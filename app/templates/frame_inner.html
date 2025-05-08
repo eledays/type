@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/content.css') }}">
+</head>
+<body>
+    <div class="loading"></div>
+
+    <div class="word-cont">
+        <p class="word"></p>
+    </div>
+
+    <div class="answers-cont">
+        <div class="answers">
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/swiping.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/content.js') }}"></script>
+</body>
+</html>

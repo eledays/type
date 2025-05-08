@@ -1,0 +1,29 @@
+let touchStartY = 0;
+let touchEndY = 0;
+addEventListener('touchstart', (event) => {
+    touchStartY = event.touches[0].clientY;
+});
+
+addEventListener('touchend', (event) => {
+    touchEndY = event.changedTouches[0].clientY;
+    handleSwipe();
+});
+
+function handleSwipe() {
+    if (touchStartY - touchEndY > 50) {
+        parent.postMessage('swipe', '*');
+    }
+}
+
+let isScrolling = false;
+document.addEventListener('wheel', (event) => {
+    if (isScrolling) return;
+    if (event.deltaY > 0) {
+        parent.postMessage('swipe', '*');
+    }
+
+    isScrolling = true;
+    setTimeout(() => {
+        isScrolling = false; 
+    }, 300);
+});

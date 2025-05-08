@@ -1,0 +1,78 @@
+
+body {
+    background-color: var(--back-color);
+}
+
+iframe {
+    transition: all .3s ease;
+    border: none;
+    /* pointer-events: none; */
+}
+.fullscreen iframe {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    transform: translate(0, 0);
+}
+.partscreen iframe {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    height: 90vh;
+    width: calc(90vh * 9 / 16);
+    transform: translate(-50%, -50%);
+    border-radius: 20px;
+}
+
+.fullscreen iframe.next {
+    top: 100vh;
+    transform: translateY(0);
+}
+.partscreen iframe.next {
+    top: 100vh;
+    transform: translate(-50%, 0);
+}
+
+.fullscreen iframe.prev {
+    top: -100vh;
+    transform: translateY(0);
+}
+.partscreen iframe.prev {
+    top: -100vh;
+    transform: translate(-50%, 0);
+}
+
+.settings {
+    border: none;
+    background-color: transparent;
+    padding: 12px;
+    padding-bottom: 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: .3s;
+    color: var(--main-color);
+    z-index: 1000;
+}
+
+.partscreen .settings {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    opacity: .5;
+    padding: 10px;
+}
+
+.partscreen .settings:hover {
+    opacity: 1;
+    background-color: var(--frame-backround-color);
+}
+
+.fullscreen .settings {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    opacity: .5;
+    padding: 10px;
+}

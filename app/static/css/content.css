@@ -1,0 +1,100 @@
+body {
+    background-color: var(--frame-backround-color);
+    height: 100vh;
+    overflow: hidden;
+}
+
+.word-cont {
+    position: relative;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: var(--word-block-height);
+}
+
+.word {
+    transition: color .5s;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    font-size: var(--word-size);
+    cursor: text;
+    color: var(--main-color);
+}
+
+.missing-letter {
+    box-sizing: border-box;
+    width: 20px;
+    margin: 3px 4px;
+    display: block;
+    background-color: var(--secondary-color);
+    border-radius: 5px;
+    cursor: text;
+    user-select: all;
+    transition: margin .2s ease, width .2s ease;
+}
+
+.shrink .missing-letter {
+    margin: 3px 0;
+    width: 16px;
+}
+
+.answers-cont {
+    position: relative;
+    width: 100vw;
+    height: calc(100vh - var(--word-block-height));
+    display: flex;
+}
+
+.answers {
+    position: absolute;
+    top: 20px; 
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+}
+
+.answers button.answer {
+    width: 100px;
+    height: 100px;
+    max-width: calc(100vw / 3);
+    max-height: calc(100vw / 3);
+    margin: 5px;
+    font-size: 20px;
+    background-color: var(--secondary-color);
+    border-radius: 10px;
+    cursor: pointer;
+    border: none;
+    transition: .3s;
+}
+
+.answers button.answer:hover {
+    filter: brightness(.95);
+}
+
+.loading {
+    z-index: 10000;
+    background: linear-gradient(90deg, var(--back-color) 25%, var(--frame-backround-color) 50%, var(--back-color) 75%);
+    background-size: 100% 100%;
+    animation: shimmer 2s infinite;
+    color: transparent;
+    position: fixed;
+    width: 400vw;
+    height: 100vh;
+    transition: opacity .3s;
+}
+
+@keyframes shimmer {
+    0% {
+        left: -300vw;
+    }
+    100% {
+        left: 0vw;
+    }
+}
+
+.correct .word {
+    color: rgb(0, 255, 55)
+}
