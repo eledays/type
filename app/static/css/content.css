@@ -10,10 +10,11 @@ body {
     left: 0;
     width: 100vw;
     height: var(--word-block-height);
+    z-index: -10;
 }
 
 .word {
-    transition: color .5s;
+    transition: color .5s ease, top .3s ease;
     position: absolute;
     top: 50%;
     left: 50%;
@@ -22,6 +23,7 @@ body {
     font-size: var(--word-size);
     cursor: text;
     color: var(--main-color);
+    z-index: -10;
 }
 
 .missing-letter {
@@ -34,26 +36,22 @@ body {
     cursor: text;
     user-select: all;
     transition: margin .2s ease, width .2s ease;
+    z-index: -10;
 }
 
 .shrink .missing-letter {
-    margin: 3px 0;
+    margin: 8px 0;
+    margin-bottom: 4px;
     width: 16px;
-}
-
-.answers-cont {
-    position: relative;
-    width: 100vw;
-    height: calc(100vh - var(--word-block-height));
-    display: flex;
 }
 
 .answers {
     position: absolute;
-    top: 20px; 
+    bottom: 20vh; 
     left: 50%;
     transform: translate(-50%, -50%);
     display: flex;
+    z-index: 10;
 }
 
 .answers button.answer {
@@ -68,6 +66,7 @@ body {
     cursor: pointer;
     border: none;
     transition: .3s;
+    z-index: 10;
 }
 
 .answers button.answer:hover {
@@ -97,4 +96,79 @@ body {
 
 .correct .word {
     color: rgb(0, 255, 55)
+}
+
+.menu-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    z-index: 100;
+    background-color: var(--main-color);
+    transition: opacity .3s ease;
+
+    animation: show .2s ease 0s 1 normal forwards;
+}
+
+@keyframes show {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: .5;
+    }
+}
+
+.menu {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--frame-backround-color);
+    z-index: 1001;
+    padding: 40px 30px;
+    border-radius: 10px;
+    width: 75vw;
+    box-sizing: border-box;
+    max-width: 420px;
+    opacity: 0;
+    display: none;
+    transition: opacity .3 ease;
+}
+
+.menu .buttons {
+    display: block;
+}
+
+.menu button {
+    border: none;
+    background-color: var(--secondary-color);
+    display: block;
+    padding: 10px 15px;
+    padding-right: 30px;
+    display: flex;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+}
+
+.menu button span {
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+}
+
+.menu button p {
+    line-height: 24px;
+    font-size: 16px;
+    text-align: left;
+}
+
+.touch-area {
+    z-index: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
 }

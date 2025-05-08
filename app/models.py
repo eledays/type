@@ -22,6 +22,7 @@ class Word(db.Model):
     task_number = db.Column(db.Integer)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
     category = db.relationship('Category', back_populates='words')
+    mistake = db.Column(db.Boolean, default=False)
 
     def get_answers(self) -> list:
         """

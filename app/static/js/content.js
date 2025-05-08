@@ -4,6 +4,12 @@ var wordElement = document.querySelector('.word');
 var answersElement = document.querySelector('.answers');
 var loadingElement = document.querySelector('.loading');
 
+var menuElement = document.querySelector('.menu');
+var touchArea = document.querySelector('.touch-area');
+
+let longPressTimer = null;
+let longPressTime = 500;
+
 addEventListener('DOMContentLoaded', () => {
     fetch('/get_word')
     .then(response => response.json())
@@ -27,6 +33,20 @@ addEventListener('DOMContentLoaded', () => {
     });
 });
 
+touchArea.addEventListener('touchstart', (event) => {
+    try {event.preventDefault()} catch {}
+
+    if (longPressTimer !== null) clearInterval(longPressTimer);
+    
+    longPressTimer = setTimeout(() => {
+        openMenu();
+    }, longPressTime);
+}, {passive: false});
+
+touchArea.addEventListener('touchend', (event) => {
+    clearTimeout(longPressTimer);
+});
+
 function handleAnswerClick(event, i) {
     fetch('/check_word', {
         method: 'POST',
@@ -46,9 +66,51 @@ function handleAnswerClick(event, i) {
             setTimeout(() => {
                 document.body.classList.remove('correct');
                 parent.postMessage('swipe', '*');
-            }, 1000);
+            }, 700);
         } else {
             alert('Incorrect!');
         }
+    });
+}
+
+function openMenu() {
+    let overlay = document.createElement('div');
+    overlay.className = 'menu-overlay';
+    document.body.appendChild(overlay);
+
+    menuElement.style.display = 'block';
+    menuElement.style.opacity = 1;
+
+    wordElement.style.top = '10vh';
+
+    overlay.addEventListener('click', closeMenu);
+    overlay.addEventListener('touchstart', closeMenu);
+}
+
+function closeMenu() {
+    let overlay = document.querySelector('.menu-overlay');
+    overlay.remove();
+    menuElement.style.display = 'none';
+
+    wordElement.style.top = '50%';
+    setTimeout(() => clearTimeout(longPressTimer), 10);
+}
+
+function sendReport() {
+    let button = document.querySelector('.menu button#mistake');
+    button.querySelector('p').innerText = 'Отправка...';
+
+    fetch('/mistake_report', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({id: word.id})
+    })
+    .then(() => {
+        button.querySelector('p').innerText = 'Запрос отправлен';
+        button.querySelector('span').innerHTML = 'check';
+        button.querySelector('p').style.color = 'green';
+        button.querySelector('span').style.color = 'green';
     });
 }

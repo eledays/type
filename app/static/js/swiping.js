@@ -1,8 +1,9 @@
 let touchStartY = 0;
 let touchEndY = 0;
+
 addEventListener('touchstart', (event) => {
     touchStartY = event.touches[0].clientY;
-});
+}, {passive: false});
 
 addEventListener('touchend', (event) => {
     touchEndY = event.changedTouches[0].clientY;

@@ -12,4 +12,7 @@ db = SQLAlchemy(app)
 # login.login_view = 'login'
 login = None
 
+from flask_migrate import Migrate
+migrate = Migrate(app, db)
+
 from app import routes, models, forms

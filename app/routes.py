@@ -6,6 +6,7 @@ from flask import render_template, redirect, url_for, jsonify, request
 
 from time import sleep
 import json
+import datetime
 # from flask_login import login_required, current_user, login_user, logout_user
 # from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -49,6 +50,23 @@ def check_word():
     else:
         return jsonify({'correct': False})
     
+
+@app.route('/mistake_report', methods=['POST'])
+def mistake_report():
+    word_id = request.json.get('id')
+    word = Word.query.get(word_id)
+
+    if word is None:
+        return 'non-existent word id', 400
+    
+    word.mistake = True
+    db.session.commit()
+
+    with open('mistakes.txt', 'a', encoding='utf-8') as file:
+        file.write(f'{datetime.datetime.now()} - {word.word} [{word.id}]\n')
+
+    return 'ok', 200
+
 
 # @app.route('/login', methods=['GET', 'POST'])
 # def login():
