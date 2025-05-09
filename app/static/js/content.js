@@ -73,7 +73,10 @@ function handleAnswerClick(event, i) {
     });
 }
 
+let menuOpened = false;
 function openMenu() {
+    menuOpened = true;
+
     let overlay = document.createElement('div');
     overlay.className = 'menu-overlay';
     document.body.appendChild(overlay);
@@ -88,6 +91,8 @@ function openMenu() {
 }
 
 function closeMenu() {
+    menuOpened = false;
+    
     let overlay = document.querySelector('.menu-overlay');
     overlay.remove();
     menuElement.style.display = 'none';
@@ -113,4 +118,9 @@ function sendReport() {
         button.querySelector('p').style.color = 'green';
         button.querySelector('span').style.color = 'green';
     });
+}
+
+function switchMenu() {
+    if (menuOpened) closeMenu();
+    else openMenu();
 }

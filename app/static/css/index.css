@@ -44,7 +44,7 @@ iframe {
     transform: translate(-50%, 0);
 }
 
-.settings {
+button {
     border: none;
     background-color: transparent;
     padding: 12px;
@@ -64,14 +64,21 @@ iframe {
     padding: 10px;
 }
 
-.partscreen .settings:hover {
-    opacity: 1;
-    background-color: var(--frame-backround-color);
-}
-
 .fullscreen .settings {
     position: fixed;
     top: 12px;
+    right: 12px;
+    opacity: .5;
+    padding: 10px;
+}
+
+.fullscreen .error {
+    display: none;
+}
+
+.partscreen .error {
+    position: fixed;
+    top: 48px;
     right: 12px;
     opacity: .5;
     padding: 10px;
