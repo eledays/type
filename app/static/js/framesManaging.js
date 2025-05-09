@@ -1,6 +1,9 @@
 window.addEventListener('message', (event) => {
-    if (event.data === 'swipe') {
+    if (event.data === 'swipeNext') {
         swipeNextFrame();
+    }
+    else if (event.data === 'swipePrev') {
+        swipePrevFrame();
     }
 });
 
@@ -24,14 +27,16 @@ addEventListener('keydown', (event) => {
     if (event.key === 's' || event.key === 'ArrowDown' || event.key === ' ') {
         swipeNextFrame();
     }
+    if (event.key === 'w' || event.key === 'ArrowUp') {
+        swipePrevFrame();
+    }
 });
 
 let isScrolling = false;
 document.addEventListener('wheel', (event) => {
     if (isScrolling) return;
-    if (event.deltaY > 0) {
-        swipeNextFrame();
-    }
+    if (event.deltaY > 0) swipeNextFrame()
+    else swipePrevFrame()
 
     isScrolling = true;
     setTimeout(() => {
@@ -40,12 +45,14 @@ document.addEventListener('wheel', (event) => {
 });
 
 function swipeNextFrame() {
+    let prev = document.querySelector('.prev')
+    if (prev !== null) prev.remove();
+
     nextFrame.classList.remove('next');
-    currentFrame.classList.add('prev');
+    currentFrame.classList.replace('current', 'prev');
 
     setTimeout(() => {
         nextFrame.className = 'current';
-        currentFrame.remove();
         currentFrame = nextFrame;
         nextFrame = document.createElement('iframe');
         nextFrame.src = "/get_frame";
@@ -53,4 +60,17 @@ function swipeNextFrame() {
         document.body.appendChild(nextFrame);
         resizeHandler();
     }, 300);
+}
+
+function swipePrevFrame() {
+    let prev = document.querySelector('.prev');
+    if (!prev) return;
+
+    nextFrame.remove();
+    nextFrame = currentFrame;
+    nextFrame.classList.replace('current', 'next');
+
+    prev.classList.remove('prev');
+    prev.className = 'current';
+    currentFrame = prev;
 }

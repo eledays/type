@@ -12,7 +12,10 @@ addEventListener('touchend', (event) => {
 
 function handleSwipe() {
     if (touchStartY - touchEndY > 50) {
-        parent.postMessage('swipe', '*');
+        parent.postMessage('swipeNext', '*');
+    }
+    else if (touchStartY - touchEndY < 50) {
+        parent.postMessage('swipePrev', '*');
     }
 }
 
@@ -20,7 +23,10 @@ let isScrolling = false;
 document.addEventListener('wheel', (event) => {
     if (isScrolling) return;
     if (event.deltaY > 0) {
-        parent.postMessage('swipe', '*');
+        parent.postMessage('swipeNext', '*');
+    }
+    else {
+        parent.postMessage('swipePrev', '*');
     }
 
     isScrolling = true;
