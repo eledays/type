@@ -14,7 +14,7 @@ function handleSwipe() {
     if (touchStartY - touchEndY > 50) {
         parent.postMessage('swipeNext', '*');
     }
-    else if (touchStartY - touchEndY < 50) {
+    else if (touchStartY - touchEndY < -50) {
         parent.postMessage('swipePrev', '*');
     }
 }

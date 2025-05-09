@@ -20,7 +20,7 @@
 <body>
     <div class="cont">
         <button class="back" onclick="window.location.href='/'">
-            <span class="material-symbols-rounded">arrow_back_ios</span>
+            <span class="material-symbols-rounded notranslate">arrow_back_ios</span>
         </button>
 
         <div class="theme block">
@@ -30,6 +30,11 @@
                     <img src="{{ themes[theme].preview_url }}" onclick="setTheme('{{ theme }}')">
                 {% endfor %}
             </div>
+        </div>
+
+        <div class="block">
+            <h2>Примечание</h2>
+            <p>Можно зажать палец на слове, чтобы вызвать меню действий.</p>
         </div>
 
         <div class="block info">

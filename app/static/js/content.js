@@ -75,7 +75,7 @@ function correctAnswer(data) {
     }, 200);
     setTimeout(() => {
         document.body.classList.remove('correct');
-        parent.postMessage('swipe', '*');
+        parent.postMessage('swipeNext', '*');
     }, 700);
 }
 
@@ -87,7 +87,7 @@ function incorrectAnswer(data) {
     }, 200);
     setTimeout(() => {
         document.body.classList.remove('incorrect');
-        parent.postMessage('swipe', '*');
+        parent.postMessage('swipeNext', '*');
     }, 1500);
 }
 

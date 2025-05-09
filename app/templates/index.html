@@ -16,11 +16,11 @@
     <iframe src="{{ url_for('get_frame') }}" class="next"></iframe>
 
     <button class="settings" onclick="window.location.href = '/settings'">
-        <span class="material-symbols-rounded">settings</span>
+        <span class="material-symbols-rounded notranslate">settings</span>
     </button>
 
     <button class="error" onclick="document.querySelector('.current').contentWindow.switchMenu()">
-        <span class="material-symbols-rounded">error</span>
+        <span class="material-symbols-rounded notranslate">error</span>
     </button>
 
     <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
