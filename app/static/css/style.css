@@ -19,7 +19,9 @@ body {
 
 button {
     border: none;
-    background-color: var(--frame-backround-color);
+    background-color: var(--frame-background-color);
     padding: 6px;
     border-radius: 6px;
+    cursor: pointer;
+    color: var(--main-color);
 }

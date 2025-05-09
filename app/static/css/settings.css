@@ -2,6 +2,11 @@ body {
     padding: 24px;
 }
 
+.cont {
+    max-width: 540px;
+    margin: auto;
+}
+
 button {
     padding-right: 2px;
     text-align: center;
@@ -26,4 +31,10 @@ button {
     height: auto;
     object-fit: contain;
     border-radius: 15px;
+    cursor: pointer;
+}
+
+p {
+    margin-top: 5px;
+    color: color-mix(in srgb, var(--main-color) 90%, var(--frame-background-color) 10%);
 }

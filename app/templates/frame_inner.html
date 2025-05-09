@@ -12,6 +12,7 @@
     <div class="loading"></div>
 
     <div class="touch-area"></div>
+    <canvas></canvas>
 
     <div class="word-cont">
         <p class="word"></p>
@@ -26,7 +27,7 @@
         <div class="buttons">
             <button id="mistake" onclick="sendReport()">
                 <span class="material-symbols-rounded">error</span>
-                <p>Сообщить об ошибке</p>
+                <p>Сообщить об ошибке в задании</p>
             </button>
             <button id="search" onclick="window.open(`https://yandex.ru/search/?text=${encodeURIComponent(document.querySelector('.word').textContent)}`, '_blank')">
                 <span class="material-symbols-rounded">search</span>

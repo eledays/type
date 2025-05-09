@@ -1,5 +1,5 @@
 body {
-    background-color: var(--frame-backround-color);
+    background-color: var(--frame-background-color);
     height: 100vh;
     overflow: hidden;
     transition: background-color .5s ease;
@@ -76,7 +76,7 @@ body {
 
 .loading {
     z-index: 10000;
-    background: linear-gradient(90deg, var(--back-color) 25%, var(--frame-backround-color) 50%, var(--back-color) 75%);
+    background: linear-gradient(90deg, var(--back-color) 25%, var(--frame-background-color) 50%, var(--back-color) 75%);
     background-size: 100% 100%;
     animation: shimmer 2s infinite;
     color: transparent;
@@ -96,11 +96,11 @@ body {
 }
 
 .correct canvas {
-    background-color: color-mix(in srgb, var(--frame-backround-color) 80%, #15ff00 20%);
+    background-color: color-mix(in srgb, var(--frame-background-color) 80%, #15ff00 20%);
 }
 
 .incorrect canvas {
-    background-color: color-mix(in srgb, var(--frame-backround-color) 80%, #ff0000 20%);
+    background-color: color-mix(in srgb, var(--frame-background-color) 80%, #ff0000 20%);
 }
 
 .correct .word {
@@ -137,7 +137,7 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: var(--frame-backround-color);
+    background-color: var(--frame-background-color);
     z-index: 1001;
     padding: 40px 30px;
     border-radius: 10px;
@@ -189,7 +189,7 @@ body {
 
 canvas {
     z-index: -1000;
-    background-color: var(--frame-backround-color);
+    background-color: var(--frame-background-color);
     position: fixed;
     top: 0;
     left: 0;

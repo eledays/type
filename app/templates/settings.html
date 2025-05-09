@@ -18,16 +18,24 @@
     </style>
 </head>
 <body>
-    <button class="back" onclick="window.location.href='/'">
-        <span class="material-symbols-rounded">arrow_back_ios</span>
-    </button>
+    <div class="cont">
+        <button class="back" onclick="window.location.href='/'">
+            <span class="material-symbols-rounded">arrow_back_ios</span>
+        </button>
 
-    <div class="theme block">
-        <h1>Цветовая тема</h1>
-        <div class="previews">
-            {% for theme in themes %}
-                <img src="{{ themes[theme].preview_url }}" onclick="setTheme('{{ theme }}')">
-            {% endfor %}
+        <div class="theme block">
+            <h1>Цветовая тема</h1>
+            <div class="previews">
+                {% for theme in themes %}
+                    <img src="{{ themes[theme].preview_url }}" onclick="setTheme('{{ theme }}')">
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="block info">
+            <h1>О проекте</h1>
+            <p>Лента слов — бесконечная лента слов с пропущенными буквами. Проект использует популярность клипов для обучения русскому языку и подготовки к ЕГЭ</p>
+            <p>База слов сформирована в атоматическом режиме с помощью ИИ и в данный момент прорабатывается</p>
         </div>
     </div>
 
