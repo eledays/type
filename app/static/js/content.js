@@ -57,20 +57,33 @@ function handleAnswerClick(event, i) {
     })
     .then(response => response.json())
     .then(data => {
-        if (data.correct) {
-            document.body.className = 'correct';
-            wordElement.classList.add('shrink');
-            setTimeout(() => {
-                wordElement.innerHTML = data.full_word;
-            }, 200);
-            setTimeout(() => {
-                document.body.classList.remove('correct');
-                parent.postMessage('swipe', '*');
-            }, 700);
-        } else {
-            alert('Incorrect!');
-        }
+        if (data.correct) correctAnswer(data)
+        else incorrectAnswer(data)
     });
+}
+
+function correctAnswer(data) {
+    document.body.className = 'correct';
+    wordElement.classList.add('shrink');
+    setTimeout(() => {
+        wordElement.innerHTML = data.full_word;
+    }, 200);
+    setTimeout(() => {
+        document.body.classList.remove('correct');
+        parent.postMessage('swipe', '*');
+    }, 700);
+}
+
+function incorrectAnswer(data) {
+    document.body.className = 'incorrect';
+    wordElement.classList.add('shrink');
+    setTimeout(() => {
+        wordElement.innerHTML = data.full_word;
+    }, 200);
+    setTimeout(() => {
+        document.body.classList.remove('incorrect');
+        parent.postMessage('swipe', '*');
+    }, 1500);
 }
 
 let menuOpened = false;

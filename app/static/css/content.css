@@ -2,6 +2,7 @@ body {
     background-color: var(--frame-backround-color);
     height: 100vh;
     overflow: hidden;
+    transition: background-color .5s ease;
 }
 
 .word-cont {
@@ -95,7 +96,15 @@ body {
 }
 
 .correct .word {
-    color: rgb(0, 255, 55)
+    color: #00ff37
+}
+
+.incorrect .word {
+    color: #ff3c00
+}
+
+.incorrect {
+    background-color: rgb(255, 203, 203);
 }
 
 .menu-overlay {

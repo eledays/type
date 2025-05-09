@@ -44,11 +44,11 @@ def check_word():
     word_id = request.json.get('id')
     answer = request.json.get('answer')
     word = Word.query.get(word_id)
+    full_word = word.word.replace('_', word.answers[0])
     if word and answer == word.answers[0]:
-        full_word = word.word.replace('_', word.answers[0])
         return jsonify({'correct': True, 'full_word': full_word})
     else:
-        return jsonify({'correct': False})
+        return jsonify({'correct': False, 'full_word': full_word})
     
 
 @app.route('/mistake_report', methods=['POST'])
