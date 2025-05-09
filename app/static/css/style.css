@@ -4,9 +4,22 @@
     margin: 0;
     padding: 0;
     font-family: 'Manrope', sans-serif;
+    box-sizing: border-box;
 }
 
 :root {
     --word-size: 24px;
     --word-block-height: 72vh;
+}
+
+body {
+    background-color: var(--back-color);
+    color: var(--main-color);
+}
+
+button {
+    border: none;
+    background-color: var(--frame-backround-color);
+    padding: 6px;
+    border-radius: 6px;
 }

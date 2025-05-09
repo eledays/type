@@ -1,0 +1,29 @@
+body {
+    padding: 24px;
+}
+
+button {
+    padding-right: 2px;
+    text-align: center;
+    width: 36px;
+    height: 36px;
+}
+
+.block {
+    margin-top: 28px;
+}
+
+.previews {
+    margin-top: 18px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.previews img {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+    border-radius: 15px;
+}

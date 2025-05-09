@@ -2,11 +2,13 @@
     "light": {
         "name": "Стандартная светлая",
         "desc": "Стандартная светлая тема. Черные слова на белом фоне.",
-        "css": "light.css"
+        "css": "light.css",
+        "preview_url": "/static/img/theme_previews/light.png"
     },
     "dark": {
         "name": "Стандартная темная",
         "desc": "Стандартная темная тема. Белый слова на темном фоне.",
-        "css": "dark.css"
+        "css": "dark.css",
+        "preview_url": "/static/img/theme_previews/dark.png"
     }
 }

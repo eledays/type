@@ -7,6 +7,9 @@
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=arrow_back_ios" />
 
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
+
     <style>
         body {
             background-color: var(--back-color);
@@ -18,29 +21,22 @@
     <button class="back" onclick="window.location.href='/'">
         <span class="material-symbols-rounded">arrow_back_ios</span>
     </button>
-    <h1>Выберите цветовую тему</h1>
-    <select id="themeSelector">
-        {% for theme in themes %}
-            <option value="{{ theme }}">{{ themes[theme].name }}</option>
-        {% endfor %}
-    </select>
+
+    <div class="theme block">
+        <h1>Цветовая тема</h1>
+        <div class="previews">
+            {% for theme in themes %}
+                <img src="{{ themes[theme].preview_url }}" onclick="setTheme('{{ theme }}')">
+            {% endfor %}
+        </div>
+    </div>
 
     <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme) {
-                document.body.className = savedTheme;
-                document.getElementById('themeSelector').value = savedTheme;
-            }
-        });
-
-        document.getElementById('themeSelector').addEventListener('change', (event) => {
-            const selectedTheme = event.target.value;
-            localStorage.setItem('theme', selectedTheme);
-            document.body.className = selectedTheme;
+        function setTheme(theme) {
+            localStorage.setItem('theme', theme);
             window.location.reload();
-        });
+        }
     </script>
 </body>
 </html>
