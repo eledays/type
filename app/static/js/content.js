@@ -7,6 +7,11 @@ var loadingElement = document.querySelector('.loading');
 var menuElement = document.querySelector('.menu');
 var touchArea = document.querySelector('.touch-area');
 
+var canvas = document.querySelector('canvas');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+var ctx = canvas.getContext('2d');
+
 let longPressTimer = null;
 let longPressTime = 500;
 

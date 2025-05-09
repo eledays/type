@@ -66,7 +66,7 @@ body {
     border-radius: 10px;
     cursor: pointer;
     border: none;
-    transition: .3s;
+    transition: .1s;
     z-index: 10;
 }
 
@@ -95,16 +95,21 @@ body {
     }
 }
 
+.correct canvas {
+    background-color: color-mix(in srgb, var(--frame-backround-color) 80%, #15ff00 20%);
+}
+
+.incorrect canvas {
+    background-color: color-mix(in srgb, var(--frame-backround-color) 80%, #ff0000 20%);
+}
+
 .correct .word {
-    color: #00ff37
+    color: color-mix(in srgb, var(--main-color) 80%, #1c9900 60%);
+    text-shadow: 0 0 10px #8fff763f, 0 0 20px #8fff763f, 0 0 30px #8fff763f;
 }
 
 .incorrect .word {
     color: #ff3c00
-}
-
-.incorrect {
-    background-color: rgb(255, 203, 203);
 }
 
 .menu-overlay {
@@ -175,6 +180,16 @@ body {
 
 .touch-area {
     z-index: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+}
+
+canvas {
+    z-index: -1000;
+    background-color: var(--frame-backround-color);
     position: fixed;
     top: 0;
     left: 0;
