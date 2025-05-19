@@ -1,15 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Лента слов</title>
+    <title>type — Лента слов</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
     <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/themes/light.css') }}"> -->
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=error,settings" />
+
+    <link rel="icon" href="{{ url_for('static', filename='img/fav.ico') }}" type="image/x-icon">
 </head>
 <body>
     <iframe src="{{ url_for('get_frame') }}" class="current"></iframe>
