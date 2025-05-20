@@ -2,11 +2,13 @@ from app import app, db, login
 from app.forms import LoginForm, RegistrationForm
 from app.models import Word
 
-from flask import render_template, redirect, url_for, jsonify, request
+from flask import render_template, redirect, url_for, jsonify, request, send_file
 
 from time import sleep
 import json
 import datetime
+import os
+import random
 # from flask_login import login_required, current_user, login_user, logout_user
 # from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -32,7 +34,6 @@ def get_frame():
 @app.route('/get_word')
 def word():
     word = Word.query.order_by(db.func.random()).first()
-    print(word.get_html())
     return jsonify({'html_word': word.get_html(),
                     'explanation': word.explanation,
                     'answers': word.get_answers(),
@@ -66,6 +67,12 @@ def mistake_report():
         file.write(f'{datetime.datetime.now()} - {word.word} [{word.id}]\n')
 
     return 'ok', 200
+
+
+@app.route('/get_background')
+def get_background():
+    filename = random.choice(os.listdir('app/static/img/backs'))
+    return send_file(f'static/img/backs/{filename}')
 
 
 # @app.route('/login', methods=['GET', 'POST'])
