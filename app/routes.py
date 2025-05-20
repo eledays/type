@@ -74,7 +74,11 @@ def mistake_report():
 @app.route('/get_background')
 def get_background():
     filename = random.choice(os.listdir('app/static/img/backs'))
-    return send_file(f'static/img/backs/{filename}')
+    response = send_file(f'static/img/backs/{filename}')
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 
 # @app.route('/login', methods=['GET', 'POST'])
