@@ -10,5 +10,11 @@
         "desc": "Стандартная темная тема. Белый слова на темном фоне.",
         "css": "dark.css",
         "preview_url": "/static/img/theme_previews/dark.png"
+    },
+    "dark_img": {
+        "name": "Темная тема с изображениями",
+        "desc": "Темная тема с картинками на фоне.",
+        "css": "dark_img.css",
+        "preview_url": "/static/img/theme_previews/dark_img.png"
     }
 }

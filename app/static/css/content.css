@@ -1,5 +1,7 @@
 body {
     background-color: var(--frame-background-color);
+    background-image: var(--back-img);
+    background-size: 100vh;
     height: 100vh;
     overflow: hidden;
     transition: background-color .5s ease;
@@ -25,6 +27,11 @@ body {
     cursor: text;
     color: var(--main-color);
     z-index: -10;
+
+    background-color: var(--word-back);
+    padding: 10px 20px;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
 }
 
 .missing-letter {
@@ -68,6 +75,12 @@ body {
     border: none;
     transition: .1s;
     z-index: 10;
+
+    padding: 10px 20px;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+
+    font-weight: 900;
 }
 
 .answers button.answer:hover {
@@ -96,11 +109,13 @@ body {
 }
 
 .correct canvas {
-    background-color: color-mix(in srgb, var(--frame-background-color) 80%, #15ff00 20%);
+    opacity: .2;
+    background-color: #15ff00;
 }
 
 .incorrect canvas {
-    background-color: color-mix(in srgb, var(--frame-background-color) 80%, #ff0000 20%);
+    opacity: .2;
+    background-color: #ff0000;
 }
 
 .correct .word {
@@ -188,11 +203,13 @@ body {
 }
 
 canvas {
+    transition: background-color 0 linear, opacity .4 ease;
     z-index: -1000;
-    background-color: var(--frame-background-color);
+    background-color: transparent;
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
+    opacity: 0;
 }
