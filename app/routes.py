@@ -37,19 +37,21 @@ def word():
     return jsonify({'html_word': word.get_html(),
                     'explanation': word.explanation,
                     'answers': word.get_answers(),
-                    'id': word.id})
+                    'id': word.id,
+                    'right_answer': word.answers[0],
+                    'full_word': word.word.replace('_', word.answers[0])})
 
 
-@app.route('/check_word', methods=['POST'])
-def check_word():
-    word_id = request.json.get('id')
-    answer = request.json.get('answer')
-    word = Word.query.get(word_id)
-    full_word = word.word.replace('_', word.answers[0])
-    if word and answer == word.answers[0]:
-        return jsonify({'correct': True, 'full_word': full_word})
-    else:
-        return jsonify({'correct': False, 'full_word': full_word})
+# @app.route('/check_word', methods=['POST'])
+# def check_word():
+#     word_id = request.json.get('id')
+#     answer = request.json.get('answer')
+#     word = Word.query.get(word_id)
+#     full_word = word.word.replace('_', word.answers[0])
+#     if word and answer == word.answers[0]:
+#         return jsonify({'correct': True, 'full_word': full_word})
+#     else:
+#         return jsonify({'correct': False, 'full_word': full_word})
     
 
 @app.route('/mistake_report', methods=['POST'])
@@ -110,3 +112,10 @@ def get_background():
 #         login_user(user)
 #         return redirect(url_for('index'))
 #     return render_template('register.html', form=form)
+
+
+@app.after_request
+def add_cache_control_headers(response):
+    if request.path.endswith('.css') or request.path.endswith('.js'):
+        response.headers['Cache-Control'] = 'public, max-age=31536000'
+    return response

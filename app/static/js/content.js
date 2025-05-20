@@ -1,16 +1,16 @@
-var word = null;
+let word = null;
 
-var wordElement = document.querySelector('.word');
-var answersElement = document.querySelector('.answers');
-var loadingElement = document.querySelector('.loading');
+let wordElement = document.querySelector('.word');
+let answersElement = document.querySelector('.answers');
+let loadingElement = document.querySelector('.loading');
 
-var menuElement = document.querySelector('.menu');
-var touchArea = document.querySelector('.touch-area');
+let menuElement = document.querySelector('.menu');
+let touchArea = document.querySelector('.touch-area');
 
-var canvas = document.querySelector('canvas');
+let canvas = document.querySelector('canvas');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
-var ctx = canvas.getContext('2d');
+let ctx = canvas.getContext('2d');
 
 let longPressTimer = null;
 let longPressTime = 500;
@@ -53,25 +53,54 @@ touchArea.addEventListener('touchend', (event) => {
 });
 
 function handleAnswerClick(event, i) {
-    fetch('/check_word', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({id: word.id, answer: word.answers[i]})
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.correct) correctAnswer(data)
-        else incorrectAnswer(data)
-    });
+    if (word.answers[i] == word.right_answer) {
+        correctAnswer();
+    }
+    else {
+        incorrectAnswer();
+    }
+    // fetch('/check_word', {
+    //     method: 'POST',
+    //     headers: {
+    //         'Content-Type': 'application/json'
+    //     },
+    //     body: JSON.stringify({id: word.id, answer: word.answers[i]})
+    // })
+    // .then(response => response.json())
+    // .then(data => {
+    //     if (data.correct) correctAnswer(data)
+    //     else incorrectAnswer(data)
+    // });
 }
 
-function correctAnswer(data) {
-    document.body.className = 'correct';
+function correctAnswer() {
+    // document.body.className = 'correct';
+    let r = 0;
+    let alpha_delta = 0;
+    let rect = wordElement.getBoundingClientRect();
+
+    function anim() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = `rgba(0, 255, 0, ${0.6 - alpha_delta})`;
+        ctx.fillStyle = `rgba(0, 255, 0, ${0.4 - alpha_delta})`;
+
+        ctx.beginPath();
+        ctx.arc(rect.x + rect.width / 2, rect.y + rect.height / 2, r, 0, 2 * Math.PI);
+        ctx.lineWidth = 15;
+        ctx.stroke();
+        ctx.fill();
+        r += 15;
+        alpha_delta += .008;
+        
+        if (alpha_delta < 1) {
+            requestAnimationFrame(anim);
+        }
+    }
+    anim();
     wordElement.classList.add('shrink');
     setTimeout(() => {
-        wordElement.innerHTML = data.full_word;
+        wordElement.innerHTML = word.full_word;
     }, 200);
     setTimeout(() => {
         document.body.classList.remove('correct');
@@ -79,11 +108,11 @@ function correctAnswer(data) {
     }, 700);
 }
 
-function incorrectAnswer(data) {
+function incorrectAnswer() {
     document.body.className = 'incorrect';
     wordElement.classList.add('shrink');
     setTimeout(() => {
-        wordElement.innerHTML = data.full_word;
+        wordElement.innerHTML = word.full_word;
     }, 200);
     setTimeout(() => {
         document.body.classList.remove('incorrect');
