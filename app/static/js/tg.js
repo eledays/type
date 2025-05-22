@@ -6,6 +6,10 @@ if (window.Telegram) {
     console.log(user.first_name); // Имя
 }
 
+let p = document.createElement('p')
+p.innerText = 'loading';
+document.body.appendChild(p);
+
 if (tg.initData) {
     fetch('/verify-hash', {
         method: 'POST',
@@ -17,9 +21,9 @@ if (tg.initData) {
     .then(response => response.json())
     .then(data => {
         if (data.valid) {
-            console.log('Hash is valid');
+            p.innerText = 'success';
         } else {
-            console.log('Hash is invalid');
+            p.innerText = 'fail';
         }
     })
     .catch(err => {
