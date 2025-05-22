@@ -15,4 +15,7 @@ login = None
 from flask_migrate import Migrate
 migrate = Migrate(app, db)
 
+from dotenv import load_dotenv
+load_dotenv('.env')
+
 from app import routes, models, forms
