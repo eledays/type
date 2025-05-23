@@ -8,6 +8,16 @@ if (window.Telegram) {
     const tg = window.Telegram.WebApp;
     const user = tg.initDataUnsafe.user;
 
+    const theme = localStorage.getItem('theme');
+    if (tg.colorScheme === 'light' && theme !== 'light') {
+        localStorage.setItem('theme', 'light');
+        window.location.reload();
+    }
+    else if (tg.colorScheme === 'dark' && theme !== 'dark') {
+        localStorage.setItem('theme', 'dark');
+        window.location.reload();
+    }
+
     console.log(user.id); // Telegram ID
     console.log(user.first_name); // Имя
 
@@ -18,7 +28,7 @@ if (window.Telegram) {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ initData: tg.initData }),
+            body: JSON.stringify({ initData: tg.initData, user: user }),
         })
         .then(response => response.json())
         .then(data => {
