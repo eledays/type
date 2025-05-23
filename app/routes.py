@@ -1,9 +1,9 @@
 from app import app, db, login
 from app.forms import LoginForm, RegistrationForm
 from app.models import Word
-from app.utils import verify_telegram_auth
 
 from flask import render_template, redirect, url_for, jsonify, request, send_file
+from init_data_py import InitData
 
 from time import sleep
 import json
@@ -70,19 +70,19 @@ def get_background():
     return response
 
 
-@app.route('/verify-hash', methods=['POST'])
+@app.route('/verify_hash', methods=['POST'])
 def verify_hash():
     data = request.get_json()
-    init_data = data.get('initData', '')
+    init_data = InitData.parse(data.get('initData', ''))
 
-    if verify_telegram_auth(init_data, os.getenv('BOT_TOKEN')):
+    if init_data.validate(os.getenv('BOT_TOKEN')):
         return jsonify({'valid': True})
     else:
         return jsonify({'valid': False})
 
 
-@app.after_request
-def add_cache_control_headers(response):
-    if request.path.endswith('.css') or request.path.endswith('.js'):
-        response.headers['Cache-Control'] = 'public, max-age=31536000'
-    return response
+# @app.after_request
+# def add_cache_control_headers(response):
+#     if request.path.endswith('.css') or request.path.endswith('.js'):
+#         response.headers['Cache-Control'] = 'public, max-age=31536000'
+#     return response
