@@ -1,8 +1,8 @@
 from app import app, db, login
 from app.forms import LoginForm, RegistrationForm
-from app.models import Word
+from app.models import Word, Action
 
-from flask import render_template, redirect, url_for, jsonify, request, send_file
+from flask import render_template, redirect, url_for, jsonify, request, send_file, session
 from init_data_py import InitData
 
 from time import sleep
@@ -10,8 +10,6 @@ import json
 import datetime
 import os
 import random
-# from flask_login import login_required, current_user, login_user, logout_user
-# from werkzeug.security import generate_password_hash, check_password_hash
 
 
 @app.route('/')
@@ -41,7 +39,25 @@ def word():
                     'id': word.id,
                     'right_answer': word.answers[0],
                     'full_word': word.word.replace('_', word.answers[0])})
-    
+
+
+@app.route('/check_word', methods=['POST'])
+def check_word():
+    word_id = request.json.get('id')
+    answer = request.json.get('answer')
+    word = Word.query.get(word_id)
+    full_word = word.word.replace('_', word.answers[0])
+    if word and answer == word.answers[0]:
+        action = Action(user_id=session['user_id'], word_id=word_id, action=Action.RIGHT_ANSWER)
+        db.session.add(action)
+        db.session.commit()
+        return jsonify({'correct': True, 'full_word': full_word})
+    else:
+        action = Action(user_id=session['user_id'], word_id=word_id, action=Action.WRONG_ANSWER)
+        db.session.add(action)
+        db.session.commit()
+        return jsonify({'correct': False, 'full_word': full_word})
+
 
 @app.route('/mistake_report', methods=['POST'])
 def mistake_report():
@@ -76,8 +92,10 @@ def verify_hash():
     init_data = InitData.parse(data.get('initData', ''))
 
     if init_data.validate(os.getenv('BOT_TOKEN')):
+        session['user_id'] = init_data.user.id
         return jsonify({'valid': True})
     else:
+        session['user_id'] = None
         return jsonify({'valid': False})
 
 

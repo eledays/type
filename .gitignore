@@ -13,7 +13,7 @@ __pycache__/
 .pytest_cache/
 
 # Flask stuff:
-# instance/
+instance/
 .webassets-cache
 migrations
 
@@ -21,3 +21,4 @@ migrations
 words
 mistakes.txt
 certs
+*.db

@@ -53,24 +53,18 @@ touchArea.addEventListener('touchend', (event) => {
 });
 
 function handleAnswerClick(event, i) {
-    if (word.answers[i] == word.right_answer) {
-        correctAnswer();
-    }
-    else {
-        incorrectAnswer();
-    }
-    // fetch('/check_word', {
-    //     method: 'POST',
-    //     headers: {
-    //         'Content-Type': 'application/json'
-    //     },
-    //     body: JSON.stringify({id: word.id, answer: word.answers[i]})
-    // })
-    // .then(response => response.json())
-    // .then(data => {
-    //     if (data.correct) correctAnswer(data)
-    //     else incorrectAnswer(data)
-    // });
+    fetch('/check_word', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({id: word.id, answer: word.answers[i]})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.correct) correctAnswer(data)
+        else incorrectAnswer(data)
+    });
 }
 
 function correctAnswer() {
