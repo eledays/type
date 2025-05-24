@@ -1,8 +1,8 @@
-let p = document.createElement('p')
-p.innerText = 'loading' + window.Telegram;
-p.style.zIndex = 10000;
-p.style.position = 'absolute';
-document.body.appendChild(p);
+// let p = document.createElement('p')
+// p.innerText = 'loading' + window.Telegram;
+// p.style.zIndex = 10000;
+// p.style.position = 'absolute';
+// document.body.appendChild(p);
 
 if (window.Telegram) {
     const tg = window.Telegram.WebApp;
@@ -23,7 +23,7 @@ if (window.Telegram) {
     console.log(user.first_name); // Имя
 
     if (tg.initData) {
-        p.innerText = 'tg loading';
+        // p.innerText = 'tg loading';
         fetch('/verify_hash', {
             method: 'POST',
             headers: {
@@ -33,14 +33,14 @@ if (window.Telegram) {
         })
         .then(response => response.json())
         .then(data => {
-            if (data.valid) {
-                p.innerText = 'success';
-            } else {
-                p.innerText = 'fail';
-            }
+            // if (data.valid) {
+            //     p.innerText = 'success';
+            // } else {
+            //     p.innerText = 'fail';
+            // }
         })
         .catch(err => {
-            p.innerText = ('Error verifying hash on server:', err);
+            // p.innerText = ('Error verifying hash on server:', err);
         });
     }
 }

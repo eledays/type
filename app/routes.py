@@ -1,6 +1,7 @@
 from app import app, db, login
 from app.forms import LoginForm, RegistrationForm
 from app.models import Word, Action
+from app.utils import add_action
 
 from flask import render_template, redirect, url_for, jsonify, request, send_file, session
 from init_data_py import InitData
@@ -36,9 +37,7 @@ def word():
     return jsonify({'html_word': word.get_html(),
                     'explanation': word.explanation,
                     'answers': word.get_answers(),
-                    'id': word.id,
-                    'right_answer': word.answers[0],
-                    'full_word': word.word.replace('_', word.answers[0])})
+                    'id': word.id})
 
 
 @app.route('/check_word', methods=['POST'])
@@ -48,14 +47,10 @@ def check_word():
     word = Word.query.get(word_id)
     full_word = word.word.replace('_', word.answers[0])
     if word and answer == word.answers[0]:
-        action = Action(user_id=session['user_id'], word_id=word_id, action=Action.RIGHT_ANSWER)
-        db.session.add(action)
-        db.session.commit()
+        add_action(user_id=session['user_id'], word_id=word_id, action=Action.RIGHT_ANSWER)
         return jsonify({'correct': True, 'full_word': full_word})
     else:
-        action = Action(user_id=session['user_id'], word_id=word_id, action=Action.WRONG_ANSWER)
-        db.session.add(action)
-        db.session.commit()
+        add_action(user_id=session['user_id'], word_id=word_id, action=Action.WRONG_ANSWER)
         return jsonify({'correct': False, 'full_word': full_word})
 
 
