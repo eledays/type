@@ -60,6 +60,15 @@ function swipeNextFrame() {
         document.body.appendChild(nextFrame);
         resizeHandler();
     }, 300);
+
+    let word_id = currentFrame.contentWindow.word.id;
+    fetch('/action/swipe_next', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({word_id: word_id})
+    });
 }
 
 function swipePrevFrame() {

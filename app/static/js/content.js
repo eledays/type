@@ -20,6 +20,7 @@ addEventListener('DOMContentLoaded', () => {
     .then(response => response.json())
     .then(data => {
         word = data;
+        window.word = word;
         loadingElement.style.opacity = 0;
         setTimeout(() => {
             loadingElement.style.display = 'none';

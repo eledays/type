@@ -102,6 +102,19 @@ def set_user_id():
         return jsonify({'status': 'success'})
     else:
         return jsonify({'status': 'error'}), 400
+    
+
+@app.route('/action/swipe_next', methods=['POST'])
+def action_swipe_next():
+    if 'user_id' not in session:
+        return jsonify({'status': 'error', 'message': 'User not authenticated'}), 401
+    
+    word_id = request.json.get('word_id')
+    if word_id is not None:
+        add_action(user_id=session['user_id'], word_id=word_id, action=Action.SAVE_WORD)
+
+    add_action(user_id=session['user_id'], word_id=word_id, action=Action.SKIP)
+    return jsonify({'status': 'success'})
 
 
 # @app.after_request

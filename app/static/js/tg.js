@@ -4,7 +4,7 @@
 // p.style.position = 'absolute';
 // document.body.appendChild(p);
 
-if (window.Telegram) {
+if (window.Telegram && window.Telegram.WebApp.initData) {
     const tg = window.Telegram.WebApp;
     const user = tg.initDataUnsafe.user;
 
