@@ -62,6 +62,7 @@ function handleAnswerClick(event, i) {
     })
     .then(response => response.json())
     .then(data => {
+        word.full_word = data.full_word
         if (data.correct) correctAnswer(data)
         else incorrectAnswer(data)
     });
