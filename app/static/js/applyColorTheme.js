@@ -1,4 +1,4 @@
-const theme = localStorage.getItem('theme') || 'light';
+const theme = localStorage.getItem('theme') || 'dark';
 
 const themeLink = document.createElement('link');
 themeLink.rel = 'stylesheet';
