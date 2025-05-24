@@ -1,113 +1,79 @@
-from bs4 import BeautifulSoup
+import re
 
 
-def split_ignore_parentheses(s, separator=','):
-    tokens = []
-    current = []
-    level = 0
-    for char in s:
-        if char == '(':
-            level += 1
-        elif char == ')':
-            level -= 1
-        if char == separator and level == 0:
-            tokens.append(''.join(current).strip())
-            current = []
-        else:
-            current.append(char)
-    if current:
-        tokens.append(''.join(current).strip())
-    return tokens
+ipt = 'words/a.txt'
+out = 'words/3_7_5.txt'
+err = 'words/3_7_5_errors.txt'
 
 
-with open('words/a.html', 'r') as file:
-    html_content = file.read()
-
-soup = BeautifulSoup(html_content, 'html.parser')
-words = []
-
-for div in soup.find_all('div', class_='react-mathjax-preview-result'):
-    ps = div.find_all('p')[1:]
-    ps = [p.text.replace(', ', ',') for p in ps if '..' not in p.text]
-
-    if not ps:
-        continue
+def count_differences(str1, str2):
+    if len(str1) != len(str2):
+        return -1
+    pattern = r'(?=.)' 
+    differences = re.findall(pattern, str1) + re.findall(pattern, str2)
     
-    for p in ps:
-        words += [e.replace(',', ', ') for e in split_ignore_parentheses(p[3:])]
+    # Считаем отличия
+    count = sum(1 for a, b in zip(str1, str2) if a != b)
+    return count
 
-print(words)
 
-words_with_explanation = []
-for word in words:
-    try:
-        word, explanation = word.split(' (')
-        explanation = explanation[:-1]
-        words_with_explanation.append((word, explanation))
-    except:
-        pass
+lets = {
+    'а': ['а', 'о'],
+    'е': ['е', 'и'],
+    'и': ['и', 'ы', 'е'],
+    'о': ['о', 'а'],
+    'я': ['я', 'е'],
+}
 
-print(words_with_explanation)
+with open(ipt, 'r', encoding='utf-8') as file:
+    lines = file.readlines()
 
-from app import db, app
-from app.models import Word, Category
-import sqlite3
+lines = [e.strip() for e in lines if e.strip()]
 
-with app.app_context():
-    ПГ = Category.query.filter_by(name='Проверяемая гласная').first()
-    if not ПГ:
-        ПГ = Category(name='Проверяемая гласная')
-        db.session.add(ПГ)
-        db.session.commit()
+words = []
+is_word_line = False
 
-    ЧГ = Category.query.filter_by(name='Чередующаяся гласная').first()
-    if not ЧГ:
-        ЧГ = Category(name='Чередующаяся гласная')
-        db.session.add(ЧГ)
-        db.session.commit()
+for line in lines:
+    if re.search(r'\d\)', line):
+        is_word_line = True
+    elif is_word_line:
+        words.extend(line.split(', '))
+        is_word_line = False
 
-    НГ = Category.query.filter_by(name='Непроверяемая гласная').first()
-    if not НГ:
-        НГ = Category(name='Непроверяемая гласная')
-        db.session.add(НГ)
-        db.session.commit()
+from bs4 import BeautifulSoup as bs 
+import requests
 
-    for word, explanation in words_with_explanation:
-        try:
-            category, explanation = explanation.split(', ')
-            if category == 'ПГ':
-                category = ПГ
-            elif category == 'ЧГ':
-                category = ЧГ
-            elif category == 'НГ':
-                category = НГ
-
-            mislet = [e for e in word if e.isupper()][0]
-            word = word.replace(mislet, '_')
-            mislet = mislet.lower()
-
+with open(out, 'w', encoding='utf-8') as file:
+    with open(err, 'w', encoding='utf-8') as error_file:
+        for word_i, word in enumerate(words):
+            response = requests.get(f'https://gramota.ru/poisk?query={word.replace("..", "-")}&mode=slovari')
+            soup = bs(response.text, 'html.parser')
             try:
-                lets = {
-                    'а': ['а', 'о'],
-                    'е': ['е', 'и'],
-                    'и': ['и', 'ы', 'е'],
-                    'о': ['о', 'а'],
-                    'я': ['я', 'е'],
-                }[mislet]
-            except KeyError:
-                print(word, explanation)
-                break
-
-            word_obj = Word.query.filter_by(word=word).first()
-            if word_obj:
+                right_word = soup.find_all('a', class_='title')[0].text
+            except:
+                print(word, file=error_file)
                 continue
 
-            word_obj = Word(word=word, explanation=explanation, answers=lets, category=category, task_number=9)
-            db.session.add(word_obj)
-            db.session.commit()
+            diff = count_differences(word.replace('..', '.'), right_word)
 
-            print('added', word_obj.word, word_obj.explanation, word_obj.answers, word_obj.category.name)
-        except:
-            print('error', word, explanation)
-            continue
+            if diff != 1:
+                print(word, file=error_file)
+                continue
 
+            word = word.replace('..', '.')
+
+            new_word = ''
+            for i in range(len(word)):
+                if word[i] == '.':
+                    new_word += right_word[i].upper()
+                else:
+                    new_word += word[i]
+
+            print(new_word, file=file)
+            print(f'{round(word_i / len(words) * 100, 2)}% ({word_i})', ' ' * 10, end='\r')
+
+print('Done!' + ' ' * 20)
+with open(out, 'r', encoding='utf-8') as file:
+    print('Success:', len(file.readlines()), end=' ')
+with open(err, 'r', encoding='utf-8') as file:
+    print('Errors:', len(file.readlines()))
