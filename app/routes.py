@@ -59,6 +59,11 @@ def check_word():
         return jsonify({'correct': False, 'full_word': full_word})
 
 
+@app.route('/test')
+def test():
+    return 'hello'
+
+
 @app.route('/mistake_report', methods=['POST'])
 def mistake_report():
     word_id = request.json.get('id')
