@@ -1,9 +1,0 @@
-:root {
-    --main-color: #ffffff;
-    --secondary-color: rgba(0, 0, 0, 0.151);
-    --back-color: #3d3d3d;
-    --frame-background-color: #161616;
-
-    --back-img: url('/get_background');
-    --word-back: rgba(0, 0, 0, 0.151);
-}

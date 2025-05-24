@@ -1,6 +1,7 @@
 from app import app, db, login
 
 import random
+from datetime import datetime
 
 
 # @login.user_loader
@@ -44,3 +45,15 @@ class Category(db.Model):
     name = db.Column(db.String(128), unique=True, nullable=False)
     words = db.relationship('Word', back_populates='category', lazy='dynamic')
     
+
+class Action(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, nullable=False)
+    word_id = db.Column(db.Integer)
+    action = db.Column(db.Integer, nullable=False)
+    datetime = db.Column(db.DateTime, default=datetime.now)
+
+    RIGHT_ANSWER = 100
+    WRONG_ANSWER = 101
+    SKIP = 102
+    SAVE_WORD = 103
