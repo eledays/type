@@ -44,4 +44,14 @@ if (window.Telegram) {
         });
     }
 }
-
+else {
+    let user_id = localStorage.getItem('user_id') || 'unsafe_' + crypto.randomUUID();
+    localStorage.setItem('user_id', user_id);
+    fetch('/set_user_id', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ user_id: user_id }),
+    });
+}

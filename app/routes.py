@@ -92,6 +92,16 @@ def verify_hash():
     else:
         session['user_id'] = None
         return jsonify({'valid': False})
+    
+
+@app.route('/set_user_id', methods=['POST'])
+def set_user_id():
+    user_id = request.json.get('user_id')
+    if user_id is not None and user_id.startswith('unsafe_'):
+        session['user_id'] = user_id
+        return jsonify({'status': 'success'})
+    else:
+        return jsonify({'status': 'error'}), 400
 
 
 # @app.after_request
