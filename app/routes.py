@@ -47,11 +47,13 @@ def check_word():
     word = Word.query.get(word_id)
     full_word = word.word.replace('_', word.answers[0])
     if word and answer == word.answers[0]:
+        session['strike'] = session.get('strike', 0) + 1
         add_action(user_id=session['user_id'], word_id=word_id, action=Action.RIGHT_ANSWER)
-        return jsonify({'correct': True, 'full_word': full_word})
+        return jsonify({'correct': True, 'full_word': full_word, 'strike': session['strike']})
     else:
+        session['strike'] = 0
         add_action(user_id=session['user_id'], word_id=word_id, action=Action.WRONG_ANSWER)
-        return jsonify({'correct': False, 'full_word': full_word})
+        return jsonify({'correct': False, 'full_word': full_word, 'strike': session['strike']})
 
 
 @app.route('/mistake_report', methods=['POST'])

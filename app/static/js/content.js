@@ -64,12 +64,13 @@ function handleAnswerClick(event, i) {
     .then(response => response.json())
     .then(data => {
         word.full_word = data.full_word;
-        if (data.correct) correctAnswer(data)
-        else incorrectAnswer(data)
+        if (data.correct) correctAnswer(data);
+        else incorrectAnswer(data);
     });
 }
 
-function correctAnswer() {
+function correctAnswer(data) {
+    window.parent.strike(data.strike);
     // document.body.className = 'correct';
     let r = 0;
     let alpha_delta = 0;
@@ -104,7 +105,8 @@ function correctAnswer() {
     }, 700);
 }
 
-function incorrectAnswer() {
+function incorrectAnswer(data) {
+    window.parent.strike(data.strike);
     document.body.className = 'incorrect';
     wordElement.classList.add('shrink');
     setTimeout(() => {

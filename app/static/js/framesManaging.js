@@ -83,3 +83,8 @@ function swipePrevFrame() {
     prev.className = 'current';
     currentFrame = prev;
 }
+
+function strike(n) {
+    let p = document.querySelector('.strike-block p');
+    p.innerText = n;
+}
