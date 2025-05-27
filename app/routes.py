@@ -42,6 +42,9 @@ def word():
 
 @app.route('/check_word', methods=['POST'])
 def check_word():
+    if 'user_id' not in session:
+        return jsonify({'status': 'error', 'message': 'User not authenticated'}), 401
+    
     word_id = request.json.get('id')
     answer = request.json.get('answer')
     word = Word.query.get(word_id)

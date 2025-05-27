@@ -10,6 +10,9 @@ window.addEventListener('message', (event) => {
 var currentFrame = document.querySelector('iframe.current');
 var nextFrame = document.querySelector('iframe.next');
 
+const parts = 50;
+const fire = document.getElementById('fire');
+
 function resizeHandler() {
     var iframes = document.querySelectorAll('iframe');
     for (iframe of iframes) {
@@ -86,5 +89,31 @@ function swipePrevFrame() {
 
 function strike(n) {
     let p = document.querySelector('.strike-block p');
+    let fireN = 2;
     p.innerText = n;
+
+    if (n >= fireN && fire.children.length === 0) {
+        for (let i = 0; i < parts; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = `calc((100% - 60px) * ${i / parts})`;
+            p.style.animationDelay = `${Math.random()}s`;
+            fire.appendChild(p);
+        }
+    }
+    else if (n < fireN && fire.children.length > 0) {
+        fire.style.opacity = 0;
+        setTimeout(() => {
+            while (fire.firstChild) {
+                fire.removeChild(fire.firstChild);
+            }
+            fire.style.opacity = 1;
+        }, 700);
+        // for (let i = fire.children.length - 1; i >= 0; i--) {
+        //     fire.children[i].style.opacity = 0;
+        // }
+        // while (fire.firstChild) {
+        //     fire.removeChild(fire.firstChild);
+        // }
+    }
 }
