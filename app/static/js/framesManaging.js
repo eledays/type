@@ -13,6 +13,8 @@ var nextFrame = document.querySelector('iframe.next');
 const parts = 50;
 const fire = document.getElementById('fire');
 
+
+
 function resizeHandler() {
     var iframes = document.querySelectorAll('iframe');
     for (iframe of iframes) {
@@ -87,33 +89,46 @@ function swipePrevFrame() {
     currentFrame = prev;
 }
 
+const strikeLevel = {
+    5: 4,
+    4: 3,
+    3: 2,
+    2: 1,
+}
+
 function strike(n) {
     let p = document.querySelector('.strike-block p');
-    let fireN = 2;
     p.innerText = n;
 
-    if (n >= fireN && fire.children.length === 0) {
-        for (let i = 0; i < parts; i++) {
-            const p = document.createElement('div');
-            p.className = 'particle';
-            p.style.left = `calc((100% - 60px) * ${i / parts})`;
-            p.style.animationDelay = `${Math.random()}s`;
-            fire.appendChild(p);
-        }
-    }
-    else if (n < fireN && fire.children.length > 0) {
+    console.log(n, strikeLevel[-1]);
+    
+
+    if (n === 0 && fire.children.length > 0) {
         fire.style.opacity = 0;
+        document.documentElement.style.setProperty('--strike-background-color', `var(--secondary-color)`);
         setTimeout(() => {
             while (fire.firstChild) {
                 fire.removeChild(fire.firstChild);
             }
             fire.style.opacity = 1;
         }, 700);
-        // for (let i = fire.children.length - 1; i >= 0; i--) {
-        //     fire.children[i].style.opacity = 0;
-        // }
-        // while (fire.firstChild) {
-        //     fire.removeChild(fire.firstChild);
-        // }
+        return;
+    }
+
+    for (let level in strikeLevel) {
+        if (n >= level) {
+            document.documentElement.style.setProperty('--particle-color', `var(--fire-${strikeLevel[level]})`);
+            document.documentElement.style.setProperty('--strike-background-color', `transparent`);
+            
+            if (fire.children.length === 0) {
+                for (let i = 0; i < parts; i++) {
+                    const p = document.createElement('div');
+                    p.className = 'particle';
+                    p.style.left = `calc((100% - 60px) * ${i / parts})`;
+                    p.style.animationDelay = `${Math.random()}s`;
+                    fire.appendChild(p);
+                }
+            }
+        }
     }
 }

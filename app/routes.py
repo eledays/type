@@ -15,7 +15,7 @@ import random
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', strike=session.get('strike', 0))
 
 
 @app.route('/settings')
