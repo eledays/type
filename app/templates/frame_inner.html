@@ -38,10 +38,13 @@
                 <span class="material-symbols-rounded notranslate">search</span>
                 <p>Найти слово в интернете</p>
             </button>
-            <button id="search" onclick="window.open('yandexmusic://', '_blank')" style="margin-top: 10px;">
+            <button id="search" onclick="window.open('https://music.yandex.ru', '_blank')" style="margin-top: 10px;">
                 <span class="material-symbols-rounded"><img src="{{ url_for('static', filename='img/yandex-music.svg') }}" alt="Yandex Music Logo"></span>
                 <p>Включить музыку</p>
             </button>
+            {% if info_str %}
+            <p class="info">Фильтр: {{ info_str }}</p>
+            {% endif %}
         </div>
     </div>
 

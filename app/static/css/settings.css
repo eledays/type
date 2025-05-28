@@ -38,3 +38,13 @@ p {
     margin-top: 5px;
     color: color-mix(in srgb, var(--main-color) 90%, var(--frame-background-color) 10%);
 }
+
+.task {
+    display: block;
+    background-color: rgb(36, 36, 36);
+    padding: 10px 20px;
+    margin-top: 5px;
+    border-radius: 5px;
+    color: white;
+    text-decoration: none;
+}

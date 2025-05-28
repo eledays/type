@@ -1,6 +1,6 @@
 from app import app, db, login
 from app.forms import LoginForm, RegistrationForm
-from app.models import Word, Action
+from app.models import Word, Action, Category
 from app.utils import add_action
 
 from flask import render_template, redirect, url_for, jsonify, request, send_file, session
@@ -23,26 +23,39 @@ def task(task_id):
     return render_template('index.html', strike=session.get('strike', 0), params=f'task_id={task_id}')
 
 
+@app.route('/category/<int:category_id>')
+def category(category_id):
+    category = Category.query.get(category_id)
+    if not category:
+        return 'Category not found', 404    
+    return render_template('index.html', strike=session.get('strike', 0), params=f'category_id={category_id}')
+
+
 @app.route('/settings')
 def settings():
-    with open(app.static_folder + '/css/themes/themes.json', 'r', encoding='utf-8') as file:
-        themes = file.read()
-    themes = json.loads(themes)
-    return render_template('settings.html', themes=themes)
+    categories = Category.query.all()
+    return render_template('settings.html', categories=categories, tasks=app.config['TASKS'])
 
 
 @app.route('/get_frame')
 def get_frame():
     task_id = request.args.get('task_id', '')
+    category_id = request.args.get('category_id', '')
+    category = Category.query.get(category_id)
 
     if task_id:
         words = Word.query.filter(Word.task_number == task_id)
+        info_str=f'Задание №{task_id}'
+    elif category_id:
+        words = Word.query.filter(Word.category_id == category_id)
+        info_str=f'Категория "{category.name}"'
     else:
         words = Word.query
+        info_str = ''
 
     word = words.order_by(db.func.random()).first()
     if word:
-        return render_template('frame_inner.html', word=word)   
+        return render_template('frame_inner.html', word=word, info_str=info_str)   
     else:
         return 'No words available', 404
 

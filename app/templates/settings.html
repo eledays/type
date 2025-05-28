@@ -25,18 +25,12 @@
             <span class="material-symbols-rounded notranslate">arrow_back_ios</span>
         </button>
 
-        <div class="theme block">
-            <h1>Цветовая тема</h1>
-            <div class="previews">
-                {% for theme in themes %}
-                    <img src="{{ themes[theme].preview_url }}" onclick="setTheme('{{ theme }}')">
-                {% endfor %}
-            </div>
-        </div>
-
         <div class="block">
-            <h2>Примечание</h2>
-            <p>Можно зажать палец на слове, чтобы вызвать меню действий.</p>
+            <h1 style="margin-bottom: 10px;">Фильтр по номеру задания</h1>
+            <a href="/" class="task">Все задания</a>
+            {% for task in tasks %}
+                <a href="/task/{{ task }}" class="task">{{ task }}. {{ tasks[task] }}</a>
+            {% endfor %}
         </div>
 
         <div class="block info">

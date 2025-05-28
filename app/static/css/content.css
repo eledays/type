@@ -214,3 +214,9 @@ canvas {
     /* opacity: 0; */
     filter: blur(50px);
 }
+
+p.info {
+    text-align: center;
+    font-size: 12px;
+    margin-top: 24px;
+}
