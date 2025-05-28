@@ -1,5 +1,5 @@
 :root {
-    --fire-1: radial-gradient(rgb(255 118 0) 20%, rgba(255, 80, 0, 0) 70%);
+    --fire-1: radial-gradient(rgb(255 141 0) 20%, rgba(255, 80, 0, 0) 70%);
     --fire-2: radial-gradient(rgb(255, 81, 0) 20%, rgba(255, 80, 0, 0) 70%);
     --fire-3: radial-gradient(rgb(255, 51, 0) 20%, rgba(255, 80, 0, 0) 70%);
     --fire-4: radial-gradient(rgb(255, 0, 0) 20%, rgba(255, 80, 0, 0) 70%);
@@ -145,6 +145,7 @@ button {
     left: 50%;
     transform: translateX(-50%);
     transition: opacity .7s ease;
+    position: relative;
 }
 
 .fullscreen .fire {

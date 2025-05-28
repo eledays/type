@@ -70,8 +70,6 @@ function handleAnswerClick(event, i) {
 }
 
 function correctAnswer(data) {
-    console.log(data.strike);
-    
     window.parent.strike(data.strike);
     // document.body.className = 'correct';
     let r = 0;

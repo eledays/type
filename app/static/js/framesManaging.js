@@ -89,8 +89,6 @@ function swipePrevFrame() {
 }
 
 function strike(strikeData) {
-    console.log(strikeData);
-    
     let n = strikeData.n;
     let strikeLevel = strikeData.levels
     let p = document.querySelector('.strike-block p');
@@ -118,8 +116,10 @@ function strike(strikeData) {
                 for (let i = 0; i < parts; i++) {
                     const p = document.createElement('div');
                     p.className = 'particle';
-                    p.style.left = `calc((100% - 60px) * ${i / parts})`;
+                    p.style.left = `calc(${(fire.getBoundingClientRect().width) / 2}px * (${i / parts}))`;
                     p.style.animationDelay = `${Math.random()}s`;
+                    p.style.animation = 'none';
+                    p.style.opacity = 1;
                     fire.appendChild(p);
                 }
             }
