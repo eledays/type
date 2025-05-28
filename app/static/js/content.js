@@ -67,6 +67,10 @@ function handleAnswerClick(event, i) {
         if (data.correct) correctAnswer(data);
         else incorrectAnswer(data);
     });
+
+    answersElement.querySelectorAll('.answer').forEach((e) => {
+        e.disabled = true;
+    });
 }
 
 function correctAnswer(data) {
