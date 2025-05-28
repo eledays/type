@@ -65,7 +65,7 @@ function swipeNextFrame() {
         resizeHandler();
     }, 300);
 
-    let word_id = currentFrame.contentWindow.word.id;
+    let word_id = currentFrame.contentWindow.word_id;
     fetch('/action/swipe_next', {
         method: 'POST',
         headers: {

@@ -1,4 +1,4 @@
-let word = null;
+let word = {};
 
 let wordElement = document.querySelector('.word');
 let answersElement = document.querySelector('.answers');
@@ -15,28 +15,13 @@ let ctx = canvas.getContext('2d');
 let longPressTimer = null;
 let longPressTime = 500;
 
+loadingElement.style.display = 'none';
+
 addEventListener('DOMContentLoaded', () => {
-    fetch('/get_word')
-    .then(response => response.json())
-    .then(data => {
-        word = data;
-        window.word = word;
-        loadingElement.style.opacity = 0;
-        setTimeout(() => {
-            loadingElement.style.display = 'none';
-        }, 300);
-        wordElement.innerHTML = word.html_word;
-
-        answersElement.innerHTML = '';
-        for (let i = 0; i < word.answers.length; i++) {
-            let answer = document.createElement('button');
-            answer.className = 'answer';
-            answer.innerHTML = word.answers[i];
-            answersElement.appendChild(answer);
-
-            answer.addEventListener('click', (event) => handleAnswerClick(event, i));
-        }
-    });
+    for (let i = 0; i < answersElement.querySelectorAll('button').length; i++) {
+        let answer = answersElement.querySelectorAll('button')[i];
+        answer.addEventListener('click', (event) => handleAnswerClick(event, i));
+    }
 });
 
 touchArea.addEventListener('touchstart', (event) => {
@@ -53,13 +38,15 @@ touchArea.addEventListener('touchend', (event) => {
     clearTimeout(longPressTimer);
 });
 
-function handleAnswerClick(event, i) {
+function handleAnswerClick(event) {
+    console.log(event);
+    
     fetch('/check_word', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({id: word.id, answer: word.answers[i]})
+        body: JSON.stringify({id: word_id, answer: event.srcElement.innerText.trim()})
     })
     .then(response => response.json())
     .then(data => {

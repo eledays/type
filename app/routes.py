@@ -18,6 +18,11 @@ def index():
     return render_template('index.html', strike=session.get('strike', 0))
 
 
+@app.route('/task/<int:task_id>')
+def task(task_id):
+    return render_template('index.html', strike=session.get('strike', 0), params=f'task_id={task_id}')
+
+
 @app.route('/settings')
 def settings():
     with open(app.static_folder + '/css/themes/themes.json', 'r', encoding='utf-8') as file:
@@ -28,16 +33,27 @@ def settings():
 
 @app.route('/get_frame')
 def get_frame():
-    return render_template('frame_inner.html')
+    task_id = request.args.get('task_id', '')
+
+    if task_id:
+        words = Word.query.filter(Word.task_number == task_id)
+    else:
+        words = Word.query
+
+    word = words.order_by(db.func.random()).first()
+    if word:
+        return render_template('frame_inner.html', word=word)   
+    else:
+        return 'No words available', 404
 
 
-@app.route('/get_word')
-def word():
-    word = Word.query.order_by(db.func.random()).first()
-    return jsonify({'html_word': word.get_html(),
-                    'explanation': word.explanation,
-                    'answers': word.get_answers(),
-                    'id': word.id})
+# @app.route('/get_word')
+# def word():
+#     word = Word.query.order_by(db.func.random()).first()
+#     return jsonify({'html_word': word.get_html(),
+#                     'explanation': word.explanation,
+#                     'answers': word.get_answers(),
+#                     'id': word.id})
 
 
 @app.route('/check_word', methods=['POST'])

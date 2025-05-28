@@ -14,8 +14,8 @@
     <link rel="icon" href="{{ url_for('static', filename='img/fav.ico') }}" type="image/x-icon">
 </head>
 <body>
-    <iframe src="{{ url_for('get_frame') }}" class="current"></iframe>
-    <iframe src="{{ url_for('get_frame') }}" class="next"></iframe>
+    <iframe src="/get_frame?{{ params }}" class="current"></iframe>
+    <iframe src="/get_frame?{{ params }}" class="next"></iframe>
 
     <button class="settings" onclick="window.location.href = '/settings'">
         <span class="material-symbols-rounded notranslate">settings</span>
