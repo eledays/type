@@ -14,7 +14,6 @@ const parts = 50;
 const fire = document.getElementById('fire');
 
 
-
 function resizeHandler() {
     var iframes = document.querySelectorAll('iframe');
     for (iframe of iframes) {
@@ -89,19 +88,13 @@ function swipePrevFrame() {
     currentFrame = prev;
 }
 
-const strikeLevel = {
-    5: 4,
-    4: 3,
-    3: 2,
-    2: 1,
-}
-
-function strike(n) {
+function strike(strikeData) {
+    console.log(strikeData);
+    
+    let n = strikeData.n;
+    let strikeLevel = strikeData.levels
     let p = document.querySelector('.strike-block p');
     p.innerText = n;
-
-    console.log(n, strikeLevel[-1]);
-    
 
     if (n === 0 && fire.children.length > 0) {
         fire.style.opacity = 0;
@@ -115,9 +108,10 @@ function strike(n) {
         return;
     }
 
-    for (let level in strikeLevel) {
-        if (n >= level) {
-            document.documentElement.style.setProperty('--particle-color', `var(--fire-${strikeLevel[level]})`);
+    for (let i = 0; i < strikeLevel.length; i++) {
+        console.log(i, n, strikeLevel[i]);
+        if (n < strikeLevel[i]) {
+            document.documentElement.style.setProperty('--particle-color', `var(--fire-${i})`);
             document.documentElement.style.setProperty('--strike-background-color', `transparent`);
             
             if (fire.children.length === 0) {
@@ -129,6 +123,8 @@ function strike(n) {
                     fire.appendChild(p);
                 }
             }
+
+            return;
         }
     }
 }

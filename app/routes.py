@@ -52,11 +52,21 @@ def check_word():
     if word and answer == word.answers[0]:
         session['strike'] = session.get('strike', 0) + 1
         add_action(user_id=session['user_id'], word_id=word_id, action=Action.RIGHT_ANSWER)
-        return jsonify({'correct': True, 'full_word': full_word, 'strike': session['strike']})
+        return jsonify({
+            'correct': True, 'full_word': full_word, 
+            'strike': {
+                'n': session['strike'],
+                'levels': app.config['STRIKE_LEVELS']
+            }})
     else:
         session['strike'] = 0
         add_action(user_id=session['user_id'], word_id=word_id, action=Action.WRONG_ANSWER)
-        return jsonify({'correct': False, 'full_word': full_word, 'strike': session['strike']})
+        return jsonify({
+            'correct': False, 'full_word': full_word, 
+            'strike': {
+                'n': session['strike'],
+                'levels': app.config['STRIKE_LEVELS']
+            }})
 
 
 @app.route('/mistake_report', methods=['POST'])
@@ -78,8 +88,20 @@ def mistake_report():
 
 @app.route('/get_background')
 def get_background():
-    filename = random.choice(os.listdir('app/static/img/backs'))
-    response = send_file(f'static/img/backs/{filename}')
+    if 'strike' not in session:
+        session['strike'] = 0
+    
+    levels = app.config['STRIKE_LEVELS']
+
+    if session['strike'] < levels[0]:
+        path = 'dark'
+    elif session['strike'] < levels[1]:
+        path = 'yellow'
+    else:
+        path = 'dark'
+
+    filename = random.choice(os.listdir(f'app/static/img/backs/{path}'))
+    response = send_file(f'static/img/backs/{path}/{filename}')
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
