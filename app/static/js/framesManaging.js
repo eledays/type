@@ -59,7 +59,7 @@ function swipeNextFrame() {
         nextFrame.className = 'current';
         currentFrame = nextFrame;
         nextFrame = document.createElement('iframe');
-        nextFrame.src = "/get_frame";
+        nextFrame.src = currentFrame.src;
         nextFrame.className = 'next';
         document.body.appendChild(nextFrame);
         resizeHandler();

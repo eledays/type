@@ -54,12 +54,10 @@ def filters():
 
 @app.route('/get_frame')
 def get_frame():
-    import time
-    start = time.time()
     task_id = request.args.get('task_id', '')
     category_id = request.args.get('category_id', '')
     category = Category.query.get(category_id)
-    mistakes = request.args.get('category_id', '') == 'true'
+    mistakes = request.args.get('mistakes', '') 
     user_id = session.get('user_id')
 
     if task_id:
@@ -69,10 +67,31 @@ def get_frame():
         words = Word.query.filter(Word.category_id == category_id)
         info_str = [f'Фильтр: "Категория "{category.name}""']
     elif mistakes:
-        words = Word.query.join(Action, Word.id == Action.word_id).filter(
-            Action.user_id == user_id, Action.action == Action.WRONG_ANSWER
+        print('sdfsdf')
+        stats = (
+            db.session.query(
+                Action.word_id,
+                func.sum(case((Action.action == Action.WRONG_ANSWER, 1), else_=0)).label('wrong_count'),
+                func.sum(case((Action.action == Action.RIGHT_ANSWER, 1), else_=0)).label('right_count')
+            )
+            .filter(Action.user_id == user_id)
+            .group_by(Action.word_id)
+            .subquery()
         )
+
+        query = (
+            db.session.query(Word)
+            .join(stats, Word.id == stats.c.word_id)
+            .filter(stats.c.wrong_count > stats.c.right_count)
+        )
+
+        word = query.order_by(func.random()).first()
         info_str = ['Фильтр: "Неверые ответы"']
+
+        if word:
+            return render_template('frame_inner.html', word=word, info_str=info_str)
+        else:
+            return 'No words available', 404
     else:
         words = Word.query
         info_str = []
