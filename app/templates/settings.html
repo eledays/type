@@ -21,35 +21,7 @@
 </head>
 <body>
     <div class="cont">
-        <button class="back" onclick="backToReferrer()">
-            <span class="material-symbols-rounded notranslate">arrow_back_ios</span>
-        </button>
-
-        <div class="block">
-            <h1>Фильтры</h1>
-
-            <h2>По номеру задания</h2>
-            <div class="filters">
-                <a href="/" class="filter">Все задания</a>
-                {% for task in tasks %}
-                    <a href="/task/{{ task }}" class="filter">{{ task }}. {{ tasks[task] }}</a>
-                {% endfor %}
-            </div>
-
-            <h2>По категории (ФИПИ)</h2>
-            <div class="filters">
-                <a href="/" class="filter">Все задания</a>
-                {% for category in categories %}
-                    <a href="/category/{{ category }}" class="filter">{{ category.name }}</a>
-                {% endfor %}
-            </div>
-        </div>
-
-        <div class="block info">
-            <h1>О проекте</h1>
-            <p><b>type</b> — бесконечная лента слов в формате ТикТок для подготовки к ЕГЭ по русскому языку. В каждом слове есть один пропуск, который нужно правильно заполнить одним из вариантов внизу экрана.</p>
-            <p>База слов сформирована в атоматическом режиме с помощью ИИ и в данный момент прорабатывается</p>
-        </div>
+        В разработке...
     </div>
 
     <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
