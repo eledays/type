@@ -5,6 +5,7 @@ from app.utils import add_action
 
 from flask import render_template, redirect, url_for, jsonify, request, send_file, session
 from init_data_py import InitData
+from sqlalchemy import and_, func, case
 
 from time import sleep
 import json
@@ -53,6 +54,8 @@ def filters():
 
 @app.route('/get_frame')
 def get_frame():
+    import time
+    start = time.time()
     task_id = request.args.get('task_id', '')
     category_id = request.args.get('category_id', '')
     category = Category.query.get(category_id)
@@ -61,49 +64,49 @@ def get_frame():
 
     if task_id:
         words = Word.query.filter(Word.task_number == task_id)
-        info_str=f'Задание №{task_id}'
+        info_str = [f'Фильтр: "Задание №{task_id}"']
     elif category_id:
         words = Word.query.filter(Word.category_id == category_id)
-        info_str = f'Категория "{category.name}"'
+        info_str = [f'Фильтр: "Категория "{category.name}""']
     elif mistakes:
         words = Word.query.join(Action, Word.id == Action.word_id).filter(
             Action.user_id == user_id, Action.action == Action.WRONG_ANSWER
         )
-        info_str = 'Неверые ответы'
+        info_str = ['Фильтр: "Неверые ответы"']
     else:
         words = Word.query
-        info_str = ''
+        info_str = []
 
-    words = words.all()
-    if not words:
-        return 'No words available', 404
-    
-    weights = []
-    for word in words:
-        k = 0
-        mistakes = Action.query.filter(
-            Action.user_id == user_id, 
-            Action.word_id == word.id, 
-            Action.action == Action.WRONG_ANSWER
-        ).count()
-        right_answers = Action.query.filter(
-            Action.user_id == user_id, 
-            Action.word_id == word.id, 
-            Action.action == Action.RIGHT_ANSWER
-        ).count()
-        skips = Action.query.filter(
-            Action.user_id == user_id, 
-            Action.word_id == word.id, 
-            Action.action == Action.SKIP
-        ).count()
-        if mistakes == right_answers == skips == 0:
-            k = 1
-        else:
-            k = .5 + (mistakes + skips * .5 - right_answers) * .1
-        k = max(0, min(1, k))
-        weights.append(k)
+    words = words.outerjoin(Action, and_(
+        Word.id == Action.word_id,
+        Action.user_id == user_id
+    )).filter(Action.id.is_(None))
 
-    word = random.choices(words, weights=weights, k=1)[0]
+    stats = (
+        db.session.query(
+            Action.word_id,
+            func.sum(case((Action.action == Action.WRONG_ANSWER, 1), else_=0)).label('wrong_count'),
+            func.sum(case((Action.action == Action.RIGHT_ANSWER, 1), else_=0)).label('right_count')
+        )
+        .filter(Action.user_id == user_id)
+        .group_by(Action.word_id)
+        .subquery()
+    )
+
+    # Основной запрос: присоединяем статистику к Word
+    difficult_words = (
+        db.session.query(Word, (stats.c.wrong_count - stats.c.right_count).label('diff'))
+        .join(stats, Word.id == stats.c.word_id)
+        .order_by((stats.c.wrong_count - stats.c.right_count).desc())
+    ).all()[:50]
+
+    if random.randint(0, 1) or not difficult_words:
+        word = words.order_by(func.random()).first()
+        info_str.append('Это слово встретилось первый раз')
+    else:
+        word = random.choice(difficult_words)[0]
+        info_str.append('Это слово встретилось из-за большого количества ошибок')
+
     if word:
         return render_template('frame_inner.html', word=word, info_str=info_str)
     else:
@@ -232,4 +235,4 @@ def action_swipe_next():
 
 @app.route('/favicon.ico')
 def favicon():
-    return send_file('static/favicon.ico', mimetype='image/x-icon')
+    return send_file('static/img/fav.ico', mimetype='image/x-icon')

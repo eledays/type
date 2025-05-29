@@ -56,9 +56,11 @@
                     <p>Включить музыку</p>
                 </button>
             </div>
-            {% if info_str %}
-            <p class="info">Фильтр: {{ info_str }}</p>
-            {% endif %}
+            <div class="info">
+                {% for str in info_str %}
+                    <p>{{ str }}</p>
+                {% endfor %}
+            </div>
         </div>
     </div>
 

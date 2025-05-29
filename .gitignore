@@ -22,3 +22,4 @@ words
 mistakes.txt
 certs
 *.db
+*temp*
