@@ -31,10 +31,24 @@ def category(category_id):
     return render_template('index.html', strike=session.get('strike', 0), params=f'category_id={category_id}')
 
 
+@app.route('/mistakes')
+def mistakes():
+    if 'user_id' not in session:
+        return 'Not authenticated', 401
+    
+    return render_template('index.html', strike=session.get('strike', 0), params=f'mistakes=true')
+
+
 @app.route('/settings')
 def settings():
     categories = Category.query.all()
-    return render_template('settings.html', categories=categories, tasks=app.config['TASKS'])
+    return render_template('settings.html')
+
+
+@app.route('/filters')
+def filters():
+    categories = Category.query.all()
+    return render_template('filters.html', categories=categories, tasks=app.config['TASKS'])
 
 
 @app.route('/get_frame')
@@ -42,20 +56,56 @@ def get_frame():
     task_id = request.args.get('task_id', '')
     category_id = request.args.get('category_id', '')
     category = Category.query.get(category_id)
+    mistakes = request.args.get('category_id', '') == 'true'
+    user_id = session.get('user_id')
 
     if task_id:
         words = Word.query.filter(Word.task_number == task_id)
         info_str=f'Задание №{task_id}'
     elif category_id:
         words = Word.query.filter(Word.category_id == category_id)
-        info_str=f'Категория "{category.name}"'
+        info_str = f'Категория "{category.name}"'
+    elif mistakes:
+        words = Word.query.join(Action, Word.id == Action.word_id).filter(
+            Action.user_id == user_id, Action.action == Action.WRONG_ANSWER
+        )
+        info_str = 'Неверые ответы'
     else:
         words = Word.query
         info_str = ''
 
-    word = words.order_by(db.func.random()).first()
+    words = words.all()
+    if not words:
+        return 'No words available', 404
+    
+    weights = []
+    for word in words:
+        k = 0
+        mistakes = Action.query.filter(
+            Action.user_id == user_id, 
+            Action.word_id == word.id, 
+            Action.action == Action.WRONG_ANSWER
+        ).count()
+        right_answers = Action.query.filter(
+            Action.user_id == user_id, 
+            Action.word_id == word.id, 
+            Action.action == Action.RIGHT_ANSWER
+        ).count()
+        skips = Action.query.filter(
+            Action.user_id == user_id, 
+            Action.word_id == word.id, 
+            Action.action == Action.SKIP
+        ).count()
+        if mistakes == right_answers == skips == 0:
+            k = 1
+        else:
+            k = .5 + (mistakes + skips * .5 - right_answers) * .1
+        k = max(0, min(1, k))
+        weights.append(k)
+
+    word = random.choices(words, weights=weights, k=1)[0]
     if word:
-        return render_template('frame_inner.html', word=word, info_str=info_str)   
+        return render_template('frame_inner.html', word=word, info_str=info_str)
     else:
         return 'No words available', 404
 
@@ -178,3 +228,8 @@ def action_swipe_next():
 #     if request.path.endswith('.css') or request.path.endswith('.js'):
 #         response.headers['Cache-Control'] = 'public, max-age=31536000'
 #     return response
+
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_file('static/favicon.ico', mimetype='image/x-icon')

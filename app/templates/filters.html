@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>type — Фильтры</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=arrow_back_ios" />
+</head>
+<body>
+    <div class="cont">
+        <button class="back" onclick="backToReferrer()">
+            <span class="material-symbols-rounded notranslate">arrow_back_ios</span>
+        </button>
+
+        <div class="block">
+            <h1>Фильтры</h1>
+
+            <div class="filters">
+                <a href="/" class="filter" id="all">Сбросить фильтры</a>
+                <a href="/mistakes" class="filter" id="mistakes">Неверно решенные</a>
+            </div>
+
+            <h2>По номеру задания</h2>
+            <div class="filters">
+                {% for task in tasks %}
+                    <a href="/task/{{ task }}" class="filter">{{ task }}. {{ tasks[task] }}</a>
+                {% endfor %}
+            </div>
+
+            <h2>По категории (ФИПИ)</h2>
+            <div class="filters">
+                {% for category in categories %}
+                    <a href="/category/{{ category.id }}" class="filter">{{ category.name }}</a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <script>
+        function backToReferrer() {
+            const referrer = new URLSearchParams(window.location.search).get('referrer');
+            
+            if (referrer) {
+                window.location.href = referrer;
+            } else {
+                window.location.href = '/';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const filters = document.querySelectorAll('.filter');
+            const referrer = new URLSearchParams(window.location.search).get('referrer');
+
+            filters.forEach(filter => {
+                if (filter.getAttribute('href') === referrer) {
+                    filter.classList.add('selected');
+                }
+            });
+
+            if (!referrer || referrer === '/') {
+                let allFilter = document.querySelector('.filter#all');
+                if (allFilter) {
+                    allFilter.remove(); 
+                }
+            }
+        });
+    </script>
+    <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
+</body>
+</html>

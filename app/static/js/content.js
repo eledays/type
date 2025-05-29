@@ -120,7 +120,7 @@ function openMenu() {
     menuElement.style.display = 'block';
     menuElement.style.opacity = 1;
 
-    wordElement.style.top = '10vh';
+    wordElement.style.top = '20vh';
 
     overlay.addEventListener('click', closeMenu);
     overlay.addEventListener('touchstart', closeMenu);

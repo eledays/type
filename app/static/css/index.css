@@ -79,6 +79,14 @@ button {
     padding: 10px;
 }
 
+.fullscreen .filters {
+    position: fixed;
+    top: 48px;
+    right: 12px;
+    opacity: .5;
+    padding: 10px;
+}
+
 .fullscreen .error {
     display: none;
 }

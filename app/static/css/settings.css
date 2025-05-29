@@ -18,6 +18,16 @@ button {
     margin-top: 28px;
 }
 
+.block h1 {
+    line-height: 100%;
+    margin-bottom: 15px;
+}
+
+.block h2 {
+    margin-bottom: 12px;
+    margin-top: 18px;
+}
+
 .previews {
     margin-top: 18px;
     width: 100%;
@@ -39,12 +49,28 @@ p {
     color: color-mix(in srgb, var(--main-color) 90%, var(--frame-background-color) 10%);
 }
 
-.task {
+.filters {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 5px;
+}
+
+.filter {
     display: block;
-    background-color: rgb(36, 36, 36);
-    padding: 10px 20px;
-    margin-top: 5px;
+    /* background-color: rgb(226, 226, 226); */
+    background-color: var(--secondary-color);
+    padding: 10px 14px;
+    /* margin-top: 5px; */
     border-radius: 5px;
-    color: white;
+    color: var(--main-color);
     text-decoration: none;
+}
+
+.filter.selected {
+    background-color: color-mix(in srgb, var(--secondary-color) 80%, var(--main-color) 20%);
+    /* color: var(--frame-background-color); */
+}
+
+.filter#mistakes {
+    background-color: color-mix(in srgb, var(--secondary-color) 80%, red 20%)
 }

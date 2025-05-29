@@ -6,7 +6,7 @@
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/content.css') }}">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=check,error,search" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=check,error,filter_list,search,settings" />
 </head>
 <body>
     <div class="loading"></div>
@@ -30,18 +30,32 @@
 
     <div class="menu">
         <div class="buttons">
-            <button id="mistake" onclick="sendReport()">
-                <span class="material-symbols-rounded notranslate">error</span>
-                <p>Сообщить об ошибке в задании</p>
-            </button>
-            <button id="search" onclick="window.open(`https://yandex.ru/search/?text=${encodeURIComponent(document.querySelector('.word').textContent)}`, '_blank')">
-                <span class="material-symbols-rounded notranslate">search</span>
-                <p>Найти слово в интернете</p>
-            </button>
-            <button id="search" onclick="window.open('https://music.yandex.ru', '_blank')" style="margin-top: 10px;">
-                <span class="material-symbols-rounded"><img src="{{ url_for('static', filename='img/yandex-music.svg') }}" alt="Yandex Music Logo"></span>
-                <p>Включить музыку</p>
-            </button>
+            <div class="block">
+                <button class="settings" onclick="window.parent.location.href = `/settings?referrer=${encodeURIComponent(window.parent.location.pathname)}`">
+                    <span class="material-symbols-rounded notranslate">settings</span>
+                    <p>Настройки</p>
+                </button>  
+                <button class="filters" onclick="window.parent.location.href = `/filters?referrer=${encodeURIComponent(window.parent.location.pathname)}`">
+                    <span class="material-symbols-rounded notranslate">filter_list</span>
+                    <p>Фильтры</p>
+                </button>
+            </div>
+            <div class="block">
+                <button id="mistake" onclick="sendReport()">
+                    <span class="material-symbols-rounded notranslate">error</span>
+                    <p>Сообщить об ошибке в задании</p>
+                </button>
+                <button id="search" onclick="window.open(`https://yandex.ru/search/?text=${encodeURIComponent(document.querySelector('.word').textContent)}`, '_blank')">
+                    <span class="material-symbols-rounded notranslate">search</span>
+                    <p>Найти слово в интернете</p>
+                </button>
+            </div>
+            <div class="block">
+                <button id="search" onclick="window.open('https://music.yandex.ru', '_blank')" style="margin-top: 10px;">
+                    <span class="material-symbols-rounded"><img src="{{ url_for('static', filename='img/yandex-music.svg') }}" alt="Yandex Music Logo"></span>
+                    <p>Включить музыку</p>
+                </button>
+            </div>
             {% if info_str %}
             <p class="info">Фильтр: {{ info_str }}</p>
             {% endif %}

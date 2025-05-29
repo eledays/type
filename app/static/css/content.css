@@ -152,9 +152,9 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: var(--frame-background-color);
+    background-color: var(--back-color);
     z-index: 1001;
-    padding: 40px 30px;
+    padding: 30px 20px;
     border-radius: 10px;
     width: 75vw;
     box-sizing: border-box;
@@ -168,6 +168,10 @@ body {
     display: block;
 }
 
+.menu .buttons .block {
+    margin-top: 10px;
+}
+
 .menu button {
     border: none;
     background-color: var(--secondary-color);
@@ -176,7 +180,7 @@ body {
     padding-right: 30px;
     display: flex;
     margin-bottom: 5px;
-    border-radius: 5px;
+    border-radius: 10px;
     cursor: pointer;
     width: 100%;
 }
