@@ -21,7 +21,7 @@
 </head>
 <body>
     <div class="cont">
-        <button class="back" onclick="window.location.href='/'">
+        <button class="back" onclick="backToReferrer()">
             <span class="material-symbols-rounded notranslate">arrow_back_ios</span>
         </button>
 
@@ -42,9 +42,15 @@
 
     <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
     <script>
-        function setTheme(theme) {
-            localStorage.setItem('theme', theme);
-            window.location.reload();
+        function backToReferrer() {
+            const referrer = new URLSearchParams(window.location.search).get('referrer');
+            console.log(referrer);
+            
+            if (referrer) {
+                window.location.href = referrer;
+            } else {
+                window.location.href = '/';
+            }
         }
     </script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>

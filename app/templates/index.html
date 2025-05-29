@@ -17,7 +17,7 @@
     <iframe src="/get_frame?{{ params }}" class="current"></iframe>
     <iframe src="/get_frame?{{ params }}" class="next"></iframe>
 
-    <button class="settings" onclick="window.location.href = '/settings'">
+    <button class="settings" onclick="window.location.href = `/settings?referrer=${encodeURIComponent(window.location.pathname)}`">
         <span class="material-symbols-rounded notranslate">settings</span>
     </button>
 
