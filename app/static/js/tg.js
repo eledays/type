@@ -8,6 +8,8 @@ if (window.Telegram && window.Telegram.WebApp.initData) {
     const tg = window.Telegram.WebApp;
     const user = tg.initDataUnsafe.user;
 
+    tg.expand();
+
     localStorage.setItem('theme', 'dark');
     // const theme = localStorage.getItem('theme');
     // if (tg.colorScheme === 'light' && theme !== 'light') {
