@@ -1,11 +1,11 @@
-from app import app, db, login
-from app.forms import LoginForm, RegistrationForm
+from app import app, db, bot
 from app.models import Word, Action, Category
 from app.utils import add_action
 
 from flask import render_template, redirect, url_for, jsonify, request, send_file, session
 from init_data_py import InitData
 from sqlalchemy import and_, func, case
+import telebot
 
 from time import sleep
 import json
@@ -258,3 +258,12 @@ def action_swipe_next():
 @app.route('/favicon.ico')
 def favicon():
     return send_file('static/img/fav.ico', mimetype='image/x-icon')
+
+
+@app.route('/tg_webhook', methods=['POST'])
+def webhook():
+    if request.headers.get('content-type') == 'application/json':
+        json_string = request.get_data().decode('utf-8')
+        update = telebot.types.Update.de_json(json_string)
+        bot.process_new_updates([update])
+    return 'OK', 200
