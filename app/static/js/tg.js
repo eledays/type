@@ -49,7 +49,7 @@ if (window.Telegram && window.Telegram.WebApp.initData) {
 else {
     let user_id;
     try {
-        user_id = localStorage.getItem('user_id') || 'unsafe_' + crypto.randomUUID;
+        user_id = localStorage.getItem('user_id') || 'unsafe_' + crypto.randomUUID();
     }
     catch (e) {
         user_id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);

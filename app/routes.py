@@ -122,9 +122,12 @@ def get_frame():
     if random.randint(0, 1) or not difficult_words:
         word = words.order_by(func.random()).first()
         info_str.append('Это слово встретилось первый раз')
-    else:
+    elif difficult_words:
         word = random.choice(difficult_words)[0]
         info_str.append('Это слово встретилось из-за большого количества ошибок')
+    else:
+        word = Word.query.order_by(func.random()).first()
+        info_str.append('Это слово встретилось случайно')
 
     if word:
         return render_template('frame_inner.html', word=word, info_str=info_str)
