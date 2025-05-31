@@ -77,3 +77,4 @@ with open(out, 'r', encoding='utf-8') as file:
     print('Success:', len(file.readlines()), end=' ')
 with open(err, 'r', encoding='utf-8') as file:
     print('Errors:', len(file.readlines()))
+
