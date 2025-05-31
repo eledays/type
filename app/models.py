@@ -1,18 +1,7 @@
-from app import app, db, login
+from app import app, db
 
 import random
 from datetime import datetime
-
-
-# @login.user_loader
-# def load_user(user_id):
-#     return User.query.get(int(user_id))
-
-
-# class User(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     username = db.Column(db.String(24), unique=True, nullable=False)
-#     password_hash = db.Column(db.String(128), nullable=False)
 
 
 class Word(db.Model):

@@ -15,6 +15,6 @@ migrate = Migrate(app, db)
 
 import os
 import telebot
-bot = telebot.TeleBot(os.getenv['BOT_TOKEN'])
+bot = telebot.TeleBot(os.getenv('BOT_TOKEN'))
 
-from app import routes, models
+from app import routes, models, tg_handlers
