@@ -15,7 +15,8 @@ button {
 }
 
 .block {
-    margin-top: 28px;
+    margin-top: var(--tg-content-safe-area-inset-top);
+    padding-top: 20px;
 }
 
 .block h1 {
