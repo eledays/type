@@ -1,11 +1,33 @@
 window.addEventListener('message', (event) => {
     if (event.data === 'swipeNext') {
-        swipeNextFrame();
+        let strikeP = Number(document.querySelector('.strike-block p').innerText);
+        if (strikeP > 0) {
+            Telegram.WebApp.showPopup({
+                title: "Вы уверены?",
+                message: "Если перелистнуть, серия обнулится. Перелистываем?",
+                buttons: [
+                { id: "no", type: "default", text: "Нет" },
+                { id: "yes", type: "destructive", text: "Да" }
+                ]
+            });
+        }
+        else {
+            swipeNextFrame();
+        }
+    }
+    else if (event.data === 'swipeNextNoFetch') {
+        swipeNextFrame(doFetch=false);
     }
     else if (event.data === 'swipePrev') {
         swipePrevFrame();
     }
 });
+
+Telegram.WebApp.onEvent('popupClosed', function(button) {
+    if (button.button_id === "yes") {
+        swipeNextFrame();
+    }
+});  
 
 var currentFrame = document.querySelector('iframe.current');
 var nextFrame = document.querySelector('iframe.next');
@@ -48,7 +70,7 @@ document.addEventListener('wheel', (event) => {
     }, 300);
 });
 
-function swipeNextFrame() {
+function swipeNextFrame(doFetch=true) {
     let prev = document.querySelector('.prev')
     if (prev !== null) prev.remove();
 
@@ -65,14 +87,22 @@ function swipeNextFrame() {
         resizeHandler();
     }, 300);
 
-    let word_id = currentFrame.contentWindow.word_id;
-    fetch('/action/swipe_next', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({word_id: word_id})
-    });
+    if (doFetch) {
+        // Уязвимость: Обработка потери свайпа частично на стороне клиента
+        let word_id = currentFrame.contentWindow.word_id;
+        
+        fetch('/action/swipe_next', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({word_id: word_id})
+        })
+        .then((data) => data.json())
+        .then((data) => {
+            strike({n: 0})
+        });
+    }
 }
 
 function swipePrevFrame() {
@@ -89,14 +119,13 @@ function swipePrevFrame() {
 }
 
 function strike(strikeData) {
-    let n = strikeData.n;
-    let strikeLevel = strikeData.levels
     let p = document.querySelector('.strike-block p');
+    let n = strikeData.n;
+    let strikeLevel = strikeData.levels;
     p.innerText = n;
 
     if (n === 0 && fire.children.length > 0) {
         fire.style.opacity = 0;
-        document.documentElement.style.setProperty('--strike-background-color', `var(--secondary-color)`);
         setTimeout(() => {
             while (fire.firstChild) {
                 fire.removeChild(fire.firstChild);
@@ -118,8 +147,6 @@ function strike(strikeData) {
                     p.className = 'particle';
                     p.style.left = `calc(${(fire.getBoundingClientRect().width) / 2}px * (${i / parts}))`;
                     p.style.animationDelay = `${Math.random()}s`;
-                    p.style.animation = 'none';
-                    p.style.opacity = 1;
                     fire.appendChild(p);
                 }
             }

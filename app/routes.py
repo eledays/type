@@ -117,9 +117,13 @@ def get_frame():
         db.session.query(Word, (stats.c.wrong_count - stats.c.right_count).label('diff'))
         .join(stats, Word.id == stats.c.word_id)
         .order_by((stats.c.wrong_count - stats.c.right_count).desc())
-    ).all()[:50]
+    )
 
-    if random.randint(0, 1) or not difficult_words:
+    words_len = words.count()
+    diff_word_len = difficult_words.count()
+    difficult_words = difficult_words.all()[:50]
+
+    if random.random() * (words_len + diff_word_len) > diff_word_len or not difficult_words:
         word = words.order_by(func.random()).first()
         info_str.append('Это слово встретилось первый раз')
     elif difficult_words:
@@ -219,10 +223,11 @@ def verify_hash():
 
     if init_data.validate(os.getenv('BOT_TOKEN')):
         session['user_id'] = init_data.user.id
-        return jsonify({'valid': True})
+        print(session.get('user_id'))
+        return jsonify({'valid': True}), 200
     else:
         session['user_id'] = None
-        return jsonify({'valid': False})
+        return jsonify({'valid': False}), 400
     
 
 @app.route('/set_user_id', methods=['POST'])
@@ -242,10 +247,11 @@ def action_swipe_next():
     
     word_id = request.json.get('word_id')
     if word_id is not None:
-        add_action(user_id=session['user_id'], word_id=word_id, action=Action.SAVE_WORD)
-
-    add_action(user_id=session['user_id'], word_id=word_id, action=Action.SKIP)
-    return jsonify({'status': 'success'})
+        session['strike'] = 0
+        add_action(user_id=session['user_id'], word_id=word_id, action=Action.SKIP)
+        return jsonify({'status': 'success', 'strike': 0}), 200
+    else:
+        return jsonify({'status': 'fail', 'error': 'no word id'}), 400
 
 
 # @app.after_request

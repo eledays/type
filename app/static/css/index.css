@@ -102,27 +102,26 @@ button {
 .strike-block {
     position: fixed;
     left: 50%;
-    padding: 10px 20px;
+    top: var(--tg-safe-area-inset-top);
     transform: translateX(-50%);
-
     background-color: var(--strike-background-color);
-    /* border-radius: 10px;
-    cursor: pointer;
-    border: none;
-    transition: .1s; */
-
     z-index: 10;
-
-    padding: 10px 20px;
     border-radius: 10px;
-    /* backdrop-filter: blur(10px);  */
-
     font-weight: 800;
-    /* background-color: rgb(255, 255, 255); */
-    /* box-shadow: 0 0 20px 3px rgba(255, 58, 58, 0.479); */
-
-    /* animation: heartbeat 1s infinite; */
     color: rgb(255, 255, 255);
+    height: var(--tg-content-safe-area-inset-top);
+    box-sizing: border-box;
+    padding: calc((var(--tg-safe-area-inset-top) - 14px) / 2) 0;
+}
+
+.strike-block p {
+    line-height: 100%;
+    background-color: #00000036;
+    box-sizing: border-box;
+    margin: auto 0;
+    padding: 6px 16px;
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
 }
 
 @keyframes heartbeat {
@@ -134,13 +133,13 @@ button {
     }
 }
 
-.partscreen .strike-block {
+/* .partscreen .strike-block {
     top: calc(5vh + 48px);
 }
 
 .fullscreen .strike-block {
     top: calc(48px);
-}
+} */
 
 .fire {
     font-size: 24px;

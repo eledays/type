@@ -11,6 +11,8 @@ if (window.Telegram && window.Telegram.WebApp.initData) {
     window.addEventListener('DOMContentLoaded', () => {
         tg.ready();
         tg.expand();
+        tg.requestFullscreen();
+        tg.lockOrientation();
     });
 
     localStorage.setItem('theme', 'dark');
@@ -23,9 +25,6 @@ if (window.Telegram && window.Telegram.WebApp.initData) {
     //     localStorage.setItem('theme', 'dark');
     //     window.location.reload();
     // }
-
-    console.log(user.id); // Telegram ID
-    console.log(user.first_name); // Имя
 
     if (tg.initData) {
         // p.innerText = 'tg loading';

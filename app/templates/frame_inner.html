@@ -21,7 +21,7 @@
     </div>
 
     <div class="answers">
-        {% for answer in word.answers %}
+        {% for answer in word.get_answers() %}
             <button class="answer">
                 {{ answer }}
             </button>
@@ -64,7 +64,7 @@
         </div>
     </div>
 
-    <script>let word_id = "{{ word.id }}";</script>
+    <script>var word_id = "{{ word.id }}";</script>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
