@@ -147,8 +147,12 @@ function strike(strikeData) {
     }
 
     for (let i = 0; i < strikeLevel.length; i++) {
-        console.log(i, n, strikeLevel[i]);
         if (n < strikeLevel[i]) {
+            // Перезагрузка следующего фрейма при смене огонька, чтобы применился фон
+            if (i > 0 && n - 1 < strikeLevel[i - 1]) {
+                nextFrame.contentWindow.location.reload();
+            }
+
             document.documentElement.style.setProperty('--particle-color', `var(--fire-${i})`);
             document.documentElement.style.setProperty('--strike-background-color', `transparent`);
             
