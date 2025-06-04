@@ -2,7 +2,6 @@ let word = {};
 
 let wordElement = document.querySelector('.word');
 let answersElement = document.querySelector('.answers');
-let loadingElement = document.querySelector('.loading');
 
 let menuElement = document.querySelector('.menu');
 let touchArea = document.querySelector('.touch-area');
@@ -14,15 +13,17 @@ let ctx = canvas.getContext('2d');
 
 let longPressTimer = null;
 let longPressTime = 500;
-
-loadingElement.style.display = 'none';
-
 addEventListener('DOMContentLoaded', () => {
     for (let i = 0; i < answersElement.querySelectorAll('button').length; i++) {
         let answer = answersElement.querySelectorAll('button')[i];
         answer.addEventListener('click', (event) => handleAnswerClick(event, i));
-        Telegram.WebApp.BackButton.hide();
     }
+    Telegram.WebApp.SettingsButton.show();
+    Telegram.WebApp.SettingsButton.onClick(() => {
+        console.log('hello')
+        window.parent.location.href = `/settings?referrer=${encodeURIComponent(window.parent.location.pathname)}`;
+    });
+    Telegram.WebApp.BackButton.hide();
 });
 
 touchArea.addEventListener('touchstart', (event) => {

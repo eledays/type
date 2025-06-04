@@ -1,7 +1,7 @@
 from app import app, db
 
 import random
-from datetime import datetime
+from datetime import datetime, time
 
 
 class Word(db.Model):
@@ -52,4 +52,4 @@ class Settings(db.Model):
     user_id = db.Column(db.Integer, primary_key=True)
     strike = db.Column(db.Boolean, default=True)
     notification = db.Column(db.Boolean, default=True)
-    notification_time = db.Column(db.Time, nullable=True, default=datetime.time(12, 0))
+    notification_time = db.Column(db.Time, nullable=True, default=time(12, 0))

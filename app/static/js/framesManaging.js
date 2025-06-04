@@ -126,6 +126,11 @@ function swipePrevFrame() {
 
 function strike(strikeData) {
     let p = document.querySelector('.strike-block p');
+
+    if (!p) {
+        return;
+    }
+
     let n = strikeData.n;
     let strikeLevel = strikeData.levels;
     p.innerText = n;

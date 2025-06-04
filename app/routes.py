@@ -1,5 +1,5 @@
 from app import app, db, bot
-from app.models import Word, Action, Category
+from app.models import Word, Action, Category, Settings
 from app.utils import add_action
 
 from flask import render_template, redirect, url_for, jsonify, request, send_file, session
@@ -16,7 +16,20 @@ import random
 
 @app.route('/')
 def index():
-    return render_template('index.html', strike=session.get('strike', 0))
+    if 'user_id' not in session:
+        return render_template('auth.html')
+    
+    user_id = session.get('user_id')
+    user_settings = Settings.query.filter(Settings.user_id == user_id).first()
+
+    if user_settings is None:
+        user_settings = Settings(user_id=user_id)
+        db.session.add(user_settings)
+        db.session.commit()
+
+    strike = session.get('strike', 0) if user_settings.strike else None
+
+    return render_template('index.html', strike=strike)
 
 
 @app.route('/task/<int:task_id>')
@@ -40,12 +53,6 @@ def mistakes():
     return render_template('index.html', strike=session.get('strike', 0), params=f'mistakes=true')
 
 
-@app.route('/settings')
-def settings():
-    categories = Category.query.all()
-    return render_template('settings.html')
-
-
 @app.route('/filters')
 def filters():
     categories = Category.query.all()
@@ -67,7 +74,6 @@ def get_frame():
         words = Word.query.filter(Word.category_id == category_id)
         info_str = [f'Фильтр: "Категория "{category.name}""']
     elif mistakes:
-        print('sdfsdf')
         stats = (
             db.session.query(
                 Action.word_id,
@@ -153,12 +159,16 @@ def check_word():
     if 'user_id' not in session:
         return jsonify({'status': 'error', 'message': 'User not authenticated'}), 401
     
+    user_id = session.get('user_id')
+    user_settings = Settings.query.filter(Settings.user_id == user_id).first()
+    
     word_id = request.json.get('id')
     answer = request.json.get('answer')
     word = Word.query.get(word_id)
     full_word = word.word.replace('_', word.answers[0])
     if word and answer == word.answers[0]:
-        session['strike'] = session.get('strike', 0) + 1
+        if user_settings.strike:
+            session['strike'] = session.get('strike', 0) + 1
         add_action(user_id=session['user_id'], word_id=word_id, action=Action.RIGHT_ANSWER)
         return jsonify({
             'correct': True, 'full_word': full_word, 
@@ -167,7 +177,8 @@ def check_word():
                 'levels': app.config['STRIKE_LEVELS']
             }})
     else:
-        session['strike'] = 0
+        if user_settings.strike:
+            session['strike'] = 0
         add_action(user_id=session['user_id'], word_id=word_id, action=Action.WRONG_ANSWER)
         return jsonify({
             'correct': False, 'full_word': full_word, 
@@ -196,12 +207,18 @@ def mistake_report():
 
 @app.route('/get_background')
 def get_background():
+    if 'user_id' not in session:
+        return jsonify({'status': 'error', 'message': 'User not authenticated'}), 401
+    
+    user_id = session.get('user_id')
+    user_settings = Settings.query.filter(Settings.user_id == user_id).first()
+
     if 'strike' not in session:
         session['strike'] = 0
     
     levels = app.config['STRIKE_LEVELS']
 
-    if session['strike'] < levels[0]:
+    if session['strike'] < levels[0] or not user_settings.strike:
         path = 'dark'
     elif session['strike'] < levels[1]:
         path = 'yellow'
@@ -245,6 +262,9 @@ def action_swipe_next():
     if 'user_id' not in session:
         return jsonify({'status': 'error', 'message': 'User not authenticated'}), 401
     
+    user_id = session.get('user_id')
+    user_settings = Settings.query.filter(Settings.user_id == user_id).first()
+    
     word_id = int(request.json.get('word_id'))
     user_id = session.get('user_id')
     if word_id is not None:
@@ -253,7 +273,8 @@ def action_swipe_next():
         if word_id in last_ids:
             return jsonify({'status': 'success', 'strike': session.get('strike', 0)}), 200
 
-        session['strike'] = 0
+        if user_settings.strike:
+            session['strike'] = 0
         add_action(user_id=user_id, word_id=word_id, action=Action.SKIP)
         return jsonify({'status': 'success', 'strike': 0}), 200
     else:
@@ -286,8 +307,13 @@ def webhook():
 def can_swipe():
     if 'user_id' not in session:
         return jsonify({'status': 'error', 'message': 'User not authenticated'}), 401
+
     user_id = session.get('user_id')
+    user_settings = Settings.query.filter(Settings.user_id == user_id).first()
     word_id = request.args.get('word_id')
+
+    if not user_settings.strike:
+        return jsonify({'status': 'yes'}), 200
 
     if word_id is None:
         return jsonify({'status': 'error', 'message': 'No word id'}), 401
@@ -301,3 +327,38 @@ def can_swipe():
         return jsonify({'status': 'yes'}), 200
     else:
         return jsonify({'status': 'no'}), 200
+
+
+@app.route('/settings')
+def settings():
+    if 'user_id' not in session:
+        return 'Not authenticated', 401
+    
+    user_id = session.get('user_id')
+    user_settings = Settings.query.filter(Settings.user_id == user_id).first()
+
+    if user_settings is None:
+        user_settings = Settings(user_id=user_id)
+        db.session.add(user_settings)
+        db.session.commit()
+
+    return render_template('settings.html', settings=user_settings)
+    
+
+@app.route('/set_settings', methods=['POST'])
+def set_settings():
+    if 'user_id' not in session:
+        return jsonify({'status': 'error', 'message': 'User not authenticated'}), 401
+    
+    user_id = session.get('user_id')
+    user_settings = Settings.query.filter(Settings.user_id == user_id).first()
+
+    for k, v in request.json.items():
+        if hasattr(user_settings, k):
+            setattr(user_settings, k, v)
+        else:
+            db.session.rollback()
+            return 'Unknown field', 400
+    db.session.commit()
+
+    return 'ok', 200

@@ -1,30 +1,41 @@
 body {
     padding: 24px;
+    background-color: var(--tg-theme-bg-color);
+    color: var(--tg-theme-text-color);
 }
 
 .cont {
     max-width: 540px;
     margin: auto;
     margin-top: var(--tg-content-safe-area-inset-top);
+    padding-top: 3px;
 }
 
 button {
-    padding-right: 2px;
-    text-align: center;
-    width: 36px;
-    height: 36px;
+    width: 100%;
+    text-align: left;
+    background-color: var(--tg-theme-secondary-bg-color);
+    padding: 10px 14px;
+    border-radius: 5px;
+    color: var(--tg-theme-text-color);
+    text-decoration: none;
+    font-size: 16px;
 }
 
 .block {
     padding-top: 20px;
 }
 
-.block h1 {
+h1 {
     line-height: 100%;
     margin-bottom: 15px;
 }
 
-.block h2 {
+.title {
+    margin-top: 30px;
+}
+
+h2 {
     margin-bottom: 12px;
     margin-top: 18px;
 }
@@ -58,20 +69,13 @@ p {
 
 .filter {
     display: block;
-    /* background-color: rgb(226, 226, 226); */
-    background-color: var(--secondary-color);
+    background-color: var(--tg-theme-secondary-bg-color);
     padding: 10px 14px;
-    /* margin-top: 5px; */
     border-radius: 5px;
-    color: var(--main-color);
+    color: var(--tg-theme-text-color);
     text-decoration: none;
 }
 
 .filter.selected {
-    background-color: color-mix(in srgb, var(--secondary-color) 80%, var(--main-color) 20%);
-    /* color: var(--frame-background-color); */
-}
-
-.filter#mistakes {
-    background-color: color-mix(in srgb, var(--secondary-color) 80%, red 20%)
+    background-color: color-mix(in srgb, var(--tg-theme-secondary-bg-color) 80%, var(--tg-theme-text-color) 20%);
 }

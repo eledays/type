@@ -11,21 +11,56 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
 
     <link rel="icon" href="{{ url_for('static', filename='img/fav.ico') }}" type="image/x-icon">
-
-    <style>
-        body {
-            background-color: var(--back-color);
-            color: var(--main-color)
-        }
-    </style>
 </head>
 <body>
     <div class="cont">
-        В разработке...
+        <h1 class="title">Настройки</h1>
+
+        <div class="block">
+            {% if settings.strike %}
+                <button class="on" onclick="strikeOff()" id="strike">Страйк: включён</button>
+            {% else %}
+                <button class="off" onclick="strikeOn()" id="strike">Страйк: выключен</button>
+            {% endif %}
+        </div>
     </div>
 
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="{{ url_for('static', filename='js/tg.js') }}"></script>
     <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
     <script>
+        let strikeBtn = document.getElementById('strike');
+
+        function strikeOff() {
+            fetch('/set_settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({strike: false})
+            })
+            .then((data) => {
+                if (data.status === 200) {
+                    strikeBtn.innerText = 'Страйк: выключен';
+                    strikeBtn.className = 'off';
+                    strikeBtn.onclick = strikeOn;
+                }
+            });
+        }
+
+        function strikeOn() {
+            fetch('/set_settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({strike: true})
+            })
+            .then((data) => {
+                if (data.status === 200) {
+                    strikeBtn.innerText = 'Страйк: включён';
+                    strikeBtn.className = 'on';
+                    strikeBtn.onclick = strikeOff;
+                }
+            });
+        }
+
         function backToReferrer() {
             const referrer = new URLSearchParams(window.location.search).get('referrer');
             console.log(referrer);
@@ -36,8 +71,8 @@
                 window.location.href = '/';
             }
         }
+        Telegram.WebApp.BackButton.show();
+        Telegram.WebApp.BackButton.onClick(backToReferrer);
     </script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="{{ url_for('static', filename='js/tg.js') }}"></script>
 </body>
 </html>
