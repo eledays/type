@@ -1,19 +1,25 @@
 window.addEventListener('message', (event) => {
     if (event.data === 'swipeNext') {
-        let strikeP = Number(document.querySelector('.strike-block p').innerText);
-        if (strikeP > 0) {
-            Telegram.WebApp.showPopup({
-                title: "Вы уверены?",
-                message: "Если перелистнуть, серия обнулится. Перелистываем?",
-                buttons: [
-                { id: "no", type: "default", text: "Нет" },
-                { id: "yes", type: "destructive", text: "Да" }
-                ]
-            });
-        }
-        else {
-            swipeNextFrame();
-        }
+        let word_id = currentFrame.contentWindow.word_id
+        fetch(`/can_swipe?word_id=${word_id}`, {
+            method: 'GET'
+        })
+        .then((data) => data.json())
+        .then((data) => {
+            if (data.status === 'yes') {
+                swipeNextFrame();
+            }
+            else {
+                Telegram.WebApp.showPopup({
+                    title: "Вы уверены?",
+                    message: "Если перелистнуть, серия обнулится. Перелистываем?",
+                    buttons: [
+                    { id: "no", type: "default", text: "Нет" },
+                    { id: "yes", type: "destructive", text: "Да" }
+                    ]
+                });
+            }
+        });
     }
     else if (event.data === 'swipeNextNoFetch') {
         swipeNextFrame(doFetch=false);
@@ -100,7 +106,7 @@ function swipeNextFrame(doFetch=true) {
         })
         .then((data) => data.json())
         .then((data) => {
-            strike({n: 0})
+            strike({n: data.strike})
         });
     }
 }

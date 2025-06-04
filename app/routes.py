@@ -245,13 +245,19 @@ def action_swipe_next():
     if 'user_id' not in session:
         return jsonify({'status': 'error', 'message': 'User not authenticated'}), 401
     
-    word_id = request.json.get('word_id')
+    word_id = int(request.json.get('word_id'))
+    user_id = session.get('user_id')
     if word_id is not None:
+        last_words = Action.query.filter(Action.user_id == user_id).order_by(Action.datetime.desc()).limit(3)
+        last_ids = [e.word_id for e in last_words]
+        if word_id in last_ids:
+            return jsonify({'status': 'success', 'strike': session.get('strike', 0)}), 200
+
         session['strike'] = 0
-        add_action(user_id=session['user_id'], word_id=word_id, action=Action.SKIP)
+        add_action(user_id=user_id, word_id=word_id, action=Action.SKIP)
         return jsonify({'status': 'success', 'strike': 0}), 200
     else:
-        return jsonify({'status': 'fail', 'error': 'no word id'}), 400
+        return jsonify({'status': 'error', 'error': 'no word id'}), 400
 
 
 # @app.after_request
@@ -274,3 +280,24 @@ def webhook():
         bot.process_new_updates([update])
         return 'OK', 200
     return 'Error', 501
+
+
+@app.route('/can_swipe', methods=['GET'])
+def can_swipe():
+    if 'user_id' not in session:
+        return jsonify({'status': 'error', 'message': 'User not authenticated'}), 401
+    user_id = session.get('user_id')
+    word_id = request.args.get('word_id')
+
+    if word_id is None:
+        return jsonify({'status': 'error', 'message': 'No word id'}), 401
+    
+    word_id = int(word_id)
+    last_words = Action.query.filter(Action.user_id == user_id).order_by(Action.datetime.desc()).limit(3)
+    last_ids = [e.word_id for e in last_words]
+    strike = session.get('strike', 0)
+
+    if word_id in last_ids or strike <= 3:
+        return jsonify({'status': 'yes'}), 200
+    else:
+        return jsonify({'status': 'no'}), 200
