@@ -5,6 +5,7 @@ body {
 .cont {
     max-width: 540px;
     margin: auto;
+    margin-top: var(--tg-content-safe-area-inset-top);
 }
 
 button {
@@ -15,7 +16,6 @@ button {
 }
 
 .block {
-    margin-top: var(--tg-content-safe-area-inset-top);
     padding-top: 20px;
 }
 

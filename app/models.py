@@ -46,3 +46,10 @@ class Action(db.Model):
     WRONG_ANSWER = 101
     SKIP = 102
     SAVE_WORD = 103
+
+
+class Settings(db.Model):
+    user_id = db.Column(db.Integer, primary_key=True)
+    strike = db.Column(db.Boolean, default=True)
+    notification = db.Column(db.Boolean, default=True)
+    notification_time = db.Column(db.Time, nullable=True, default=datetime.time(12, 0))
