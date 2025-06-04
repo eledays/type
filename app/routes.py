@@ -332,7 +332,7 @@ def can_swipe():
 @app.route('/settings')
 def settings():
     if 'user_id' not in session:
-        return 'Not authenticated', 401
+        return render_template('auth.html')
     
     user_id = session.get('user_id')
     user_settings = Settings.query.filter(Settings.user_id == user_id).first()
@@ -355,6 +355,8 @@ def set_settings():
 
     for k, v in request.json.items():
         if hasattr(user_settings, k):
+            if k == 'notification_time':
+                v = datetime.datetime.strptime(v, '%H:%M').time()
             setattr(user_settings, k, v)
         else:
             db.session.rollback()

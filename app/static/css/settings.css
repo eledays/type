@@ -26,6 +26,10 @@ button {
     padding-top: 20px;
 }
 
+.block * {
+    margin-top: 5px;
+}
+
 h1 {
     line-height: 100%;
     margin-bottom: 15px;
@@ -78,4 +82,21 @@ p {
 
 .filter.selected {
     background-color: color-mix(in srgb, var(--tg-theme-secondary-bg-color) 80%, var(--tg-theme-text-color) 20%);
+}
+
+input[type="time"] {
+    text-align: left;
+    background-color: var(--tg-theme-secondary-bg-color);
+    padding: 10px 14px;
+    border-radius: 5px;
+    color: var(--tg-theme-text-color);
+    text-decoration: none;
+    font-size: 16px;
+    border: none;
+    outline: none;
+}
+
+.notification-block {
+    display: flex;
+    gap: 5px;
 }

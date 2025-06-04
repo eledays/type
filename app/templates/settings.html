@@ -16,13 +16,23 @@
     <div class="cont">
         <h1 class="title">Настройки</h1>
 
-        <div class="block">
-            {% if settings.strike %}
-                <button class="on" onclick="strikeOff()" id="strike">Страйк: включён</button>
-            {% else %}
-                <button class="off" onclick="strikeOn()" id="strike">Страйк: выключен</button>
-            {% endif %}
-        </div>
+        {% if settings.strike %}
+            <button class="on" onclick="strikeOff()" id="strike">Страйк: включён</button>
+        {% else %}
+            <button class="off" onclick="strikeOn()" id="strike">Страйк: выключен</button>
+        {% endif %}
+
+        {% if settings.notification %}
+            <div class="notification-block">
+                <button class="on" onclick="notificationOff()" id="notification">Уведомления: включены</button>
+                <input type="time" id="notification-time" onchange="notificationTimeSend()">
+            </div>
+        {% else %}
+            <div class="notification-block">
+                <button class="off" onclick="notificationOn()" id="notification">Уведомления: выключены</button>
+                <input type="time" id="notification-time" style="display: none;">
+            </div>
+        {% endif %}
     </div>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -30,6 +40,10 @@
     <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
     <script>
         let strikeBtn = document.getElementById('strike');
+        let notificationBtn = document.getElementById('notification');
+        let notificationInput = document.getElementById('notification-time');
+
+        notificationInput.value = '{{ settings.notification_time.strftime("%H:%M") }}';
 
         function strikeOff() {
             fetch('/set_settings', {
@@ -61,9 +75,48 @@
             });
         }
 
+        function notificationOff() {
+            fetch('/set_settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({notification: false})
+            })
+            .then((data) => {
+                if (data.status === 200) {
+                    notificationBtn.innerText = 'Уведомления: выключены';
+                    notificationBtn.className = 'off';
+                    notificationInput.style.display = 'none';
+                    notificationBtn.onclick = notificationOn;
+                }
+            });
+        }
+
+        function notificationOn() {
+            fetch('/set_settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({notification: true})
+            })
+            .then((data) => {
+                if (data.status === 200) {
+                    notificationBtn.innerText = 'Уведомления: включены';
+                    notificationBtn.className = 'on';
+                    notificationInput.style.display = 'block';
+                    notificationBtn.onclick = notificationOff;
+                }
+            });
+        }
+
+        function notificationTimeSend() {
+            fetch('/set_settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({notification_time: notificationInput.value})
+            });
+        }
+
         function backToReferrer() {
             const referrer = new URLSearchParams(window.location.search).get('referrer');
-            console.log(referrer);
             
             if (referrer) {
                 window.location.href = referrer;
