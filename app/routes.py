@@ -1,6 +1,6 @@
 from app import app, db, bot
 from app.models import Word, Action, Category, Settings
-from app.utils import add_action
+from app.utils import add_action, get_strike
 
 from flask import render_template, redirect, url_for, jsonify, request, send_file, session
 from init_data_py import InitData
@@ -27,14 +27,14 @@ def index():
         db.session.add(user_settings)
         db.session.commit()
 
-    strike = session.get('strike', 0) if user_settings.strike else None
+    strike = session.get('strike', get_strike(user_id)) if user_settings.strike else None
 
     return render_template('index.html', strike=strike)
 
 
 @app.route('/task/<int:task_id>')
 def task(task_id):
-    return render_template('index.html', strike=session.get('strike', 0), params=f'task_id={task_id}')
+    return render_template('index.html', strike=session.get('strike', get_strike(session.get('user_id'))), params=f'task_id={task_id}')
 
 
 @app.route('/category/<int:category_id>')
@@ -42,7 +42,7 @@ def category(category_id):
     category = Category.query.get(category_id)
     if not category:
         return 'Category not found', 404    
-    return render_template('index.html', strike=session.get('strike', 0), params=f'category_id={category_id}')
+    return render_template('index.html', strike=session.get('strike', get_strike(session.get('user_id'))), params=f'category_id={category_id}')
 
 
 @app.route('/mistakes')
@@ -50,7 +50,7 @@ def mistakes():
     if 'user_id' not in session:
         return 'Not authenticated', 401
     
-    return render_template('index.html', strike=session.get('strike', 0), params=f'mistakes=true')
+    return render_template('index.html', strike=session.get('strike', 0, get_strike(session.get('user_id'))), params=f'mistakes=true')
 
 
 @app.route('/filters')
@@ -168,7 +168,7 @@ def check_word():
     full_word = word.word.replace('_', word.answers[0])
     if word and answer == word.answers[0]:
         if user_settings.strike:
-            session['strike'] = session.get('strike', 0) + 1
+            session['strike'] = session.get('strike', get_strike(user_id)) + 1
         add_action(user_id=session['user_id'], word_id=word_id, action=Action.RIGHT_ANSWER)
         return jsonify({
             'correct': True, 'full_word': full_word, 
@@ -271,7 +271,7 @@ def action_swipe_next():
         last_words = Action.query.filter(Action.user_id == user_id).order_by(Action.datetime.desc()).limit(3)
         last_ids = [e.word_id for e in last_words]
         if word_id in last_ids:
-            return jsonify({'status': 'success', 'strike': session.get('strike', 0)}), 200
+            return jsonify({'status': 'success', 'strike': session.get('strike', get_strike(user_id))}), 200
 
         if user_settings.strike:
             session['strike'] = 0
@@ -321,7 +321,7 @@ def can_swipe():
     word_id = int(word_id)
     last_words = Action.query.filter(Action.user_id == user_id).order_by(Action.datetime.desc()).limit(3)
     last_ids = [e.word_id for e in last_words]
-    strike = session.get('strike', 0)
+    strike = session.get('strike', get_strike(user_id))
 
     if word_id in last_ids or strike <= 3:
         return jsonify({'status': 'yes'}), 200
