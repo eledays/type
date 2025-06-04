@@ -214,11 +214,13 @@ def get_background():
     user_settings = Settings.query.filter(Settings.user_id == user_id).first()
 
     if 'strike' not in session:
-        session['strike'] = 0
+        session['strike'] = get_strike(user_id)
     
     levels = app.config['STRIKE_LEVELS']
 
-    if session['strike'] < levels[0] or not user_settings.strike:
+    if str(user_id) == str(os.getenv('SECURE_ID')) and session['strike'] >= levels[0]:
+        path = 'secure'
+    elif session['strike'] < levels[0] or not user_settings.strike:
         path = 'dark'
     elif session['strike'] < levels[1]:
         path = 'yellow'
