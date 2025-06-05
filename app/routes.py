@@ -29,7 +29,7 @@ def index():
 
     strike = session.get('strike', get_strike(user_id)) if user_settings.strike else None
 
-    return render_template('index.html', strike=strike)
+    return render_template('index.html', strike=strike, admin=session.get('admin', False))
 
 
 @app.route('/task/<int:task_id>')
@@ -344,7 +344,8 @@ def settings():
         db.session.add(user_settings)
         db.session.commit()
 
-    return render_template('settings.html', settings=user_settings)
+    admin = str(user_id) == str(os.getenv('ADMIN_ID'))
+    return render_template('settings.html', settings=user_settings, admin=admin)
     
 
 @app.route('/set_settings', methods=['POST'])
@@ -355,6 +356,10 @@ def set_settings():
     user_id = session.get('user_id')
     user_settings = Settings.query.filter(Settings.user_id == user_id).first()
 
+    if 'admin' in request.json and str(user_id) == str(os.getenv('ADMIN_ID')):
+        session['admin'] = request.json.get('admin')
+        return 'ok', 200
+    
     for k, v in request.json.items():
         if hasattr(user_settings, k):
             if k == 'notification_time':

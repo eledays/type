@@ -17,7 +17,7 @@
         <h1 class="title">Настройки</h1>
 
         {% if settings.strike %}
-            <button class="on" onclick="strikeOff()" id="strike">Страйк: включён</button>
+            <button class="on" onclick="strikeOff()" id="strike">Страйк: включен</button>
         {% else %}
             <button class="off" onclick="strikeOn()" id="strike">Страйк: выключен</button>
         {% endif %}
@@ -32,6 +32,41 @@
                 <button class="off" onclick="notificationOn()" id="notification">Уведомления: выключены</button>
                 <input type="time" id="notification-time" style="display: none;">
             </div>
+        {% endif %}
+
+        {% if admin %}
+            <button class="off" onclick="adminOn()" id="admin">Админка: выключена</button>
+            <script>
+                let adminBtn = document.getElementById('admin');
+                function adminOn() {
+                    fetch('/set_settings', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({admin: true})
+                    })
+                    .then((data) => {
+                        if (data.status === 200) {
+                            adminBtn.innerText = 'Админка: включена';
+                            adminBtn.className = 'off';
+                            adminBtn.onclick = adminOff;
+                        }
+                    });
+                }
+                function adminOff() {
+                    fetch('/set_settings', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({admin: false})
+                    })
+                    .then((data) => {
+                        if (data.status === 200) {
+                            adminBtn.innerText = 'Админка: выключена';
+                            adminBtn.className = 'off';
+                            adminBtn.onclick = adminOn;
+                        }
+                    });                    
+                }
+            </script>
         {% endif %}
     </div>
 
