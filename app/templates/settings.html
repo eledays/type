@@ -72,10 +72,35 @@
                 }
             </script>
         {% endif %}
+
+        <div class="block">
+            <h1>Статистика</h1>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Решено слов</div>
+                    <div class="stat-value">128</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Ошибок</div>
+                    <div class="stat-value">15</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Процент правильных</div>
+                    <div class="stat-value">88.3%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Среднее время</div>
+                    <div class="stat-value">4.7 сек</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Лучшая серия</div>
+                    <div class="stat-value">34</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="{{ url_for('static', filename='js/tg.js') }}"></script>
     <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
     <script>
         let strikeBtn = document.getElementById('strike');
