@@ -17,6 +17,9 @@
             {{ word.get_html()|safe }}
         </p>
     </div>
+    {% if admin %}
+        <textarea name="explanation" id="explanation">{{ word.explanation }}</textarea>
+    {% endif %}
 
     <div class="answers">
         {% for answer in word.get_answers() %}

@@ -36,6 +36,32 @@ body {
     backdrop-filter: blur(10px);
 }
 
+#explanation {
+    position: fixed;
+    bottom: 50%;
+    left: 50%; 
+    transform: translate(-50%, 50%);
+    z-index: 1;
+    width: 80%;
+    height: 40px;
+    font-size: 16px;
+    background-color: var(--secondary-color);
+    border: none;
+    padding: 10px;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    color: white;
+    outline: none;
+    transition: .1s;
+}
+
+#explanation:focus {
+    height: 120px;
+    outline: 1px solid rgba(255, 255, 255, 0.315);
+    bottom: 10px;
+    transform: translate(-50%, 0);
+}
+
 .missing-letter {
     box-sizing: border-box;
     width: 20px;
@@ -72,7 +98,6 @@ body {
     margin: 5px;
     font-size: 20px;
     background-color: var(--secondary-color);
-    border-radius: 10px;
     cursor: pointer;
     border: none;
     transition: .1s;

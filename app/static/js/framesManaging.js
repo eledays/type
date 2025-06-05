@@ -77,6 +77,7 @@ document.addEventListener('wheel', (event) => {
 });
 
 function swipeNextFrame(doFetch=true) {
+    let word_id = currentFrame.contentWindow.word_id;
     let prev = document.querySelector('.prev')
     if (prev !== null) prev.remove();
 
@@ -95,7 +96,6 @@ function swipeNextFrame(doFetch=true) {
 
     if (doFetch) {
         // Уязвимость: Обработка потери свайпа частично на стороне клиента
-        let word_id = currentFrame.contentWindow.word_id;
         
         fetch('/action/swipe_next', {
             method: 'POST',
@@ -108,6 +108,24 @@ function swipeNextFrame(doFetch=true) {
         .then((data) => {
             strike({n: data.strike})
         });
+    }
+
+    let explanationInput = currentFrame.contentWindow.explanationInput;
+
+    if (explanationInput && explanationInput.value !== 'None' && explanationInput.value) {
+        fetch('/add_explanation', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({word_id: word_id, explanation: explanationInput.value})
+        });
+    }
+    if (explanationInput && currentFrame.contentWindow.document.activeElement === explanationInput) {
+        nextFrame.contentWindow.explanationInput.focus();
+        if (nextFrame.contentWindow.explanationInput.value === 'None') {
+            nextFrame.contentWindow.explanationInput.value = '';
+        }
     }
 }
 

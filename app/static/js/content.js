@@ -3,6 +3,8 @@ let word = {};
 let wordElement = document.querySelector('.word');
 let answersElement = document.querySelector('.answers');
 
+var explanationInput = document.getElementById('explanation');
+
 let menuElement = document.querySelector('.menu');
 let touchArea = document.querySelector('.touch-area');
 
@@ -27,7 +29,7 @@ addEventListener('DOMContentLoaded', () => {
 });
 
 touchArea.addEventListener('touchstart', (event) => {
-    try {event.preventDefault()} catch {}
+    // try {event.preventDefault()} catch {}
 
     if (longPressTimer !== null) clearInterval(longPressTimer);
     

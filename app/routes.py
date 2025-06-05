@@ -29,7 +29,7 @@ def index():
 
     strike = session.get('strike', get_strike(user_id)) if user_settings.strike else None
 
-    return render_template('index.html', strike=strike, admin=session.get('admin', False))
+    return render_template('index.html', strike=strike)
 
 
 @app.route('/task/<int:task_id>')
@@ -65,7 +65,10 @@ def get_frame():
     category_id = request.args.get('category_id', '')
     category = Category.query.get(category_id)
     mistakes = request.args.get('mistakes', '') 
+    admin = session.get('admin', False) 
+
     user_id = session.get('user_id')
+    admin = (str(user_id) == str(os.getenv('ADMIN_ID'))) and admin
 
     if task_id:
         words = Word.query.filter(Word.task_number == task_id)
@@ -126,8 +129,11 @@ def get_frame():
     )
 
     words_len = words.count()
-    diff_word_len = difficult_words.count()
-    difficult_words = difficult_words.all()[:50]
+
+    difficult_words = list(set(words.all()) & set(difficult_words.all()))
+
+    diff_word_len = len(difficult_words)
+    difficult_words = difficult_words[:50]
 
     if random.random() * (words_len + diff_word_len) > diff_word_len or not difficult_words:
         word = words.order_by(func.random()).first()
@@ -140,7 +146,7 @@ def get_frame():
         info_str.append('Это слово встретилось случайно')
 
     if word:
-        return render_template('frame_inner.html', word=word, info_str=info_str)
+        return render_template('frame_inner.html', word=word, info_str=info_str, admin=admin)
     else:
         return 'No words available', 404
 
@@ -345,6 +351,10 @@ def settings():
         db.session.commit()
 
     admin = str(user_id) == str(os.getenv('ADMIN_ID'))
+    if admin and session.get('admin', False):
+        admin = 2
+    else:
+        admin = 1
     return render_template('settings.html', settings=user_settings, admin=admin)
     
 
@@ -371,3 +381,27 @@ def set_settings():
     db.session.commit()
 
     return 'ok', 200
+
+
+@app.route('/add_explanation', methods=['POST'])
+def add_explanation():
+    if 'user_id' not in session:
+        return render_template('auth.html')
+    
+    user_id = session.get('user_id')
+
+    if str(user_id) != str(os.getenv('ADMIN_ID')):
+        return 'Access denied', 403
+
+    word_id = request.json.get('word_id')
+    explanation = request.json.get('explanation')
+
+    print(word_id)
+
+    word = Word.query.filter(Word.id == word_id).first()
+
+    if word:
+        word.explanation = explanation
+        db.session.commit()
+        return 'ok', 200
+    return 'Error', 400

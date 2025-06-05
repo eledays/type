@@ -35,7 +35,11 @@
         {% endif %}
 
         {% if admin %}
-            <button class="off" onclick="adminOn()" id="admin">Админка: выключена</button>
+            {% if admin == 1 %}
+                <button class="off" onclick="adminOn()" id="admin">Админка: выключена</button>
+            {% elif admin == 2 %}
+                <button class="on" onclick="adminOff()" id="admin">Админка: включена</button>
+            {% endif %}
             <script>
                 let adminBtn = document.getElementById('admin');
                 function adminOn() {

@@ -7,6 +7,8 @@
 
 body {
     background-color: var(--back-color);
+    z-index: -1;
+    position: absolute;
 }
 
 iframe {
