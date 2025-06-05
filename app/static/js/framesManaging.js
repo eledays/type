@@ -194,3 +194,10 @@ function strike(strikeData) {
         }
     }
 }
+
+addEventListener('DOMContentLoaded', () => {
+    Telegram.WebApp.SettingsButton.show();
+    Telegram.WebApp.SettingsButton.onClick(() => {
+        window.parent.location.href = `/settings?referrer=${encodeURIComponent(window.parent.location.pathname)}`;
+    });
+});

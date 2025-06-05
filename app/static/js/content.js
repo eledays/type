@@ -20,11 +20,6 @@ addEventListener('DOMContentLoaded', () => {
         let answer = answersElement.querySelectorAll('button')[i];
         answer.addEventListener('click', (event) => handleAnswerClick(event, i));
     }
-    Telegram.WebApp.SettingsButton.show();
-    Telegram.WebApp.SettingsButton.onClick(() => {
-        console.log('hello')
-        window.parent.location.href = `/settings?referrer=${encodeURIComponent(window.parent.location.pathname)}`;
-    });
     Telegram.WebApp.BackButton.hide();
 });
 
