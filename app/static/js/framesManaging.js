@@ -38,7 +38,7 @@ Telegram.WebApp.onEvent('popupClosed', function(button) {
 var currentFrame = document.querySelector('iframe.current');
 var nextFrame = document.querySelector('iframe.next');
 
-const parts = 50;
+const parts = 10;
 const fire = document.getElementById('fire');
 
 
@@ -125,6 +125,8 @@ function swipePrevFrame() {
 }
 
 function strike(strikeData) {
+    // Вовращает - был ли переход на новый уровень страйка
+
     let p = document.querySelector('.strike-block p');
 
     if (!p) {
@@ -133,9 +135,12 @@ function strike(strikeData) {
 
     let n = strikeData.n;
     let strikeLevel = strikeData.levels;
+    let nextLevel = false;
     p.innerText = n;
 
     if (n === 0 && fire.children.length > 0) {
+        // Перезагрузка следующего фрейма при смене огонька, чтобы применился фон
+        nextFrame.contentWindow.location.reload();
         fire.style.opacity = 0;
         setTimeout(() => {
             while (fire.firstChild) {
@@ -143,7 +148,7 @@ function strike(strikeData) {
             }
             fire.style.opacity = 1;
         }, 700);
-        return;
+        return false;
     }
 
     for (let i = 0; i < strikeLevel.length; i++) {
@@ -151,6 +156,7 @@ function strike(strikeData) {
             // Перезагрузка следующего фрейма при смене огонька, чтобы применился фон
             if (i > 0 && n - 1 < strikeLevel[i - 1]) {
                 nextFrame.contentWindow.location.reload();
+                nextLevel = true;
             }
 
             document.documentElement.style.setProperty('--particle-color', `var(--fire-${i})`);
@@ -166,7 +172,7 @@ function strike(strikeData) {
                 }
             }
 
-            return;
+            return nextLevel;
         }
     }
 }

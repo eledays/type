@@ -63,8 +63,11 @@ function handleAnswerClick(event) {
 }
 
 function correctAnswer(data) {
-    window.parent.strike(data.strike);
-    // document.body.className = 'correct';
+    let nextLevel = window.parent.strike(data.strike);
+    
+    let rgba = [0, 255, 0, .6];
+    if (nextLevel) rgba = [255, 255, 0,.8];
+
     let r = 0;
     let alpha_delta = 0;
     let rect = wordElement.getBoundingClientRect();
@@ -72,8 +75,8 @@ function correctAnswer(data) {
     function anim() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        ctx.strokeStyle = `rgba(0, 255, 0, ${0.6 - alpha_delta})`;
-        ctx.fillStyle = `rgba(0, 255, 0, ${0.4 - alpha_delta})`;
+        ctx.strokeStyle = `rgba(${rgba[0]}, ${rgba[1]}, ${rgba[2]}, ${rgba[3] - alpha_delta})`;
+        ctx.fillStyle = `rgba(${rgba[0]}, ${rgba[1]}, ${rgba[2]}, ${rgba[3] - .2 - alpha_delta})`;
 
         ctx.beginPath();
         ctx.arc(rect.x + rect.width / 2, rect.y + rect.height / 2, r, 0, 2 * Math.PI);
