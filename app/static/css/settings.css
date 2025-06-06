@@ -4,7 +4,7 @@ body {
     color: var(--tg-theme-text-color);
 }
 
-.cont > * {
+.cont>* {
     margin-top: 5px;
 }
 
@@ -85,7 +85,7 @@ p {
     background-color: color-mix(in srgb, var(--tg-theme-secondary-bg-color) 80%, var(--tg-theme-text-color) 20%);
 }
 
-input[type="time"] {
+/* input[type="time"] {
     text-align: left;
     background-color: var(--tg-theme-secondary-bg-color);
     padding: 10px 14px;
@@ -95,7 +95,7 @@ input[type="time"] {
     font-size: 16px;
     border: none;
     outline: none;
-}
+} */
 
 .notification-block {
     display: flex;
@@ -153,4 +153,121 @@ input[type="time"] {
     font-weight: 600;
     color: var(--tg-theme-text-color, #222222);
 }
-  
+
+.settings-block {
+    background-color: var(--tg-theme-bg-color, #ffffff);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    color: var(--tg-theme-text-color, #222222);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.settings-block h2 {
+    font-size: 1.4rem;
+    margin-bottom: 16px;
+    text-align: center;
+    color: var(--tg-theme-text-color, #222222);
+}
+
+.settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--tg-theme-secondary-bg-color);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    z-index: 1;
+}
+
+.setting-name {
+    font-size: 1rem;
+    color: var(--tg-theme-text-color, #222222);
+}
+
+.setting-value {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.setting-value.on {
+    color: var(--tg-theme-link-color, #30a4f4);
+}
+
+.setting-value.off {
+    color: var(--tg-theme-hint-color, #999999);
+}
+
+.time-block {
+    background-color: var(--tg-theme-bg-color, #ffffff);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 600px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--tg-theme-text-color, #222222);
+}
+
+.reminder-block h2 {
+    font-size: 1.4rem;
+    margin-bottom: 16px;
+    text-align: center;
+    color: var(--tg-theme-text-color, #222222);
+}
+
+.time-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    /* margin-bottom: 8px; */
+    margin-top: -4px;
+    z-index: 0;
+    transition: .3s;
+}
+
+.time-label {
+    font-size: 1rem;
+    color: var(--tg-theme-text-color, #222222);
+    z-index: 0;
+}
+
+.time-input {
+    padding: 6px 10px;
+    font-size: 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    background-color: var(--tg-theme-bg-color, #ffffff);
+    color: var(--tg-theme-text-color, #222222);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    height: 36x;
+    z-index: 0;
+}
+
+.time-input:focus {
+    outline: none;
+    border-color: var(--tg-theme-link-color, #30a4f4);
+}
+
+.reminder-note {
+    font-size: 0.9rem;
+    text-align: center;
+    color: var(--tg-theme-hint-color, #888888);
+    z-index: 0;
+}
+
+.time-input::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
+    margin: 0;
+}

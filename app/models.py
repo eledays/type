@@ -51,5 +51,7 @@ class Action(db.Model):
 class Settings(db.Model):
     user_id = db.Column(db.Integer, primary_key=True)
     strike = db.Column(db.Boolean, default=True)
-    notification = db.Column(db.Boolean, default=True)
-    notification_time = db.Column(db.Time, nullable=True, default=time(12, 0))
+    notification = db.Column(db.Boolean, default=False)
+    notification_time = db.Column(db.Time, nullable=False, default=time(12, 0))
+    day_results = db.Column(db.Boolean, nullable=False, default=True)
+    day_results_time = db.Column(db.Time, nullable=False, default=time(20, 0))

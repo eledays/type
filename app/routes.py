@@ -353,7 +353,7 @@ def settings():
     admin = str(user_id) == str(os.getenv('ADMIN_ID'))
     if admin and session.get('admin', False):
         admin = 2
-    else:
+    elif admin and not session.get('admin', False):
         admin = 1
     return render_template('settings.html', settings=user_settings, admin=admin)
     

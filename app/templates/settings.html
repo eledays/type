@@ -14,182 +14,85 @@
 </head>
 <body>
     <div class="cont">
-        <h1 class="title">Настройки</h1>
-
-        {% if settings.strike %}
-            <button class="on" onclick="strikeOff()" id="strike">Страйк: включен</button>
-        {% else %}
-            <button class="off" onclick="strikeOn()" id="strike">Страйк: выключен</button>
-        {% endif %}
-
-        {% if settings.notification %}
-            <div class="notification-block">
-                <button class="on" onclick="notificationOff()" id="notification">Уведомления: включены</button>
-                <input type="time" id="notification-time" onchange="notificationTimeSend()">
-            </div>
-        {% else %}
-            <div class="notification-block">
-                <button class="off" onclick="notificationOn()" id="notification">Уведомления: выключены</button>
-                <input type="time" id="notification-time" style="display: none;">
-            </div>
-        {% endif %}
-
-        {% if admin %}
-            {% if admin == 1 %}
-                <button class="off" onclick="adminOn()" id="admin">Админка: выключена</button>
-            {% elif admin == 2 %}
-                <button class="on" onclick="adminOff()" id="admin">Админка: включена</button>
-            {% endif %}
-            <script>
-                let adminBtn = document.getElementById('admin');
-                function adminOn() {
-                    fetch('/set_settings', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({admin: true})
-                    })
-                    .then((data) => {
-                        if (data.status === 200) {
-                            adminBtn.innerText = 'Админка: включена';
-                            adminBtn.className = 'off';
-                            adminBtn.onclick = adminOff;
-                        }
-                    });
-                }
-                function adminOff() {
-                    fetch('/set_settings', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({admin: false})
-                    })
-                    .then((data) => {
-                        if (data.status === 200) {
-                            adminBtn.innerText = 'Админка: выключена';
-                            adminBtn.className = 'off';
-                            adminBtn.onclick = adminOn;
-                        }
-                    });                    
-                }
-            </script>
-        {% endif %}
-
-        <div class="block">
-            <h1>Статистика</h1>
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <div class="stat-label">Решено слов</div>
-                    <div class="stat-value">128</div>
+        <div class="settings-block">
+            <h2>Настройки</h2>
+            <div class="settings-list">
+                <div class="setting-item" id="strike" onclick="handleClick('strike')">
+                    <span class="setting-name">Страйк</span>
+                    {% if settings.strike %}
+                        <span class="setting-value on">Включен</span>
+                    {% else %}
+                        <span class="setting-value off">Выключен</span>
+                    {% endif %}
                 </div>
-                <div class="stat-item">
-                    <div class="stat-label">Ошибок</div>
-                    <div class="stat-value">15</div>
+                <div class="setting-item" id="notification" onclick="handleClick('notification')">
+                    <span class="setting-name">Уведомления</span>
+                    {% if settings.notification %}
+                        <span class="setting-value on">Включены</span>
+                    {% else %}
+                        <span class="setting-value off">Выключены</span>
+                    {% endif %}
                 </div>
-                <div class="stat-item">
-                    <div class="stat-label">Процент правильных</div>
-                    <div class="stat-value">88.3%</div>
+                <div class="time-control" id="notification" style="margin-top: {% if settings.notification %}-4px{% else %}-52px{% endif %}">
+                    <label for="time-input" class="time-label">Время:</label>
+                    <input type="time" id="time-input" class="time-input" value="{{ settings.notification_time.strftime('%H:%M') }}">
                 </div>
-                <div class="stat-item">
-                    <div class="stat-label">Среднее время</div>
-                    <div class="stat-value">4.7 сек</div>
+                <div class="setting-item" id="day_results" onclick="handleClick('day_results')">
+                    <span class="setting-name">Итоги дня</span>
+                    {% if settings.strike %}
+                        <span class="setting-value on">Включены</span>
+                    {% else %}
+                        <span class="setting-value off">Выключены</span>
+                    {% endif %}
                 </div>
-                <div class="stat-item">
-                    <div class="stat-label">Лучшая серия</div>
-                    <div class="stat-value">34</div>
+                <div class="time-control" id="day_results" style="margin-top: {% if settings.day_results %}-4px{% else %}-52px{% endif %}">
+                    <label for="time-input" class="reminder-label">Время:</label>
+                    <input type="time" id="time-input" class="time-input" value="{{ settings.day_results_time.strftime('%H:%M') }}">
                 </div>
+                {% if admin %}
+                <div class="setting-item" id="admin" onclick="handleClick('admin')">
+                    <span class="setting-name">Админка</span>
+                    {{ admin }}
+                    {% if admin == 1 %}
+                        <span class="setting-value off">Выключена</span>
+                    {% elif admin == 2 %}
+                        <span class="setting-value on">Включена</span>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
         </div>
+
+        <div class="stats-block">
+            <h2>Cтатистика</h2>
+            <div class="stats-grid">
+              <div class="stat-item">
+                <div class="stat-label">Решено слов</div>
+                <div class="stat-value">128</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">Ошибок</div>
+                <div class="stat-value">15</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">Процент правильных</div>
+                <div class="stat-value">88.3%</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">Среднее время</div>
+                <div class="stat-value">4.7 сек</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">Лучшая серия</div>
+                <div class="stat-value">34</div>
+              </div>
+            </div>
+          </div>
+          
     </div>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
-    <script>
-        let strikeBtn = document.getElementById('strike');
-        let notificationBtn = document.getElementById('notification');
-        let notificationInput = document.getElementById('notification-time');
-
-        notificationInput.value = '{{ settings.notification_time.strftime("%H:%M") }}';
-
-        function strikeOff() {
-            fetch('/set_settings', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({strike: false})
-            })
-            .then((data) => {
-                if (data.status === 200) {
-                    strikeBtn.innerText = 'Страйк: выключен';
-                    strikeBtn.className = 'off';
-                    strikeBtn.onclick = strikeOn;
-                }
-            });
-        }
-
-        function strikeOn() {
-            fetch('/set_settings', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({strike: true})
-            })
-            .then((data) => {
-                if (data.status === 200) {
-                    strikeBtn.innerText = 'Страйк: включён';
-                    strikeBtn.className = 'on';
-                    strikeBtn.onclick = strikeOff;
-                }
-            });
-        }
-
-        function notificationOff() {
-            fetch('/set_settings', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({notification: false})
-            })
-            .then((data) => {
-                if (data.status === 200) {
-                    notificationBtn.innerText = 'Уведомления: выключены';
-                    notificationBtn.className = 'off';
-                    notificationInput.style.display = 'none';
-                    notificationBtn.onclick = notificationOn;
-                }
-            });
-        }
-
-        function notificationOn() {
-            fetch('/set_settings', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({notification: true})
-            })
-            .then((data) => {
-                if (data.status === 200) {
-                    notificationBtn.innerText = 'Уведомления: включены';
-                    notificationBtn.className = 'on';
-                    notificationInput.style.display = 'block';
-                    notificationBtn.onclick = notificationOff;
-                }
-            });
-        }
-
-        function notificationTimeSend() {
-            fetch('/set_settings', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({notification_time: notificationInput.value})
-            });
-        }
-
-        function backToReferrer() {
-            const referrer = new URLSearchParams(window.location.search).get('referrer');
-            
-            if (referrer) {
-                window.location.href = referrer;
-            } else {
-                window.location.href = '/';
-            }
-        }
-        Telegram.WebApp.BackButton.show();
-        Telegram.WebApp.BackButton.onClick(backToReferrer);
-    </script>
+    <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
 </body>
 </html>
