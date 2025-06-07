@@ -35,7 +35,7 @@
                 </div>
                 <div class="time-control" id="notification" style="margin-top: {% if settings.notification %}-4px{% else %}-52px{% endif %}">
                     <label for="time-input" class="time-label">Время:</label>
-                    <input type="time" id="time-input" class="time-input" value="{{ settings.notification_time.strftime('%H:%M') }}">
+                    <input type="time" id="time-input" class="time-input" value="{{ settings.notification_time.strftime('%H:%M') }}" onchange="handleTimeInput('notification')">
                 </div>
                 <div class="setting-item" id="day_results" onclick="handleClick('day_results')">
                     <span class="setting-name">Итоги дня</span>
@@ -47,12 +47,11 @@
                 </div>
                 <div class="time-control" id="day_results" style="margin-top: {% if settings.day_results %}-4px{% else %}-52px{% endif %}">
                     <label for="time-input" class="reminder-label">Время:</label>
-                    <input type="time" id="time-input" class="time-input" value="{{ settings.day_results_time.strftime('%H:%M') }}">
+                    <input type="time" id="time-input" class="time-input" value="{{ settings.day_results_time.strftime('%H:%M') }}" onchange="handleTimeInput('day_results')">
                 </div>
                 {% if admin %}
                 <div class="setting-item" id="admin" onclick="handleClick('admin')">
                     <span class="setting-name">Админка</span>
-                    {{ admin }}
                     {% if admin == 1 %}
                         <span class="setting-value off">Выключена</span>
                     {% elif admin == 2 %}
@@ -66,29 +65,44 @@
         <div class="stats-block">
             <h2>Cтатистика</h2>
             <div class="stats-grid">
-              <div class="stat-item">
-                <div class="stat-label">Решено слов</div>
-                <div class="stat-value">128</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-label">Ошибок</div>
-                <div class="stat-value">15</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-label">Процент правильных</div>
-                <div class="stat-value">88.3%</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-label">Среднее время</div>
-                <div class="stat-value">4.7 сек</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-label">Лучшая серия</div>
-                <div class="stat-value">34</div>
-              </div>
+                <div class="stat-item">
+                    <div class="stat-label">Верных</div>
+                    <div class="stat-value">{{ stats.correct }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Ошибок</div>
+                    <div class="stat-value">{{ stats.mistakes }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Скипов</div>
+                    <div class="stat-value">{{ stats.skips }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Процент правильных</div>
+                    <div class="stat-value">{{ stats.correct_percent }}%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Среднее время</div>
+                    <div class="stat-value">{{ stats.avg_time_per_word }} сек</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Лучшая серия</div>
+                    <div class="stat-value">{{ stats.best_streak }}</div>
+                </div>
             </div>
-          </div>
-          
+            <div class="stats-grid" style="margin-top: 24px;">
+                {% if admin %}
+                <div class="stat-item">
+                    <div class="stat-label">Размечено объяснений</div>
+                    <div class="stat-value">{{ stats.explanations }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Пользователей</div>
+                    <div class="stat-value">{{ stats.users }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>

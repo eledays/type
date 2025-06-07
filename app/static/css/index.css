@@ -154,7 +154,6 @@ button {
     left: 50%;
     transform: translateX(-50%);
     transition: opacity .7s ease;
-    position: relative;
 }
 
 .fullscreen .fire {

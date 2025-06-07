@@ -135,7 +135,7 @@ p {
 }
 
 .stat-item {
-    background: rgba(0, 0, 0, 0.03);
+    background: var(--tg-theme-secondary-bg-color);
     border: 1px solid rgba(0, 0, 0, 0.05);
     border-radius: 10px;
     padding: 12px;

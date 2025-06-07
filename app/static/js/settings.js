@@ -32,35 +32,12 @@ function handleClick(id) {
     });
 }
 
-function notificationClick() {
-    let value = notificationItem.querySelector('.setting-value');
-    let reminderControl = document.querySelector('.reminder-control');
-    let notification = !(value.classList.contains('on'));
-
+function handleTimeInput(id) {
+    let item = document.querySelector(`.time-control#${id} #time-input`);
     fetch('/set_settings', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({notification: notification})
-    })
-    .then((data) => {
-        if (data.status === 200 && notification) {
-            value.innerText = 'Включены';
-            value.classList.replace('off', 'on');
-            reminderControl.style.marginTop = '-4px';
-        }
-        else if (data.status === 200 && !notification) {
-            value.innerText = 'Выключены';
-            value.classList.replace('on', 'off');
-            reminderControl.style.marginTop = '-52px';
-        }
-    });
-}
-
-function notificationTimeSend() {
-    fetch('/set_settings', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({notification_time: notificationInput.value})
+        body: JSON.stringify({[id + '_time']: item.value})
     });
 }
 

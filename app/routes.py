@@ -1,6 +1,6 @@
 from app import app, db, bot
 from app.models import Word, Action, Category, Settings
-from app.utils import add_action, get_strike
+from app.utils import add_action, get_strike, get_user_stats
 
 from flask import render_template, redirect, url_for, jsonify, request, send_file, session
 from init_data_py import InitData
@@ -224,7 +224,7 @@ def get_background():
     
     levels = app.config['STRIKE_LEVELS']
 
-    if str(user_id) == str(os.getenv('SECURE_ID')) and session['strike'] >= levels[0]:
+    if str(user_id) in [str(os.getenv('SECURE_ID')), str(os.getenv('ADMIN_ID'))] and session['strike'] >= levels[0]:
         path = 'secure'
     elif session['strike'] < levels[0] or not user_settings.strike:
         path = 'dark'
@@ -355,7 +355,13 @@ def settings():
         admin = 2
     elif admin and not session.get('admin', False):
         admin = 1
-    return render_template('settings.html', settings=user_settings, admin=admin)
+
+    stats = get_user_stats(user_id)
+    if admin:
+        stats["explanations"] = Word.query.filter(Word.explanation.isnot(None)).count()
+        stats["users"] = Settings.query.count()
+
+    return render_template('settings.html', settings=user_settings, admin=admin, stats=stats)
     
 
 @app.route('/set_settings', methods=['POST'])
@@ -372,7 +378,7 @@ def set_settings():
     
     for k, v in request.json.items():
         if hasattr(user_settings, k):
-            if k == 'notification_time':
+            if k.endswith('_time'):
                 v = datetime.datetime.strptime(v, '%H:%M').time()
             setattr(user_settings, k, v)
         else:
