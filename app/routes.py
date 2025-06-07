@@ -225,7 +225,12 @@ def get_background():
     levels = app.config['STRIKE_LEVELS']
 
     if str(user_id) in [str(os.getenv('SECURE_ID')), str(os.getenv('ADMIN_ID'))] and session['strike'] >= levels[0]:
-        path = 'secure'
+        filename = random.choice(os.listdir(f'app/secure_static/backs/'))
+        response = send_file(f'secure_static/backs/{filename}')
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
     elif session['strike'] < levels[0] or not user_settings.strike:
         path = 'dark'
     elif session['strike'] < levels[1]:

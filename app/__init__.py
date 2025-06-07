@@ -15,7 +15,7 @@ migrate = Migrate(app, db)
 
 import os
 import telebot
-bot = telebot.TeleBot(os.getenv('BOT_TOKEN'))
+bot = telebot.TeleBot(os.getenv('BOT_TOKEN'), parse_mode='html')
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.utils import scheduler_run

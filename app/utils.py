@@ -4,7 +4,7 @@ from app.models import Action, Settings, Word
 from telebot import types
 
 from datetime import datetime, time, timedelta
-from sqlalchemy import or_, desc, func
+from sqlalchemy import or_, and_, desc, func
 
 
 def add_action(user_id, word_id, action):
@@ -29,7 +29,11 @@ def scheduler_run():
                 Settings.notification_time >= start,
                 Settings.notification_time < end
             ).all()
-
+            users_to_notify_day_results = Settings.query.filter(
+                Settings.day_results == True,
+                Settings.day_results_time >= start,
+                Settings.day_results_time < end
+            ).all()
         else:
             users_to_notify = Settings.query.filter(
                 Settings.notification == True,
@@ -38,12 +42,19 @@ def scheduler_run():
                     Settings.notification_time < end
                 )
             ).all()
+            users_to_notify_day_results = Settings.query.filter(
+                Settings.day_results == True,
+                or_(
+                    Settings.day_results_time >= start,
+                    Settings.day_results_time < end
+                )
+            ).all()
 
-        today_start = datetime.combine(datetime.now().date(), time(0, 0))
-        active_user_ids = db.session.query(Action.user_id).filter(
-            Action.datetime >= today_start
-        ).distinct().all()
-        active_user_ids = {uid for uid, in active_user_ids}
+        # today_start = datetime.combine(datetime.now().date(), time(0, 0))
+        # active_user_ids = db.session.query(Action.user_id).filter(
+        #     Action.datetime >= today_start
+        # ).distinct().all()
+        # active_user_ids = {uid for uid, in active_user_ids}
 
         for user in users_to_notify:
             # if user.user_id in active_user_ids:
@@ -54,6 +65,8 @@ def scheduler_run():
             markup.add(button)
 
             bot.send_message(user.user_id, 'Привет! Пора русский порешать', reply_markup=markup)
+        for user in users_to_notify_day_results:
+            send_day_summary(user.user_id)
 
 
 def get_strike(user_id):
@@ -123,3 +136,47 @@ def get_user_stats(user_id: int):
             "best_streak": best_streak
         }
 
+
+def send_day_summary(user_id: int) -> str:
+    with app.app_context():
+        # Определяем временной диапазон "сегодня"
+        now = datetime.now()
+        today_start = datetime(now.year, now.month, now.day)
+        today_end = today_start + timedelta(days=1)
+
+        # Получаем все действия пользователя за день
+        actions = Action.query.filter(
+            and_(
+                Action.user_id == user_id,
+                Action.datetime >= today_start,
+                Action.datetime < today_end
+            )
+        ).all()
+
+        # Подсчёт по категориям действий
+        right = sum(a.action == Action.RIGHT_ANSWER for a in actions)
+        wrong = sum(a.action == Action.WRONG_ANSWER for a in actions)
+        skipped = sum(a.action == Action.SKIP for a in actions)
+
+        total = right + wrong + skipped
+
+        if total == 0:
+            markup = types.InlineKeyboardMarkup()
+            button = types.InlineKeyboardButton('Решать', web_app=types.WebAppInfo(url=app.config.get('URL')))
+            markup.add(button)
+            bot.send_message(user_id, "<b>Итоги дня</b>\n\nКажется, сегодня ничего нет. Давай решим хотя бы пару заданий?", reply_markup=markup)
+
+        text = (
+            f"<b>Итоги дня</b>\n\n"
+            f"- Правильных ответов: <b>{right}</b>\n"
+            f"- Ошибок: <b>{wrong}</b>\n"
+            f"- Пропущено: <b>{skipped}</b>\n"
+            f"- Всего заданий сегодня: <b>{total}</b>"
+        )
+
+        if right > 100:
+            text += (
+                '\n\nОтличный результат! Продолжай в том же духе!'
+            )
+
+        bot.send_message(user_id, text)
