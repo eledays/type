@@ -5,6 +5,8 @@ from telebot import types
 
 from datetime import datetime, time, timedelta
 from sqlalchemy import or_, and_, desc, func
+from time import sleep
+import os
 
 
 def add_action(user_id, word_id, action):
@@ -180,3 +182,18 @@ def send_day_summary(user_id: int) -> str:
             )
 
         bot.send_message(user_id, text)
+
+
+def send_all_message(text):
+    success, fail = 0, 0
+    with app.app_context():
+        users = Settings.query.all()
+        for user in users:
+            try:
+                bot.send_message(user.user_id, text)
+                success += 1
+            except:
+                fail += 1
+            sleep(.5)
+    
+    bot.send_message(os.getenv('ADMIN_ID'), f'Отправлено\nУспешно: {success}\nОшибки: {fail}')
