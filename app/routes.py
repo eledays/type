@@ -135,13 +135,16 @@ def get_frame():
     diff_word_len = len(difficult_words)
     difficult_words = difficult_words[:50]
 
-    if random.random() * (words_len + diff_word_len) > diff_word_len or not difficult_words:
+    if (random.random() * (words_len + diff_word_len) > diff_word_len or not difficult_words) and words.count():
+        print(1)
         word = words.order_by(func.random()).first()
         info_str.append('Это слово встретилось первый раз')
     elif difficult_words:
+        print(2)
         word = random.choice(difficult_words)[0]
         info_str.append('Это слово встретилось из-за большого количества ошибок')
     else:
+        print(3)
         word = Word.query.order_by(func.random()).first()
         info_str.append('Это слово встретилось случайно')
 
@@ -177,7 +180,7 @@ def check_word():
             session['strike'] = session.get('strike', get_strike(user_id)) + 1
         add_action(user_id=session['user_id'], word_id=word_id, action=Action.RIGHT_ANSWER)
         return jsonify({
-            'correct': True, 'full_word': full_word, 
+            'correct': True, 'full_word': full_word, 'explanation': word.explanation,
             'strike': {
                 'n': session['strike'],
                 'levels': app.config['STRIKE_LEVELS']
@@ -187,8 +190,8 @@ def check_word():
             session['strike'] = 0
         add_action(user_id=session['user_id'], word_id=word_id, action=Action.WRONG_ANSWER)
         return jsonify({
-            'correct': False, 'full_word': full_word, 
-            'strike': {
+            'correct': False, 'full_word': full_word, 'explanation': word.explanation,
+            'strike': { 
                 'n': session['strike'],
                 'levels': app.config['STRIKE_LEVELS']
             }})

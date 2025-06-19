@@ -38,7 +38,7 @@ Telegram.WebApp.onEvent('popupClosed', function(button) {
 var currentFrame = document.querySelector('iframe.current');
 var nextFrame = document.querySelector('iframe.next');
 
-const parts = 10;
+const parts = 50;
 const fire = document.getElementById('fire');
 
 

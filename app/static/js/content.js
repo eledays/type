@@ -91,6 +91,7 @@ function correctAnswer(data) {
     wordElement.classList.add('shrink');
     setTimeout(() => {
         wordElement.innerHTML = word.full_word;
+        
     }, 200);
     setTimeout(() => {
         document.body.classList.remove('correct');
