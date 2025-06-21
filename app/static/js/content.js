@@ -13,7 +13,8 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 let ctx = canvas.getContext('2d');
 
-let longPressTimer = null;
+let longPressTimer;
+let answerLongPressTimer;
 let longPressTime = 500;
 addEventListener('DOMContentLoaded', () => {
     for (let i = 0; i < answersElement.querySelectorAll('button').length; i++) {
@@ -35,6 +36,34 @@ touchArea.addEventListener('touchstart', (event) => {
 
 touchArea.addEventListener('touchend', (event) => {
     clearTimeout(longPressTimer);
+});
+
+answersElement.querySelectorAll('button').forEach((e) => {
+    if (!explanationInput) {
+        return;
+    }
+    e.addEventListener('touchstart', (event) => {
+        // try {event.preventDefault()} catch {}
+
+        if (answerLongPressTimer !== null) clearInterval(answerLongPressTimer);
+        
+        answerLongPressTimer = setTimeout(() => {
+            fetch('/delete_answer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({word_id: word_id, answer: e.innerText.trim()})
+            });
+            e.remove();
+        }, longPressTime);
+    }, {passive: false});
+});
+
+answersElement.querySelectorAll('button').forEach((e) => {
+    e.addEventListener('touchend', (event) => {
+        clearTimeout(answerLongPressTimer);
+    });
 });
 
 function handleAnswerClick(event) {

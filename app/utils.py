@@ -166,7 +166,10 @@ def send_day_summary(user_id: int) -> str:
             markup = types.InlineKeyboardMarkup()
             button = types.InlineKeyboardButton('Решать', web_app=types.WebAppInfo(url=app.config.get('URL')))
             markup.add(button)
-            bot.send_message(user_id, "<b>Итоги дня</b>\n\nКажется, сегодня ничего нет. Давай решим хотя бы пару заданий?", reply_markup=markup)
+            try:
+                bot.send_message(user_id, "<b>Итоги дня</b>\n\nКажется, сегодня ничего нет. Давай решим хотя бы пару заданий?", reply_markup=markup)
+            except:
+                pass
 
         text = (
             f"<b>Итоги дня</b>\n\n"
