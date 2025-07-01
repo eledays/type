@@ -22,7 +22,10 @@ def day_results_handler(message):
 
 
 @bot.message_handler(commands=['all_message'])
-def all_message(message, step=0, data={}):
+def all_message(message, step=0, data=None):
+    if data is None:
+        data = {}
+
     if message.chat.id != int(os.getenv('ADMIN_ID')):
         return 
     
