@@ -13,14 +13,4 @@ db = SQLAlchemy(app)
 from flask_migrate import Migrate
 migrate = Migrate(app, db)
 
-import os
-import telebot
-bot = telebot.TeleBot(os.getenv('BOT_TOKEN'), parse_mode='html')
-
-from apscheduler.schedulers.background import BackgroundScheduler
-from app.utils import scheduler_run
-scheduler = BackgroundScheduler()
-scheduler.add_job(scheduler_run, trigger="interval", minutes=app.config.get('SEND_NOTIFICATION_PERIOD'))
-scheduler.start()
-
-from app import routes, models, tg_handlers, utils
+from app import routes, models, utils

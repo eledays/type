@@ -1,4 +1,4 @@
-from app import app, db, bot
+from app import app, db
 from app.models import Action, Settings, Word
 
 from telebot import types

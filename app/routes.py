@@ -1,4 +1,4 @@
-from app import app, db, bot
+from app import app, db
 from app.models import Word, Action, Category, Settings
 from app.utils import add_action, get_strike, get_user_stats
 
@@ -248,26 +248,12 @@ def get_background():
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
-
-
-@app.route('/verify_hash', methods=['POST'])
-def verify_hash():
-    data = request.get_json()
-    init_data = InitData.parse(data.get('initData', ''))
-
-    if init_data.validate(os.getenv('BOT_TOKEN')):
-        session['user_id'] = init_data.user.id
-        print(session.get('user_id'))
-        return jsonify({'valid': True}), 200
-    else:
-        session['user_id'] = None
-        return jsonify({'valid': False}), 400
     
 
 @app.route('/set_user_id', methods=['POST'])
 def set_user_id():
     user_id = request.json.get('user_id')
-    if user_id is not None and user_id.startswith('unsafe_'):
+    if user_id is not None:
         session['user_id'] = user_id
         return jsonify({'status': 'success'})
     else:
@@ -308,16 +294,6 @@ def action_swipe_next():
 @app.route('/favicon.ico')
 def favicon():
     return send_file('static/img/fav.ico', mimetype='image/x-icon')
-
-
-@app.route('/tg_webhook', methods=['POST'])
-def webhook():
-    if request.headers.get('content-type') == 'application/json':
-        json_string = request.get_data().decode('utf-8')
-        update = telebot.types.Update.de_json(json_string)
-        bot.process_new_updates([update])
-        return 'OK', 200
-    return 'Error', 501
 
 
 @app.route('/can_swipe', methods=['GET'])
