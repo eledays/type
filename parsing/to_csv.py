@@ -1,6 +1,6 @@
 import csv
 
-writer = csv.DictWriter(open('words/words.csv', 'w'), fieldnames=['word', 'answers', 'category'], delimiter=';')
+writer = csv.DictWriter(open('../words/words.csv', 'w'), fieldnames=['word', 'answers', 'category'], delimiter=';')
 lets = {
     'а': ['а', 'о', 'ё'],
     'е': ['е', 'и', 'ё'],
@@ -30,7 +30,7 @@ for k, v in {
     '3_7_4.txt': 'Правописание приставок. Буквы ы – и после при ставок',
     '3_7_5.txt': 'Правописание суффиксов',
     }.items():
-    with open('words/' + k, 'r', encoding='utf-8') as file:
+    with open('../words/' + k, 'r', encoding='utf-8') as file:
         for line in file.readlines():
             word = line.strip()
             right_let = [e for e in word if e.isupper()][0]

@@ -1,9 +1,9 @@
 import re
 
 
-ipt = 'words/a.txt'
-out = 'words/3_7_5.txt'
-err = 'words/3_7_5_errors.txt'
+ipt = '../words/words.txt'
+out = '../words/3_7_5.txt'
+err = '../words/3_7_5_errors.txt'
 
 
 def count_differences(str1, str2):
