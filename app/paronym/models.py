@@ -15,7 +15,7 @@ class Paronym(db.Model):
         """
         Returns all group paronyms
         """
-        paronyms = self.group.paronyms
+        paronyms = [i.word for i in self.group.paronyms]
         return paronyms
 
 
