@@ -23,6 +23,7 @@ class Sentence(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     sentence = db.Column(db.String, unique=True, nullable=False)
     word_id = db.Column(db.Integer, db.ForeignKey('paronym.id'), nullable=False)
+    word_tags = db.Column(db.String)
     word = db.relationship(Paronym, backref='sentences')
 
     def get_all_options(self):
