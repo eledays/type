@@ -74,6 +74,10 @@ def get_frame():
 
     user_id = session.get('user_id')
     admin = (str(user_id) == str(os.getenv('ADMIN_ID'))) and admin
+    if task_id == '5':
+        sentence = Sentence.query.order_by(func.random()).first()
+        info_str = [f'Фильтр: "Задание №{task_id}"']
+        return render_template('frame_inner.html', word=sentence, info_str=info_str)
 
     if task_id:
         words = Word.query.filter(Word.task_number == task_id)
@@ -187,7 +191,7 @@ def check_word():
     else:
         note = Sentence.query.get(note_id)
         parse_word = MorphAnalyzer().parse(note.word.word)[0]
-        word_in_right_form = parse_word.inflect(note.word_tags).word
+        word_in_right_form = parse_word.inflect(set(note.word_tags.split(','))).word
         full_note = note.sentence.replace('_______', word_in_right_form)
         right_answer = word_in_right_form
         explanation = None

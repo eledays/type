@@ -1,3 +1,7 @@
+from random import shuffle
+
+from pymorphy3 import MorphAnalyzer
+
 from app import app, db
 
 
@@ -25,7 +29,28 @@ class Sentence(db.Model):
     word_id = db.Column(db.Integer, db.ForeignKey('paronym.id'), nullable=False)
     word_tags = db.Column(db.String)
     word = db.relationship(Paronym, backref='sentences')
+    explanation = ''
 
-    def get_all_options(self):
-        paronyms = self.word.group.paronyms
+    def get_answers(self) -> list:
+        """
+        Returns the answers in a random order.
+        """
+        analyzer = MorphAnalyzer()
+        tags = set(self.word_tags.split(','))
+        paronyms = []
+        for i in self.word.group.paronyms:
+            word = analyzer.parse(i.word)[0]
+            for tag in tags:
+                word_in_form = word.inflect({tag})
+                if word_in_form is not None:
+                    word = word_in_form
+
+            paronyms.append(word.word)
+        shuffle(paronyms)
         return paronyms
+
+    def get_html(self) -> str:
+        """
+        Returns the word with missing letters highlighted in HTML format.
+        """
+        return self.sentence

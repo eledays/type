@@ -28,7 +28,7 @@ def to_db(sentence: str, word: str, correct_word: str):
 
     sentence = sentence.replace(word.upper(), '_______')
     morph = pymorphy3.MorphAnalyzer()
-    tags = str(morph.parse(correct_word.lower().rstrip())[0].tag)
+    tags = ','.join(morph.parse(correct_word.lower().rstrip())[0].tag.grammemes)
 
     with app.app_context():
         if Sentence.query.filter_by(sentence=sentence).first():
