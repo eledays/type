@@ -1,11 +1,15 @@
+import pymorphy3.analyzer
+
 from app import app, db
 from app.models import Word, Action, Category, Settings
+from app.paronym.models import Paronym, Sentence
 from app.utils import add_action, get_strike, get_user_stats
 
 from flask import render_template, redirect, url_for, jsonify, request, send_file, session
 from init_data_py import InitData
 from sqlalchemy import and_, func, case
 import telebot
+from pymorphy3.analyzer import MorphAnalyzer
 
 from time import sleep
 import json
@@ -171,17 +175,32 @@ def check_word():
     
     user_id = session.get('user_id')
     user_settings = Settings.query.filter(Settings.user_id == user_id).first()
-    
-    word_id = request.json.get('id')
+
+    note_id = request.json.get('id')
     answer = request.json.get('answer')
-    word = Word.query.get(word_id)
-    full_word = word.word.replace('_', word.answers[0])
-    if word and answer == word.answers[0]:
+    is_paronym = len(answer) != 1
+    if not is_paronym:
+        note = Word.query.get(note_id)
+        full_note = note.word.replace('_', note.answers[0])
+        explanation = note.explanation
+        right_answer = note.answers[0]
+    else:
+        note = Sentence.query.get(note_id)
+        parse_word = MorphAnalyzer().parse(note.word.word)[0]
+        word_in_right_form = parse_word.inflect(note.word_tags).word
+        full_note = note.sentence.replace('_______', word_in_right_form)
+        right_answer = word_in_right_form
+        explanation = None
+
+    if note and answer == right_answer:
         if user_settings.strike:
             session['strike'] = session.get('strike', get_strike(user_id)) + 1
-        add_action(user_id=session['user_id'], word_id=word_id, action=Action.RIGHT_ANSWER)
+
+        if not is_paronym:
+            add_action(user_id=session['user_id'], word_id=note_id, action=Action.RIGHT_ANSWER)
+
         return jsonify({
-            'correct': True, 'full_word': full_word, 'explanation': word.explanation,
+            'correct': True, 'full_word': full_note, 'explanation': explanation,
             'strike': {
                 'n': session['strike'],
                 'levels': app.config['STRIKE_LEVELS']
@@ -189,9 +208,12 @@ def check_word():
     else:
         if user_settings.strike:
             session['strike'] = 0
-        add_action(user_id=session['user_id'], word_id=word_id, action=Action.WRONG_ANSWER)
+
+        if not is_paronym:
+            add_action(user_id=session['user_id'], word_id=note_id, action=Action.WRONG_ANSWER)
+
         return jsonify({
-            'correct': False, 'full_word': full_word, 'explanation': word.explanation,
+            'correct': False, 'full_word': full_note, 'explanation': explanation,
             'strike': { 
                 'n': session['strike'],
                 'levels': app.config['STRIKE_LEVELS']
