@@ -14,4 +14,4 @@ from flask_migrate import Migrate
 migrate = Migrate(app, db)
 
 from app import routes, models, utils
-from app.paronym import models as models_par, routes as routes_par
+from app.paronym import models as models_par
