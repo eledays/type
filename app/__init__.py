@@ -13,5 +13,6 @@ db = SQLAlchemy(app)
 from flask_migrate import Migrate
 migrate = Migrate(app, db)
 
-from app import routes, models, utils
+from app import models, utils
+from app.routes import admin, core, filters, main_logic, users
 from app.paronym import models as models_par
