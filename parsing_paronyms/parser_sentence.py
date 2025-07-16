@@ -7,7 +7,8 @@ from tqdm import tqdm
 
 
 driver = webdriver.Chrome()
-driver.get("https://rus-ege.sdamgia.ru/test?id=50168830&nt=True&pub=False&print=true&svg=0&num=true&ans=true&tt=&td=")
+# driver.get("https://rus-ege.sdamgia.ru/test?id=50168830&nt=True&pub=False&print=true&svg=0&num=true&ans=true&tt=&td=")
+driver.get("https://rus-ege.sdamgia.ru/test?id=50214784&nt=True&pub=False&print=true&svg=0&num=true&ans=true&tt=&td=")
 
 all_divs = driver.find_elements(By.TAG_NAME, 'div')
 

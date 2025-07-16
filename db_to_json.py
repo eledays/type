@@ -15,6 +15,7 @@ def export_to_json(db_path, json_path):
     for table in tables:
         cursor.execute(f"SELECT * FROM {table};")
         rows = cursor.fetchall()
+
         database_data[table] = [dict(row) for row in rows]
 
     if not os.path.exists('fixtures'):
