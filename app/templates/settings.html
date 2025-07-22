@@ -58,6 +58,9 @@
                         <span class="setting-value on">Включена</span>
                     {% endif %}
                 </div>
+                <button class="setting-item filters" onclick="window.parent.location.href = `/filters?referrer=${encodeURIComponent(window.parent.location.pathname)}`">
+                    <span class="setting-name">Фильтры</span>
+                </button>
                 {% endif %}
             </div>
         </div>
