@@ -1,8 +1,13 @@
-from app import app, db
+from app import app, db, ENABLE_TELEGRAM
 from app.models import Word, Settings
 from app.utils import get_user_stats
 
 from flask import render_template, jsonify, request, session
+
+if ENABLE_TELEGRAM:
+    from app import bot
+    from init_data_py import InitData
+    import telebot
 
 import datetime
 import os
@@ -61,6 +66,8 @@ def set_settings():
 
 @app.route('/set_user_id', methods=['POST'])
 def set_user_id():
+    if ENABLE_TELEGRAM:
+        return jsonify({'status': 'error'}), 400
     user_id = request.json.get('user_id')
     if user_id is not None:
         session['user_id'] = user_id
@@ -68,3 +75,29 @@ def set_user_id():
     else:
         return jsonify({'status': 'error'}), 400
 
+
+@app.route('/verify_hash', methods=['POST'])
+def verify_hash():
+    if not ENABLE_TELEGRAM:
+        return 'No Telegram integration', 500
+
+    data = request.get_json()
+    init_data = InitData.parse(data.get('initData', ''))
+
+    if init_data.validate(os.getenv('BOT_TOKEN')):
+        session['user_id'] = init_data.user.id
+        print(session.get('user_id'))
+        return jsonify({'valid': True}), 200
+    else:
+        session['user_id'] = None
+        return jsonify({'valid': False}), 400
+    
+
+@app.route('/tg_webhook', methods=['POST'])
+def webhook():
+    if request.headers.get('content-type') == 'application/json':
+        json_string = request.get_data().decode('utf-8')
+        update = telebot.types.Update.de_json(json_string)
+        bot.process_new_updates([update])
+        return 'OK', 200
+    return 'Error', 501

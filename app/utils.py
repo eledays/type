@@ -1,5 +1,7 @@
-from app import app, db
+from app import app, db, ENABLE_TELEGRAM
 from app.models import Action, Settings, Word
+if ENABLE_TELEGRAM:
+    from app import bot
 
 from telebot import types
 
