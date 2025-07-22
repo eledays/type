@@ -12,7 +12,7 @@
     <div class="touch-area"></div>
     <canvas></canvas>
 
-    <div class="word-cont">
+    <div class="{% if 'task_id=5' not in request.url %}word-cont{% else %}sentence-cont{% endif %}">
         <p class="word">
             {{ word.get_html()|safe }}
         </p>
@@ -22,8 +22,9 @@
     {% endif %}
 
     <div class="answers">
+
         {% for answer in word.get_answers() %}
-            <button class="answer">
+            <button class="{% if 'task_id=5' not in request.url %}answer{% else%}sentence-answer{% endif %}">
                 {{ answer }}
             </button>
         {% endfor %}

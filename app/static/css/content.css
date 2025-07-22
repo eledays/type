@@ -18,6 +18,15 @@ body {
     z-index: -10;
 }
 
+.sentence-cont {
+    position: relative;
+    top: -20;
+    left: 0;
+    width: 100vw;
+    height: var(--word-block-height);
+    z-index: -10;
+}
+
 .word {
     transition: color .5s ease, top .3s ease;
     position: absolute;
@@ -35,6 +44,7 @@ body {
     border-radius: 10px;
     backdrop-filter: blur(10px);
 }
+
 
 #explanation {
     position: fixed;
@@ -83,12 +93,16 @@ body {
 
 .answers {
     position: absolute;
-    bottom: 20vh; 
+    bottom: 20vh;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, 50%);
     display: flex;
     z-index: 10;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
 }
+
 
 .answers button.answer {
     width: 100px;
@@ -111,6 +125,29 @@ body {
 }
 
 .answers button.answer:hover {
+    filter: brightness(.95);
+}
+
+.answers button.sentence-answer {
+    max-width: calc(100vw);
+    padding: 10px 20px;
+    margin: 5px;
+    font-size: 20px;
+    background-color: var(--secondary-color);
+    cursor: pointer;
+    border: none;
+    transition: .1s;
+    z-index: 10;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.answers button.sentence-answer:hover {
     filter: brightness(.95);
 }
 
