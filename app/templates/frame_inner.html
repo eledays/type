@@ -32,6 +32,7 @@
 
     <div class="menu">
         <div class="buttons">
+            {% if not demo %}
             <div class="block">
                 <button class="settings" onclick="window.parent.location.href = `/settings?referrer=${encodeURIComponent(window.parent.location.pathname)}`">
                     <span class="material-symbols-rounded notranslate">settings</span>
@@ -64,6 +65,9 @@
                 {% endfor %}
             </div>
         </div>
+        {% else %}
+            <p>Меню доступно в полной версии</p>
+        {% endif %}
     </div>
 
     <script>var word_id = "{{ word.id }}";</script>

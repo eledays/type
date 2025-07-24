@@ -9,18 +9,17 @@ import random
 
 @app.route('/get_background')
 def get_background():
-    if 'user_id' not in session:
-        return jsonify({'status': 'error', 'message': 'User not authenticated'}), 401
-
-    user_id = session.get('user_id')
+    user_id = session.get('user_id', None)
     user_settings = Settings.query.filter(Settings.user_id == user_id).first()
 
-    if 'strike' not in session:
+    if 'strike' not in session and user_id:
         session['strike'] = get_strike(user_id)
 
     levels = app.config['STRIKE_LEVELS']
 
-    if str(user_id) in [str(os.getenv('SECURE_ID')), str(os.getenv('ADMIN_ID'))] and session['strike'] >= levels[0]:
+    if user_id is None:
+        path = 'dark'
+    elif str(user_id) in [str(os.getenv('SECURE_ID')), str(os.getenv('ADMIN_ID'))] and session['strike'] >= levels[0]:
         filename = random.choice(os.listdir(f'app/secure_static/backs/'))
         response = send_file(f'secure_static/backs/{filename}')
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -49,12 +48,12 @@ def favicon():
 
 @app.route('/can_swipe', methods=['GET'])
 def can_swipe():
-    if 'user_id' not in session:
-        return jsonify({'status': 'error', 'message': 'User not authenticated'}), 401
-
-    user_id = session.get('user_id')
-    user_settings = Settings.query.filter(Settings.user_id == user_id).first()
+    user_id = session.get('user_id', None)
+    user_settings = Settings.query.filter(Settings.user_id == user_id).first() if user_id else None
     word_id = request.args.get('word_id')
+
+    if user_settings is None:
+        return jsonify({'status': 'yes'}), 200
 
     if not user_settings.strike:
         return jsonify({'status': 'yes'}), 200

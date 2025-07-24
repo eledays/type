@@ -95,7 +95,7 @@ button {
 
 .partscreen .error {
     position: fixed;
-    top: 48px;
+    top: 12px;
     right: 12px;
     opacity: .5;
     padding: 10px;
@@ -189,4 +189,43 @@ button {
         opacity: 0;
         transform: translateY(-10em) scale(0);
     }
+}
+
+.demo-message {
+    display: flex;
+    gap: 10px;
+    width: max-content;
+    max-width: 90vw;
+    z-index: 10000;
+}
+
+.fullscreen .demo-message {
+    background-color: rgb(0, 89, 255);
+    padding: 10px 22px;
+    border-radius: 16px;
+    color: rgb(255, 255, 255);
+    font-weight: 600;
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    text-align: center;
+    top: 0px;
+    transform: translate(-50%, -100%);
+    animation: appear-from-up .2s ease-in-out 1s forwards;
+    cursor: pointer;
+}
+
+.demo-message span {
+    opacity: .5;
+}
+
+@keyframes appear-from-up {
+    from {
+        top: 0px;
+        transform: translate(-50%, -100%);
+    }    
+    to {
+        top: 20px;
+        transform: translate(-50%, 0%);
+    }    
 }

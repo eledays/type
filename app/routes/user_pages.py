@@ -30,6 +30,11 @@ def index():
     return render_template('index.html', strike=strike)
 
 
+@app.route('/demo')
+def demo_page():
+    return render_template('index.html', strike=None, demo=True, params='demo=true')
+
+
 @app.route('/get_frame')
 def get_frame():
     task_id = request.args.get('task_id', '')
@@ -37,6 +42,7 @@ def get_frame():
     category = Category.query.get(category_id)
     mistakes = request.args.get('mistakes', '')
     admin = session.get('admin', False)
+    demo = request.args.get('demo', False)
 
     user_id = session.get('user_id')
     admin = (str(user_id) == str(os.getenv('ADMIN_ID'))) and admin
@@ -124,7 +130,7 @@ def get_frame():
         info_str.append('Это слово встретилось случайно')
 
     if word:
-        return render_template('frame_inner.html', word=word, info_str=info_str, admin=admin)
+        return render_template('frame_inner.html', word=word, info_str=info_str, admin=admin, demo=demo)
     else:
         return 'No words available', 404
 
@@ -140,11 +146,8 @@ def get_frame():
 
 @app.route('/check_word', methods=['POST'])
 def check_word():
-    if 'user_id' not in session:
-        return jsonify({'status': 'error', 'message': 'User not authenticated'}), 401
-
-    user_id = session.get('user_id')
-    user_settings = Settings.query.filter(Settings.user_id == user_id).first()
+    user_id = session.get('user_id', None)
+    user_settings = Settings.query.filter(Settings.user_id == user_id).first() if user_id else None
 
     note_id = request.json.get('id')
     answer = request.json.get('answer')
@@ -163,29 +166,29 @@ def check_word():
         explanation = None
 
     if note and answer == right_answer:
-        if user_settings.strike:
+        if user_settings and user_settings.strike:
             session['strike'] = session.get('strike', get_strike(user_id)) + 1
 
         if not is_paronym:
-            add_action(user_id=session['user_id'], word_id=note_id, action=Action.RIGHT_ANSWER)
+            add_action(user_id=user_id, word_id=note_id, action=Action.RIGHT_ANSWER)
 
         return jsonify({
             'correct': True, 'full_word': full_note, 'explanation': explanation,
             'strike': {
-                'n': session['strike'],
+                'n': session.get('strike', None),
                 'levels': app.config['STRIKE_LEVELS']
             }})
     else:
-        if user_settings.strike:
+        if user_settings and user_settings.strike:
             session['strike'] = 0
 
         if not is_paronym:
-            add_action(user_id=session['user_id'], word_id=note_id, action=Action.WRONG_ANSWER)
+            add_action(user_id=user_id, word_id=note_id, action=Action.WRONG_ANSWER)
 
         return jsonify({
             'correct': False, 'full_word': full_note, 'explanation': explanation,
             'strike': {
-                'n': session['strike'],
+                'n': session.get('strike'),
                 'levels': app.config['STRIKE_LEVELS']
             }})
 

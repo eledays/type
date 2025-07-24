@@ -27,7 +27,7 @@ if ENABLE_TELEGRAM:
     scheduler.start()
 
 from app import models, utils
-from app.routes import admin, core, filters, main_logic, users
+from app.routes import admin, core, filters, user_pages, users
 from app.paronym import models as models_par
 if ENABLE_TELEGRAM:
     from app import tg_handlers
