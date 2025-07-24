@@ -1,4 +1,4 @@
-from app import app, db
+from app import app, db, ENABLE_TELEGRAM
 from app.models import Word, Action, Category, Settings
 from app.paronym.models import Sentence
 from app.utils import add_action, get_strike
@@ -14,8 +14,10 @@ import random
 
 @app.route('/')
 def index():
-    if 'user_id' not in session:
+    if 'user_id' not in session and ENABLE_TELEGRAM:
         return render_template('auth.html')
+    else:
+        session['user_id'] = int(10000000000000 * random.random() + 10000000000000)
 
     user_id = session.get('user_id')
     user_settings = Settings.query.filter(Settings.user_id == user_id).first()

@@ -199,12 +199,16 @@ button {
     z-index: 10000;
 }
 
-.fullscreen .demo-message {
+.demo-message {
     background-color: rgb(0, 89, 255);
     padding: 10px 22px;
     border-radius: 16px;
     color: rgb(255, 255, 255);
     font-weight: 600;
+    cursor: pointer;
+}
+
+.fullscreen .demo-message {
     position: fixed;
     top: 20px;
     left: 50%;
@@ -212,7 +216,12 @@ button {
     top: 0px;
     transform: translate(-50%, -100%);
     animation: appear-from-up .2s ease-in-out 1s forwards;
-    cursor: pointer;
+}
+
+.partscreen .demo-message {
+    position: fixed;
+    left: 20px;
+    top: 20px;
 }
 
 .demo-message span {
