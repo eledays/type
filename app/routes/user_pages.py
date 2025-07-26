@@ -3,13 +3,14 @@ from app.models import Word, Action, Category, Settings
 from app.paronym.models import Sentence
 from app.utils import add_action, get_strike
 
-from flask import render_template, jsonify, request, session
+from flask import render_template, jsonify, request, session, render_template_string
 from sqlalchemy import and_, func, case
 from pymorphy3.analyzer import MorphAnalyzer
 
 import datetime
 import os
 import random
+from secrets import token_hex
 
 
 @app.route('/')
@@ -234,3 +235,18 @@ def action_swipe_next():
         return jsonify({'status': 'success', 'strike': 0}), 200
     else:
         return jsonify({'status': 'error', 'error': 'no word id'}), 400
+
+
+# Функции для личного пользования, скоро уберу)
+@app.route(f'/{os.getenv("RED_CARD", None)}')
+def red_card():
+    if os.getenv("RED_CARD", None) is not None:
+        with open('app/secure_static/red.html', 'r') as file:
+            return render_template_string(file.read())
+
+
+@app.route(f'/{os.getenv("BLUE_CARD", None)}')
+def blue_card():
+    if os.getenv("BLUE_CARD", None) is not None:
+        with open('app/secure_static/blue.html', 'r') as file:
+            return render_template_string(file.read())
