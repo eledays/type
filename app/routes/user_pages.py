@@ -157,7 +157,10 @@ def check_word():
     is_paronym = ' ' in answer
     if not is_paronym:
         note = Word.query.get(note_id)
-        full_note = note.word.replace('_', note.answers[0])
+        if '_' in note.word:
+            full_note = note.word.replace('_', note.answers[0])
+        else:
+            full_note = note.answers[0]
         explanation = note.explanation
         right_answer = note.answers[0]
     else:
