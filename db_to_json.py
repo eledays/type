@@ -27,4 +27,5 @@ def export_to_json(db_path, json_path):
     conn.close()
 
 
-export_to_json('instance/app.db', 'fixtures/database_dump.json')
+if __name__ == '__main__':
+    export_to_json('instance/app.db', 'fixtures/database_dump.json')

@@ -16,6 +16,12 @@ db = SQLAlchemy(app)
 from flask_migrate import Migrate
 migrate = Migrate(app, db)
 
+bot = None
+
+if ENABLE_TELEGRAM:
+    import telebot
+    bot = telebot.TeleBot(os.getenv('BOT_TOKEN'), parse_mode='html')
+
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.utils import check_notifications, do_backup
 
@@ -24,9 +30,6 @@ backup_scheduler.add_job(do_backup, trigger="interval", days=app.config.get('BAC
 backup_scheduler.start()
 
 if ENABLE_TELEGRAM:
-    import telebot
-    bot = telebot.TeleBot(os.getenv('BOT_TOKEN'), parse_mode='html')
-
     notification_scheduler = BackgroundScheduler(persist_jobs=False)
     notification_scheduler.add_job(check_notifications, trigger="interval", minutes=app.config.get('SEND_NOTIFICATION_PERIOD'))
     notification_scheduler.start()

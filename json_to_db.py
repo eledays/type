@@ -30,4 +30,5 @@ def import_from_json(db_path, json_path):
     conn.close()
 
 
-import_from_json('instance/app.db', 'fixtures/accents.json')
+if __name__ == '__main__':
+    import_from_json('instance/app.db', 'fixtures/database_dump.json')
