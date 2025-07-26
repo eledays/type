@@ -20,7 +20,7 @@ def import_from_json(db_path, json_path):
             query = f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({placeholders})"
 
             for row in rows:
-                values = [row[column] for column in columns]
+                values = [row[column] if type(row[column]) is not list else '[' + ','.join(f'"{e}"' for e in row[column]) + ']' for column in columns]
                 cursor.execute(query, values)
         except sqlite3.IntegrityError:
             print(rows, 'is exists already')
@@ -30,4 +30,4 @@ def import_from_json(db_path, json_path):
     conn.close()
 
 
-import_from_json('instance/app.db', 'fixtures/database_dump.json')
+import_from_json('instance/app.db', 'fixtures/accents.json')

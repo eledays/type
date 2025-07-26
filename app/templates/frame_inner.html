@@ -24,7 +24,7 @@
     <div class="answers">
 
         {% for answer in word.get_answers() %}
-            <button class="{% if 'task_id=5' not in request.url %}answer{% else%}sentence-answer{% endif %}">
+            <button class="{% if answer|length < 3 %}answer{% else%}sentence-answer{% endif %}">
                 {{ answer }}
             </button>
         {% endfor %}
