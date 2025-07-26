@@ -1,4 +1,7 @@
-from app import app, db, ENABLE_TELEGRAM
+from app import app, db
+
+import os
+ENABLE_TELEGRAM = os.getenv("ENABLE_TELEGRAM", "false").lower() == "true"
 if ENABLE_TELEGRAM:
     from app import bot
 
