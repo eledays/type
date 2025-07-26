@@ -2,6 +2,7 @@ from app import app, db, ENABLE_TELEGRAM
 from app.models import Action, Settings, Word
 if ENABLE_TELEGRAM:
     from app import bot
+from db_to_json import export_to_json
 
 from telebot import types
 
@@ -19,7 +20,7 @@ def add_action(user_id, word_id, action):
     db.session.commit()
 
 
-def scheduler_run():
+def check_notifications():
     with app.app_context():
         start = datetime.now()
         end = start + timedelta(minutes=app.config.get('SEND_NOTIFICATION_PERIOD'))
@@ -71,6 +72,11 @@ def scheduler_run():
             bot.send_message(user.user_id, 'Привет! Пора русский порешать', reply_markup=markup)
         for user in users_to_notify_day_results:
             send_day_summary(user.user_id)
+
+
+def do_backup():
+    print('backup')
+    export_to_json('instance/app.db', app.config.get('BACKUP_PATH') + datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '.json')
 
 
 def get_strike(user_id):

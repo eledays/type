@@ -26,3 +26,4 @@ app/static/img/backs/secure/*
 app/secure_static/*
 errors.csv
 words.csv
+backups
