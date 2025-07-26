@@ -25,6 +25,8 @@ if ENABLE_TELEGRAM:
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.utils import check_notifications, do_backup
 
+do_backup()
+
 backup_scheduler = BackgroundScheduler(persist_jobs=False)
 backup_scheduler.add_job(do_backup, trigger="interval", days=app.config.get('BACKUP_PERIOD'))
 backup_scheduler.start()

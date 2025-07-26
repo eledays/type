@@ -17,7 +17,7 @@ from secrets import token_hex
 def index():
     if 'user_id' not in session and ENABLE_TELEGRAM:
         return render_template('auth.html')
-    else:
+    elif 'user_id' not in session and not ENABLE_TELEGRAM:
         session['user_id'] = int(10000000000000 * random.random() + 10000000000000)
 
     user_id = session.get('user_id')
