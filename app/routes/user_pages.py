@@ -154,7 +154,7 @@ def check_word():
 
     note_id = request.json.get('id')
     answer = request.json.get('answer')
-    is_paronym = ' ' in answer
+    is_paronym = len(answer) > 2 and answer.islower()
     if not is_paronym:
         note = Word.query.get(note_id)
         if '_' in note.word:
