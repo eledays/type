@@ -155,8 +155,8 @@ def send_day_summary(user_id: int) -> str:
     with app.app_context():
         # Определяем временной диапазон "сегодня"
         now = datetime.now()
-        today_start = datetime(now.year, now.month, now.day)
-        today_end = today_start + timedelta(days=1)
+        today_end = datetime(now.year, now.month, now.day, now.hour, now.minute, now.second)
+        today_start = today_end - timedelta(days=1)
 
         # Получаем все действия пользователя за день
         actions = Action.query.filter(
