@@ -1,4 +1,4 @@
-from app import app, db, ENABLE_TELEGRAM
+from app import app, db
 from app.models import Word, Action, Category, Settings
 from app.paronym.models import Sentence
 from app.utils import add_action, get_strike
@@ -18,9 +18,9 @@ from secrets import token_hex
 
 @app.route('/')
 def index():
-    if 'user_id' not in session and ENABLE_TELEGRAM:
+    if 'user_id' not in session and app.config.get('ENABLE_TELEGRAM', False):
         return render_template('auth.html')
-    elif 'user_id' not in session and not ENABLE_TELEGRAM:
+    elif 'user_id' not in session and not app.config.get('ENABLE_TELEGRAM', False):
         session['user_id'] = int(10000000000000 * random.random() + 10000000000000)
 
     user_id = session.get('user_id')
