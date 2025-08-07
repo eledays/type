@@ -1,10 +1,10 @@
-from app import app, db, ENABLE_TELEGRAM
+from app import app, db
 from app.models import Word, Settings
 from app.utils import get_user_stats
 
 from flask import render_template, jsonify, request, session
 
-if ENABLE_TELEGRAM:
+if app.config.get('ENABLE_TELEGRAM', False):
     from app import bot
     from init_data_py import InitData
     import telebot
@@ -66,7 +66,7 @@ def set_settings():
 
 @app.route('/set_user_id', methods=['POST'])
 def set_user_id():
-    if ENABLE_TELEGRAM:
+    if app.config.get('ENABLE_TELEGRAM', False):
         return jsonify({'status': 'error'}), 400
     user_id = request.json.get('user_id')
     if user_id is not None:
@@ -78,7 +78,7 @@ def set_user_id():
 
 @app.route('/verify_hash', methods=['POST'])
 def verify_hash():
-    if not ENABLE_TELEGRAM:
+    if not app.config.get('ENABLE_TELEGRAM', False):
         return 'No Telegram integration', 500
 
     data = request.get_json()

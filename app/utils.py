@@ -1,9 +1,7 @@
 from app import app, db
 from app.models import Action, Settings, Word
 
-import os
-ENABLE_TELEGRAM = os.getenv("ENABLE_TELEGRAM", "false").lower() == "true"
-if ENABLE_TELEGRAM:
+if app.config.get('ENABLE_TELEGRAM', False):
     from app import bot
 
 from db_to_json import export_to_json
