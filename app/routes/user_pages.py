@@ -3,7 +3,7 @@ from app.models import Word, Action, Category, Settings
 from app.paronym.models import Sentence
 from app.utils import add_action, get_strike
 
-if ENABLE_TELEGRAM:
+if app.config.get('ENABLE_TELEGRAM', False):
     from app import bot
 
 from flask import render_template, jsonify, request, session, render_template_string, send_from_directory
