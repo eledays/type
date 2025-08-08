@@ -1,4 +1,4 @@
-from secrets import token_hex
+from os import getenv
 
 
 class Config:
@@ -6,7 +6,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = 'sqlite:///app.db'
     BACKUP_PATH = 'backups/'
     BACKUP_PERIOD = 1  # дни
-    SECRET_KEY = token_hex(64)
+    SECRET_KEY = getenv('SECRET_KEY')
     STRIKE_LEVELS = [50, 100, 500, 1000]
     TASKS = {
         4: 'Ударения',
