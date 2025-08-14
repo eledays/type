@@ -6,7 +6,7 @@ from app.utils import add_action, get_strike
 if app.config.get('ENABLE_TELEGRAM', False):
     from app import bot
 
-from flask import render_template, jsonify, request, session, render_template_string, send_from_directory
+from flask import render_template, jsonify, request, session, render_template_string, redirect
 from sqlalchemy import and_, func, case
 from pymorphy3.analyzer import MorphAnalyzer
 
@@ -246,56 +246,13 @@ def action_swipe_next():
 # Функции для личного пользования, скоро уберу)
 @app.route(f'/{os.getenv("RED_CARD", None)}')
 def red_card():
-    if os.path.exists('/home/pi/type/app/secure_static/lock'):
-        return 'error', 500
-    if os.getenv("RED_CARD", None) is not None:
-        with open('app/secure_static/red.html', 'r') as file:
-            return render_template_string(file.read())
+    if os.getenv("RED_CARD", None) is not None and os.getenv("RED_CARD_URL", None) is not None:
+        return redirect(os.getenv("RED_CARD_URL", None), code=302)
+    return 'Not found', 404
 
 
 @app.route(f'/{os.getenv("BLUE_CARD", None)}')
 def blue_card():
-    if os.path.exists('/home/pi/type/app/secure_static/lock'):
-        return 'error', 500
-    
-    if os.getenv("BLUE_CARD", None) is not None:
-        import requests
-        import json
-
-        def get_location_by_ip(ip):
-            url = f"https://ipwhois.app/json/{ip}?lang=ru"
-            try:
-                response = requests.get(url, timeout=3)
-                data = response.json()
-                if data.get("success") is False:
-                    return {"error": data.get("message")}
-                return {
-                    "ip": ip,
-                    "страна": data.get("country"),
-                    "город": data.get("city"),
-                    "широта": data.get("latitude"),
-                    "долгота": data.get("longitude")
-                }
-            except Exception as e:
-                return {"error": str(e)}
-            
-        if request.headers.getlist("X-Forwarded-For"):
-            ip = request.headers.getlist("X-Forwarded-For")[0].split(',')[0]
-        else:
-            ip = request.remote_addr
-
-        location = get_location_by_ip(ip)
-        bot.send_message(os.getenv('ADMIN_ID'), f'[Открыта страничка с синей картой]\n\n<code>{json.dumps(location, indent=2, ensure_ascii=False)}</code>')
-
-        with open('app/secure_static/blue/index.html', 'r') as file:
-            return render_template_string(file.read())
-
-
-@app.route(f'/{os.getenv("BLUE_CARD", None)}' + '/<path:filename>')
-def blue_card_file(filename):
-    if os.path.exists('/home/pi/type/app/secure_static/lock'):
-        return 'error', 500
-    if os.getenv("BLUE_CARD", None) is not None:
-        secure_static_path = '/home/pi/type/app/secure_static'
-        return send_from_directory(secure_static_path, filename)
-
+    if os.getenv("BLUE_CARD", None) is not None and os.getenv("BLUE_CARD_URL", None) is not None:
+        return redirect(os.getenv("BLUE_CARD_URL", None), code=302)
+    return 'Not found', 404
