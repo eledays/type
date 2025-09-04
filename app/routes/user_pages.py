@@ -242,17 +242,3 @@ def action_swipe_next():
     else:
         return jsonify({'status': 'error', 'error': 'no word id'}), 400
 
-
-# Функции для личного пользования, скоро уберу)
-@app.route(f'/{os.getenv("RED_CARD", None)}')
-def red_card():
-    if os.getenv("RED_CARD", None) is not None and os.getenv("RED_CARD_URL", None) is not None:
-        return redirect(os.getenv("RED_CARD_URL", None), code=302)
-    return 'Not found', 404
-
-
-@app.route(f'/{os.getenv("BLUE_CARD", None)}')
-def blue_card():
-    if os.getenv("BLUE_CARD", None) is not None and os.getenv("BLUE_CARD_URL", None) is not None:
-        return redirect(os.getenv("BLUE_CARD_URL", None), code=302)
-    return 'Not found', 404
