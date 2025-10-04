@@ -1,0 +1,14 @@
+services:
+  type-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: type-app
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    command: /entrypoint.sh
+    restart: unless-stopped
