@@ -6,5 +6,5 @@ if [ "$ENV" = "development" ]; then
     exec python run_dev.py
 else
     echo "Running production server..."
-    exec gunicorn -w "$WORKERS" -b 0.0.0.0:$FLASK_PORT app.wsgi:app
+    exec gunicorn -w "$WORKERS" -b $FLASK_RUN_HOST:$FLASK_PORT wsgi:app
 fi
