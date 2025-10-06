@@ -1,4 +1,5 @@
 import WordCont from '../WordContainer/WordContainer'
+import AnswerContainer from '../AnswerContainer/AnswerContainer'
 import styles from './Clip.module.css'
 import type { ClipProps } from '../../types/components'
 
@@ -10,7 +11,11 @@ export default function Clip({ word, style }: ClipProps) {
           <WordCont word={word} />
         </div>
         <div className={styles.answersContainer}>
-          {/* Answers would go here */}
+          <div className={styles.answerWrapper}>
+            {word.options.map((option, index) => (
+              <AnswerContainer content={option} key={index} />
+            ))}
+          </div>
         </div>
       </div>
     </>

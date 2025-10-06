@@ -3,9 +3,11 @@
 :root {
   font-family: 'Manrope', sans-serif;
   
-  --color-primary: #000000;
+  --color-primary: #ffffff;
   --color-secondary: #747474;
   --background-color: #000000;
+
+  --answer-button-size: 8rem;
 }
 
 * {

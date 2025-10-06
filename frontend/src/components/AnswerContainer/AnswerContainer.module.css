@@ -1,0 +1,14 @@
+.answerContainer {
+  margin: 4px;
+  width: var(--answer-button-size);
+  height: var(--answer-button-size);
+  background-color: var(--color-accent);
+  border-radius: 10%;
+  background-color: rgba(0, 0, 0, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 900;
+  color: var(--color-primary);
+}

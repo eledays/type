@@ -10,3 +10,7 @@ export interface ClipProps {
   word: Word;
   style?: React.CSSProperties;
 }
+
+export interface AnswerContainerProps {
+  content: string;
+}
