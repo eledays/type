@@ -5,4 +5,11 @@
   
   --color-primary: #000000;
   --color-secondary: #747474;
+  --background-color: #000000;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }

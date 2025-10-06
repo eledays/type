@@ -1,0 +1,24 @@
+.clipsContainer {
+  width: 100vw;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-content: center;
+  align-items: center;
+  flex-direction: column;
+  touch-action: none;
+  flex-wrap: wrap;
+}
+
+.clipsContainer.mobile {
+  --margin: 0px;
+  margin: var(--margin) 0;
+  height: calc(100vh - var(--margin) * 2);
+}
+
+.clipsContainer.desktop {
+  --margin: 30px;
+  margin: var(--margin) 0;
+  height: calc(100vh - var(--margin) * 2);
+}
