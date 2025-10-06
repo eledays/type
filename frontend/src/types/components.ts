@@ -1,12 +1,12 @@
 // Component props interfaces
 
+import type {Word} from './word';
+
 export interface WordContProps {
-  word: string;
-  index: number;
+  word: Word;
 }
 
 export interface ClipProps {
-  word: string;
-  index: number;
+  word: Word;
   style?: React.CSSProperties;
 }

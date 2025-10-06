@@ -2,14 +2,34 @@ import { useState, useEffect, useMemo } from 'react'
 
 import Clip from '../Clip/Clip'
 import styles from './ClipsContainer.module.css'
+import type { Word } from '../../types/word'
+
+const mockData: Word[] = [
+  {
+    id: 1,
+    text: 'првет',
+    missingIndex: 2,
+    options: ['и', 'е']
+  },
+  {
+    id: 2,
+    text: 'иждвенец',
+    missingIndex: 3,
+    options: ['и', 'е']
+  },
+  {
+    id: 3,
+    text: 'прхождение',
+    missingIndex: 2,
+    options: ['и', 'е']
+  }
+]
 
 function getIsMobile() {
-  // Добавить проверку на существование window
   return typeof window !== 'undefined' && window.innerWidth <= window.innerHeight;
 }
 
 export default function ClipContainer() {
-  // Или использовать lazy initial state:
   const [isMobile, setIsMobile] = useState(() => getIsMobile());
 
   useEffect(() => {
@@ -27,9 +47,9 @@ export default function ClipContainer() {
 
   return (
     <div className={containerClass}>
-      <Clip word="wod" index={2} style={{ ...clipStyle, transform: 'translateY(-100vh)' }} />
-      <Clip word="wod" index={2} style={{ ...clipStyle, transform: 'translateY(0)' }} />
-      <Clip word="wod" index={2} style={{ ...clipStyle, transform: 'translateY(100vh)' }} />
+      <Clip word={mockData[0]} style={{ ...clipStyle, transform: 'translateY(-100vh)' }} />
+      <Clip word={mockData[1]} style={{ ...clipStyle, transform: 'translateY(0)' }} />
+      <Clip word={mockData[2]} style={{ ...clipStyle, transform: 'translateY(100vh)' }} />
     </div>
   )
 }

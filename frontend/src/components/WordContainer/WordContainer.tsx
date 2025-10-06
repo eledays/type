@@ -1,12 +1,12 @@
 import MissingLetter from '../MissingLetter/MissingLetter'
 import type { WordContProps } from '../../types/components'
 
-export default function WordCont({ word, index }: WordContProps) {
+export default function WordCont({ word }: WordContProps) {
   return (
     <div>
-      {word.slice(0, index)}
+      {word.text.slice(0, word.missingIndex)}
       <MissingLetter />
-      {word.slice(index)}
+      {word.text.slice(word.missingIndex)}
     </div>
   )
 }

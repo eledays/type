@@ -1,6 +1,6 @@
 .missingLetter {
-  margin: 2px;
-  padding: 0 5px;
+  margin: 4px;
+  padding: 0 9px;
   background-color: var(--color-secondary);
-  border-radius: 4px;
+  border-radius: 7px;
 } 
