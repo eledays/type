@@ -1,0 +1,13 @@
+.wordContainer {
+  transition: color .5s ease, top .3s ease;
+  display: flex;
+  font-size: var(--word-size);
+  cursor: text;
+  color: var(--color-primary);
+  z-index: 10;
+  background-color: var(--word-back-color);
+
+  padding: 10px 20px;
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+}

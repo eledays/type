@@ -7,7 +7,9 @@
   --color-secondary: #747474;
   --background-color: #000000;
 
-  --answer-button-size: 8rem;
+  --answer-button-size: 7rem;
+  --word-size: 1.5rem;
+  --word-back-color: rgba(0, 0, 0, 0.3);
 }
 
 * {

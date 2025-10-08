@@ -3,12 +3,14 @@
   width: var(--answer-button-size);
   height: var(--answer-button-size);
   background-color: var(--color-accent);
-  border-radius: 10%;
-  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 15%;
+  background-color: var(--word-back-color);
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   font-weight: 900;
   color: var(--color-primary);
+  backdrop-filter: blur(10px);
+  font-size: var(--word-size);
 }
