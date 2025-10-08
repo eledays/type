@@ -4,6 +4,23 @@ import styles from './Clip.module.css'
 import type { ClipProps } from '../../types/components'
 
 export default function Clip({ word, style }: ClipProps) {
+  function renderBackgroundMedia() {
+    if (!word.backgroundMedia) return null;
+
+    if (word.backgroundMedia.type === 'image') {
+      return <img src={word.backgroundMedia.url} alt="Background" className={styles.backgroundMedia} />;
+    } 
+    else if (word.backgroundMedia.type === 'video') {
+      return (
+        <video className={styles.backgroundMedia} autoPlay loop muted>
+          <source src={word.backgroundMedia.url} type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      );
+    }
+    return null;
+  }
+
   return (
     <>
       <div className={styles.clip} style={style}>
@@ -17,6 +34,7 @@ export default function Clip({ word, style }: ClipProps) {
             ))}
           </div>
         </div>
+        {renderBackgroundMedia()}
       </div>
     </>
   )

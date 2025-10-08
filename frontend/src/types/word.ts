@@ -5,4 +5,8 @@ export interface Word {
   text: string;
   missingIndex: number;
   options: string[];
+  backgroundMedia?: {
+    type: 'image' | 'video';
+    url: string;
+  }
 }

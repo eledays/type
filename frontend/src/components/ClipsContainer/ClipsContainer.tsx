@@ -9,19 +9,31 @@ const mockData: Word[] = [
     id: 1,
     text: 'првет',
     missingIndex: 2,
-    options: ['и', 'е']
+    options: ['и', 'е'],
+    backgroundMedia: {
+      type: 'image',
+      url: 'https://type.eleday.ru/get_background',
+    }
   },
   {
     id: 2,
     text: 'иждвенец',
     missingIndex: 3,
-    options: ['и', 'е']
+    options: ['и', 'е'],
+    backgroundMedia: {
+      type: 'image',
+      url: 'https://type.eleday.ru/get_background',
+    }
   },
   {
     id: 3,
     text: 'прхождение',
     missingIndex: 2,
-    options: ['и', 'е']
+    options: ['и', 'е'],
+    backgroundMedia: {
+      type: 'image',
+      url: 'https://type.eleday.ru/get_background',
+    }
   }
 ]
 
