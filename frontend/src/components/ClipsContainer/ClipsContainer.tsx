@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 import Clip from '../Clip/Clip'
 import styles from './ClipsContainer.module.css'
@@ -37,18 +38,8 @@ const mockData: Word[] = [
   }
 ]
 
-function getIsMobile() {
-  return typeof window !== 'undefined' && window.innerWidth <= window.innerHeight;
-}
-
 export default function ClipContainer() {
-  const [isMobile, setIsMobile] = useState(() => getIsMobile());
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(getIsMobile());
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const isMobile = useIsMobile();
 
   const containerClass = `${styles.clipsContainer} ${isMobile ? styles.mobile : styles.desktop}`;
   const clipStyle = useMemo(() => ({
