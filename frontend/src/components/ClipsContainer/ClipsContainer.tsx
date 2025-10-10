@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import { useClipNavigation } from '../../hooks/useClipNavigation'
 
 import Clip from '../Clip/Clip'
 import styles from './ClipsContainer.module.css'
@@ -40,6 +41,11 @@ const mockData: Word[] = [
 
 export default function ClipContainer() {
   const isMobile = useIsMobile();
+  useClipNavigation({
+    onNext: () => console.log('Next clip'),
+    onPrevious: () => console.log('Previous clip'),
+    swipeThreshold: 100,
+  });
 
   const containerClass = `${styles.clipsContainer} ${isMobile ? styles.mobile : styles.desktop}`;
   const clipStyle = useMemo(() => ({
