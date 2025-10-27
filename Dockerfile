@@ -22,10 +22,13 @@ RUN chmod +x /entrypoint.sh
 # TypeScript сборка
 COPY package*.json ./
 RUN npm install
+# Устанавливаем TypeScript глобально для доступа к tsc
+RUN npm install -g typescript
 
 COPY app/static/js/src/ ./app/static/js/src/
 COPY tsconfig.json ./
-RUN npx tsc
+# Создаем директорию dist и компилируем
+RUN mkdir -p app/static/js/dist && tsc
 
 EXPOSE 5000
 ENTRYPOINT ["/entrypoint.sh"]
