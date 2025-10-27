@@ -18,22 +18,22 @@ from secrets import token_hex
 
 @app.route('/')
 def index():
-    if 'user_id' not in session and app.config.get('ENABLE_TELEGRAM', False):
-        return render_template('auth.html')
-    elif 'user_id' not in session and not app.config.get('ENABLE_TELEGRAM', False):
-        session['user_id'] = int(10000000000000 * random.random() + 10000000000000)
+    # if 'user_id' not in session and app.config.get('ENABLE_TELEGRAM', False):
+    #     return render_template('auth.html')
+    # elif 'user_id' not in session and not app.config.get('ENABLE_TELEGRAM', False):
+    #     session['user_id'] = int(10000000000000 * random.random() + 10000000000000)
 
-    user_id = session.get('user_id')
-    user_settings = Settings.query.filter(Settings.user_id == user_id).first()
+    # user_id = session.get('user_id')
+    # user_settings = Settings.query.filter(Settings.user_id == user_id).first()
 
-    if user_settings is None:
-        user_settings = Settings(user_id=user_id)
-        db.session.add(user_settings)
-        db.session.commit()
+    # if user_settings is None:
+    #     user_settings = Settings(user_id=user_id)
+    #     db.session.add(user_settings)
+    #     db.session.commit()
 
-    strike = session.get('strike', get_strike(user_id)) if user_settings.strike else None
+    # strike = session.get('strike', get_strike(user_id)) if user_settings.strike else None
 
-    return render_template('index.html', strike=strike)
+    return render_template('index.html', strike=None)
 
 
 @app.route('/demo')

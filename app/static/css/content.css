@@ -9,7 +9,7 @@ body {
     background-repeat: no-repeat;
 }
 
-.word-cont {
+.word-container {
     position: relative;
     top: 0;
     left: 0;
@@ -149,27 +149,6 @@ body {
 
 .answers button.sentence-answer:hover {
     filter: brightness(.95);
-}
-
-.loading {
-    z-index: 10000;
-    background: linear-gradient(90deg, var(--back-color) 25%, var(--frame-background-color) 50%, var(--back-color) 75%);
-    background-size: 100% 100%;
-    animation: shimmer 2s infinite;
-    color: transparent;
-    position: fixed;
-    width: 400vw;
-    height: 100vh;
-    transition: opacity .3s;
-}
-
-@keyframes shimmer {
-    0% {
-        left: -300vw;
-    }
-    100% {
-        left: 0vw;
-    }
 }
 
 .correct canvas {

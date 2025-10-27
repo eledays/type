@@ -1,8 +1,9 @@
 from app import app
-from app.models import Action, Settings
+from app.models import Action, Settings, Word
 from app.utils import get_strike
 
-from flask import jsonify, request, send_file, session
+from flask import jsonify, request, send_file, session, render_template
+from sqlalchemy import func
 import os
 import random
 
@@ -77,3 +78,9 @@ def can_swipe():
 #     if request.path.endswith('.css') or request.path.endswith('.js'):
 #         response.headers['Cache-Control'] = 'public, max-age=31536000'
 #     return response
+
+
+@app.route('/api/clip')
+def get_card():
+    word = Word.query.order_by(func.random()).first()
+    return render_template('card.html', word=word)

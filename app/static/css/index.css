@@ -3,6 +3,14 @@
     --fire-2: radial-gradient(rgb(255, 81, 0) 20%, rgba(255, 80, 0, 0) 70%);
     --fire-3: radial-gradient(rgb(255, 51, 0) 20%, rgba(255, 80, 0, 0) 70%);
     --fire-4: radial-gradient(rgb(255, 0, 0) 20%, rgba(255, 80, 0, 0) 70%);
+
+    --main-color: #ffffff;
+    --secondary-color: rgba(0, 0, 0, 0.151);
+    --back-color: #000000;
+    --frame-background-color: #161616;
+
+    --back-img: url('/get_background');
+    --word-back: rgba(0, 0, 0, 0.151);
 }
 
 body {
@@ -237,4 +245,25 @@ button {
         top: 20px;
         transform: translate(-50%, 0%);
     }    
+}
+
+.loading {
+    z-index: 10000;
+    background: linear-gradient(90deg, var(--back-color) 25%, var(--frame-background-color) 50%, var(--back-color) 75%);
+    background-size: 100% 100%;
+    animation: shimmer 4s infinite;
+    color: transparent;
+    position: fixed;
+    width: 400vw;
+    height: 100vh;
+    transition: opacity .3s;
+}
+
+@keyframes shimmer {
+    0% {
+        left: -300vw;
+    }
+    100% {
+        left: 0vw;
+    }
 }

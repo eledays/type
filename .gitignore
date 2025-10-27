@@ -17,6 +17,14 @@ instance/
 .webassets-cache
 migrations
 
+# TypeScript compiled output
+/app/static/js/dist/
+*.js.map
+
+# Node modules
+node_modules/
+package-lock.json
+
 # Other:
 mistakes.txt
 certs

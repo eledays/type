@@ -13,14 +13,15 @@
     <link rel="icon" href="{{ url_for('static', filename='img/fav.ico') }}" type="image/x-icon">
 </head>
 <body>
-    <iframe src="/get_frame?{{ params }}" class="current"></iframe>
-    <iframe src="/get_frame?{{ params }}" class="next"></iframe>
+    <div class="loading"></div>
+    <!-- <iframe src="/get_frame?{{ params }}" class="current"></iframe>
+    <iframe src="/get_frame?{{ params }}" class="next"></iframe> -->
 
-    <button class="error" onclick="document.querySelector('.current').contentWindow.switchMenu()">
+    <!-- <button class="error" onclick="document.querySelector('.current').contentWindow.switchMenu()">
         <span class="material-symbols-rounded notranslate">error</span>
-    </button>
+    </button> -->
 
-    {% if strike != None %}
+    <!-- {% if strike != None %}
     <div class="strike-block">
         <p>{{ strike }}</p>
     </div>
@@ -31,21 +32,21 @@
         <p onclick="window.location.href = 'https://t.me/type_eleday_bot'">Перейти в полную версию</p>
         <span class="material-symbols-rounded notranslate" onclick="closeMessage()">close</span>
     </div>
-    {% endif %}
+    {% endif %} -->
 
-    <div class="fire" id="fire"></div>
+    <!-- <div class="fire" id="fire"></div> -->
 
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
         Telegram.WebApp.expand();
         Telegram.WebApp.requestFullscreen();
         Telegram.WebApp.lockOrientation();
-    </script>
+    </script> -->
 
-    <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/framesManaging.js') }}"></script>
+    <!-- <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/framesManaging.js') }}"></script> -->
 
-    {% if demo %}
+    <!-- {% if demo %}
     <script>
         function closeMessage() {
             if (document.querySelector('.demo-message')) {
@@ -53,6 +54,8 @@
             }
         }
     </script>
-    {% endif %}
+    {% endif %} -->
+    
+    <script type="module" src="{{ url_for('static', filename='js/dist/app.js') }}"></script>
 </body>
 </html>
