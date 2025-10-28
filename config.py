@@ -25,3 +25,4 @@ class Config:
 
     ENABLE_TELEGRAM = os.getenv("ENABLE_TELEGRAM", "false").lower() == "true"
     ENV = os.getenv("ENV", "production")
+    DEFAULT_CLIPS_BATCH_SIZE = 1

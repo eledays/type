@@ -11,24 +11,24 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+# Копируем файлы зависимостей
+COPY requirements.txt package*.json ./
 RUN pip install --no-cache-dir -r requirements.txt
+RUN npm install
+RUN npm install -g typescript
 
+# Копируем исходники для TypeScript
+COPY app/static/js/src/ ./app/static/js/src/
+COPY tsconfig.json ./
+
+# Создаем директорию dist и компилируем TypeScript
+RUN mkdir -p app/static/js/dist && tsc
+
+# Копируем остальные файлы
 COPY . .
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-
-# TypeScript сборка
-COPY package*.json ./
-RUN npm install
-# Устанавливаем TypeScript глобально для доступа к tsc
-RUN npm install -g typescript
-
-COPY app/static/js/src/ ./app/static/js/src/
-COPY tsconfig.json ./
-# Создаем директорию dist и компилируем
-RUN mkdir -p app/static/js/dist && tsc
 
 EXPOSE 5000
 ENTRYPOINT ["/entrypoint.sh"]

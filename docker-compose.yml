@@ -12,5 +12,6 @@ services:
       - "${FLASK_PORT}:${FLASK_PORT}"
     volumes:
       - .:/app
+      - /app/node_modules
     command: /entrypoint.sh
     restart: unless-stopped
