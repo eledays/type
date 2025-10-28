@@ -11,11 +11,13 @@ def batch_get_clips():
 
     clips_count: int = request.args.get(
         'count', default=app.config.get('DEFAULT_CLIPS_BATCH_SIZE', 1), type=int)
-    
-    MOCK_CLIPS = [
+
+    MOCK_CLIPS: list[dict] = [
         {'id': 1, 'content': '<b>Hello</b>, world!'},
         {'id': 2, 'content': 'This is a <i>test</i> clip.'},
         {'id': 3, 'content': 'Flask is <u>awesome</u>!'},
     ]
+
+    # В будущем проверять xss
 
     return jsonify({'clips': MOCK_CLIPS[:clips_count]})

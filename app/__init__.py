@@ -21,7 +21,7 @@ if app.config.get('ENABLE_TELEGRAM', False):
     bot = telebot.TeleBot(os.getenv('BOT_TOKEN'), parse_mode='html')
 
 from app import models, utils
-from app.routes import admin, core, filters, user_pages, users
+from app.routes import admin, core, filters, user_pages, users, api
 from app.paronym import models as models_par
 if app.config.get('ENABLE_TELEGRAM', False):
     from app import tg_handlers

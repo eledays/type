@@ -38,18 +38,40 @@ export default class ClipsManager {
     }
 
     async cleanupClips(oldClipsCount: number = 1): Promise<void> {
-        this.clips.splice(0, oldClipsCount);
-        this.currentIndex = Math.max(0, this.currentIndex - oldClipsCount);
-        console.info(`Cleaned up ${oldClipsCount} old clips. Total clips: ${this.clips.length}`);
+        this.clips.splice(0, this.currentIndex - oldClipsCount);
+        this.currentIndex = Math.max(this.currentIndex - oldClipsCount, 0);
+        console.info(`Cleaned up clips. Remaining clips: ${this.clips.length}`);
     }
 
     renderClips(container: HTMLElement): void {
+        let previousClip = null;
+        let currentClip = null;
+        let nextClip = null;
+
         container.innerHTML = '';
-        this.clips.forEach((clip, index) => {
-            const clipElement = document.createElement('div');
-            clipElement.className = 'clip';
-            clipElement.textContent = clip.content; 
-            container.appendChild(clipElement);
-        });
+
+        if (this.currentIndex > 0) {
+            previousClip = document.createElement('div');
+            previousClip.innerHTML = this.clips[this.currentIndex - 1].content;
+            previousClip.id = 'previous-clip';
+            previousClip.className = 'word-container';
+            container.appendChild(previousClip);
+        }
+
+        if (this.currentIndex < this.clips.length) {
+            currentClip = document.createElement('div');
+            currentClip.innerHTML = this.clips[this.currentIndex].content;
+            currentClip.id = 'current-clip';
+            currentClip.className = 'word-container';
+            container.appendChild(currentClip);
+        }
+
+        if (this.currentIndex + 1 < this.clips.length) {
+            nextClip = document.createElement('div');
+            nextClip.innerHTML = this.clips[this.currentIndex + 1].content;
+            nextClip.id = 'next-clip';
+            nextClip.className = 'word-container';
+            container.appendChild(nextClip);
+        }
     }
 }

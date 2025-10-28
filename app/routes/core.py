@@ -10,29 +10,31 @@ import random
 
 @app.route('/get_background')
 def get_background():
-    user_id = session.get('user_id', None)
-    user_settings = Settings.query.filter(Settings.user_id == user_id).first()
+    # user_id = session.get('user_id', None)
+    # user_settings = Settings.query.filter(Settings.user_id == user_id).first()
 
-    if 'strike' not in session and user_id:
-        session['strike'] = get_strike(user_id)
+    # if 'strike' not in session and user_id:
+    #     session['strike'] = get_strike(user_id)
 
-    levels = app.config['STRIKE_LEVELS']
+    # levels = app.config['STRIKE_LEVELS']
 
-    if user_id is None:
-        path = 'dark'
-    elif str(user_id) in [str(os.getenv('SECURE_ID')), str(os.getenv('ADMIN_ID'))] and session['strike'] >= levels[0]:
-        filename = random.choice(os.listdir(f'app/secure_static/backs/'))
-        response = send_file(f'secure_static/backs/{filename}')
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
-        return response
-    elif session['strike'] < levels[0] or not user_settings.strike:
-        path = 'dark'
-    elif session['strike'] < levels[1]:
-        path = 'yellow'
-    else:
-        path = 'dark'
+    # if user_id is None:
+    #     path = 'dark'
+    # elif str(user_id) in [str(os.getenv('SECURE_ID')), str(os.getenv('ADMIN_ID'))] and session['strike'] >= levels[0]:
+    #     filename = random.choice(os.listdir(f'app/secure_static/backs/'))
+    #     response = send_file(f'secure_static/backs/{filename}')
+    #     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    #     response.headers['Pragma'] = 'no-cache'
+    #     response.headers['Expires'] = '0'
+    #     return response
+    # elif session['strike'] < levels[0] or not user_settings.strike:
+    #     path = 'dark'
+    # elif session['strike'] < levels[1]:
+    #     path = 'yellow'
+    # else:
+    #     path = 'dark'
+
+    path = 'dark'
 
     filename = random.choice(os.listdir(f'app/static/img/backs/{path}'))
     response = send_file(f'static/img/backs/{path}/{filename}')

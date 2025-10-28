@@ -1,4 +1,5 @@
 import ClipsManager from './clipsManager.js';
+import { showLoading, hideLoading } from './effect/loading.js';
 
 export default class App {
     private clipsManager: ClipsManager | null;
@@ -10,6 +11,8 @@ export default class App {
     async init() {
         this.clipsManager = new ClipsManager();
         await this.clipsManager.loadClips(3);
+        this.clipsManager.renderClips(document.getElementById('clips-container')!);
+        hideLoading();
     }
 }
 
