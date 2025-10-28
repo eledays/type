@@ -1,64 +1,15 @@
-<!-- <div class="clip-container"> -->
-    <canvas></canvas>
+<canvas></canvas>
 
-    <div class="word-container">
-        <p class="word">
-            {{ word.get_html()|safe }}
-        </p>
-    </div>
+<div class="word-container">
+    <p class="word">
+        {{ word_html|safe }}
+    </p>
+</div>
 
-    <div class="answers">
-        {% for answer in word.get_answers() %}
-            <button class="answer">
-                {{ answer }}
-            </button>
-        {% endfor %}
-    </div>
-
-    <!-- <div class="menu">
-        <div class="buttons">
-            {% if not demo %}
-            <div class="block">
-                <button class="settings" onclick="window.parent.location.href = `/settings?referrer=${encodeURIComponent(window.parent.location.pathname)}`">
-                    <span class="material-symbols-rounded notranslate">settings</span>
-                    <p>Настройки</p>
-                </button>  
-                <button class="filters" onclick="window.parent.location.href = `/filters?referrer=${encodeURIComponent(window.parent.location.pathname)}`">
-                    <span class="material-symbols-rounded notranslate">filter_list</span>
-                    <p>Фильтры</p>
-                </button>
-            </div>
-            <div class="block">
-                <button id="mistake" onclick="sendReport()">
-                    <span class="material-symbols-rounded notranslate">error</span>
-                    <p>Сообщить об ошибке в задании</p>
-                </button>
-                <button id="search" onclick="window.open(`https://yandex.ru/search/?text=${encodeURIComponent(document.querySelector('.word').textContent)}`, '_blank')">
-                    <span class="material-symbols-rounded notranslate">search</span>
-                    <p>Найти слово в интернете</p>
-                </button>
-            </div>
-            <div class="block">
-                <button id="search" onclick="window.open('https://music.yandex.ru', '_blank')" style="margin-top: 10px;">
-                    <span class="material-symbols-rounded"><img src="{{ url_for('static', filename='img/yandex-music.svg') }}" alt="Yandex Music Logo"></span>
-                    <p>Включить музыку</p>
-                </button>
-            </div>
-            <div class="info">
-                {% for str in info_str %}
-                    <p>{{ str }}</p>
-                {% endfor %}
-            </div>
-        </div>
-        {% else %}
-            <p>Меню доступно в полной версии</p>
-        {% endif %}
-    </div> -->
-
-    <!-- <script>var word_id = "{{ word.id }}";</script>
-
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/swiping.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/content.js') }}"></script> -->
-<!-- </div> -->
+<div class="answers">
+    {% for answer in answers %}
+    <button class="answer">
+        {{ answer }}
+    </button>
+    {% endfor %}
+</div>
