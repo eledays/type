@@ -1,7 +1,7 @@
 from app import app, db
 from app.models import Word, Action, Category, Settings
 from app.paronym.models import Sentence
-from app.utils import add_action, get_strike
+from app.utils import get_strike
 
 if app.config.get('ENABLE_TELEGRAM', False):
     from app import bot
@@ -13,7 +13,6 @@ from pymorphy3.analyzer import MorphAnalyzer
 import datetime
 import os
 import random
-from secrets import token_hex
 
 
 @app.route('/')
