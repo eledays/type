@@ -10,6 +10,7 @@
 :root {
     --word-size: 24px;
     --word-block-height: 72vh;
+    --clip-transition-duration: 300ms;
 }
 
 body {

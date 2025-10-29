@@ -1,16 +1,22 @@
 import ClipsManager from './clipsManager.js';
+import SwipeHandler from './events/swipeHandler.js';
 import { showLoading, hideLoading } from './effect/loading.js';
+import { CONFIG } from './config.js';
 
 export default class App {
-    private clipsManager: ClipsManager | null;
+    private clipsManager: ClipsManager;
+    private swipeHandler: SwipeHandler;
 
     constructor() {
-        this.clipsManager = null;
+        this.clipsManager = new ClipsManager();
+        this.swipeHandler = new SwipeHandler(
+            () => this.clipsManager?.goToNextClip(),
+            () => this.clipsManager?.goToPreviousClip()
+        );
     }
 
     async init() {
-        this.clipsManager = new ClipsManager();
-        await this.clipsManager.loadClips(3);
+        await this.clipsManager.loadClips(CONFIG.clipsOnPage);
         this.clipsManager.renderClips(document.getElementById('clips-container')!);
         hideLoading();
     }

@@ -3,6 +3,8 @@ from app.models import Action, Settings
 
 if app.config.get("ENABLE_TELEGRAM", False):
     from app import bot
+else:
+    bot = None
 
 from telebot import types
 
@@ -62,14 +64,15 @@ def check_notifications():
             )
             markup.add(button)
 
-            bot.send_message(
-                user.user_id, "Привет! Пора русский порешать", reply_markup=markup
-            )
+            if bot is not None:
+                bot.send_message(
+                    user.user_id, "Привет! Пора русский порешать", reply_markup=markup
+                )
         for user in users_to_notify_day_results:
             send_day_summary(user.user_id)
 
 
-def send_day_summary(user_id: int) -> str:
+def send_day_summary(user_id: int):
     with app.app_context():
         # Определяем временной диапазон "сегодня"
         now = datetime.now()
@@ -101,11 +104,12 @@ def send_day_summary(user_id: int) -> str:
             )
             markup.add(button)
             try:
-                bot.send_message(
-                    user_id,
-                    "<b>Итоги дня</b>\n\nКажется, сегодня ничего нет. Давай решим хотя бы пару заданий?",
-                    reply_markup=markup,
-                )
+                if bot is not None:
+                    bot.send_message(
+                        user_id,
+                        "<b>Итоги дня</b>\n\nКажется, сегодня ничего нет. Давай решим хотя бы пару заданий?",
+                        reply_markup=markup,
+                    )
             except:
                 pass
 
@@ -120,7 +124,8 @@ def send_day_summary(user_id: int) -> str:
         if right > 100:
             text += "\n\nОтличный результат! Продолжай в том же духе!"
 
-        bot.send_message(user_id, text)
+        if bot is not None:
+            bot.send_message(user_id, text)
 
 
 def send_all_message(text):
@@ -129,12 +134,14 @@ def send_all_message(text):
         users = Settings.query.all()
         for user in users:
             try:
-                bot.send_message(user.user_id, text)
-                success += 1
+                if bot is not None:
+                    bot.send_message(user.user_id, text)
+                    success += 1
             except:
                 fail += 1
             sleep(0.5)
 
-    bot.send_message(
+    if bot is not None:
+        bot.send_message(
         os.getenv("ADMIN_ID", 0), f"Отправлено\nУспешно: {success}\nОшибки: {fail}"
     )

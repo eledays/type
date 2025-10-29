@@ -1,22 +1,11 @@
 body {
     background-color: var(--frame-background-color);
-    background-image: var(--back-img);
-    background-size: cover;
     height: 100vh;
     overflow: hidden;
     transition: background-color .5s ease;
-    background-position: center;
-    background-repeat: no-repeat;
 }
 
-.word-container {
-    position: relative;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: var(--word-block-height);
-    z-index: -10;
-}
+
 
 .sentence-cont {
     position: relative;

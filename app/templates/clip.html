@@ -2,7 +2,9 @@
 
 <div class="word-container">
     <p class="word">
-        {{ word_html|safe }}
+        {{ word_parts[0] }}
+        <span class="missing-letter"> </span>
+        {{ word_parts[1] }}
     </p>
 </div>
 
