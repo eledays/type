@@ -4,6 +4,8 @@
 ## Описание
 **type** — бесконечная лента слов в формате ТикТок для подготовки к ЕГЭ по русскому языку. В каждом слове есть один пропуск, который нужно правильно заполнить одним из вариантов внизу экрана.
 
+[**Style guide**](https://www.figma.com/design/dXQn6Ubr9HdIShHxYmXppK/type-%E2%80%93-style-guide?node-id=0-1&t=HydzOxkpEAnHfhth-1)
+
 ## Помощь в создании
 - [@kostya112221](https://t.me/kostya112221) — добавление заданий с паронимами
 - [@MamaKupiSnikers](https://t.me/MamaKupiSnikers) — помощь с доработкой фронта в разделе паронимов
