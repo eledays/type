@@ -19,31 +19,6 @@ def batch_get_clips():
     )
 
     MOCK_CLIPS: list[dict] = [
-        # {
-        #     "id": 1,
-        #     "content": render_template(
-        #         "clip.html",
-        #         word_parts=['пр', 'ломление'],
-        #         answers=["е", "и"],
-        #     ),
-        # },
-        # {
-        #     "id": 2,
-        #     "content": render_template(
-        #         "clip.html",
-        #         word_parts=['н', 'важдение'],
-        #         answers=["а", "о"],
-        #     ),
-        # },
-        # {
-        #     "id": 3,
-        #     "content": render_template(
-        #         "clip.html",
-        #         word_parts=['стел', 'щий'],
-        #         answers=["ю", "я"],
-        #     ),
-        # },
-    # ] + [
         {
             "id": i,
             "content": render_template(

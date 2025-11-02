@@ -1,11 +1,13 @@
 import ClipsManager from './clipsManager.js';
 import SwipeHandler from './events/swipeHandler.js';
+import WindowResizeHandler from './events/windowResizeHandler.js';
 import { showLoading, hideLoading } from './effect/loading.js';
 import { CONFIG } from './config.js';
 
 export default class App {
     private clipsManager: ClipsManager;
     private swipeHandler: SwipeHandler;
+    private windowResizeHandler: WindowResizeHandler;
 
     constructor() {
         this.clipsManager = new ClipsManager();
@@ -13,6 +15,7 @@ export default class App {
             () => this.clipsManager?.goToNextClip(),
             () => this.clipsManager?.goToPreviousClip()
         );
+        this.windowResizeHandler = new WindowResizeHandler();
     }
 
     async init() {

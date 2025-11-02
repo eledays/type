@@ -1,4 +1,4 @@
-.clips-container {
+#clips-container {
     position: relative;
     width: 100%;
     height: 100vh;
@@ -9,8 +9,8 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
     z-index: -10;
 
     transition: var(--clip-transition-duration);
@@ -40,9 +40,75 @@
 
 .clip-container .word-container {
     position: absolute;
-    top: 0;
+    top: var(--answers-container-height);
     left: 0;
-    width: 100vw;
-    height: var(--word-block-height);
+    width: 100%;
+    height: var(--word-container-height);
     z-index: -10;
+}
+
+.answers-container {
+    position: absolute;
+    height: var(--answers-container-height);
+    width: 100%;
+    bottom: 0;
+    left: 0;
+
+    display: flex;
+    z-index: 10;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.answers-container button.answer {
+    width: var(--answer-button-basic-size);
+    height: var(--answer-button-height);
+    max-width: calc(100vw / 3);
+    max-height: calc(100vw / 3 * 2);
+    margin: 5px;
+    font-size: 20px;
+    background-color: var(--secondary-color);
+    cursor: pointer;
+    border: none;
+    transition: .1s;
+    z-index: 10;
+
+    padding: 10px 20px;
+    border-radius: var(--block-border-radius);
+    backdrop-filter: var(--block-blur);
+
+    font-weight: 900;
+
+    display: flex;
+    justify-content: center;
+}
+
+.partscreen .answers-container button.answer {
+    height: var(--answer-button-basic-size);
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.answers-container button.answer:hover {
+    filter: brightness(.95);
+}
+
+.word-block {
+    transition: color .5s ease, top .3s ease;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, 0);
+    display: flex;
+    font-size: var(--word-size);
+    cursor: text;
+    color: var(--main-color);
+    z-index: -10;
+
+    background-color: var(--word-back);
+    padding: 10px 20px;
+    border-radius: var(--block-border-radius);
+    backdrop-filter: var(--block-blur);
 }

@@ -11,21 +11,21 @@
 
     --back-img: url('/get_background');
     --word-back: rgba(0, 0, 0, 0.151);
+
+    --answers-container-height: 40%;
+    --answer-button-height: 50%;
+    --word-container-height: 20%;
+    --block-border-radius: 10px;
+    --block-blur: blur(10px);
+    --clips-container-height: 90vh;
+    --answer-button-basic-size: 100px;
 }
 
 body {
     background-color: var(--back-color);
-    z-index: -1;
-    position: absolute;
 }
 
-iframe {
-    transition: all .3s ease;
-    border: none;
-    /* pointer-events: none; */
-    z-index: -1;
-}
-.fullscreen iframe {
+.fullscreen #clips-container {
     position: fixed;
     top: 0;
     left: 0;
@@ -33,32 +33,12 @@ iframe {
     height: 100vh;
     transform: translate(0, 0);
 }
-.partscreen iframe {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    height: 90vh;
-    width: calc(90vh * 9 / 16);
-    transform: translate(-50%, -50%);
+.partscreen #clips-container {
+    display: block;
+    height: var(--clips-container-height);
+    width: calc(var(--clips-container-height) * 9 / 16);
     border-radius: 20px;
-}
-
-.fullscreen iframe.next {
-    top: 100vh;
-    transform: translateY(0);
-}
-.partscreen iframe.next {
-    top: 100vh;
-    transform: translate(-50%, 0);
-}
-
-.fullscreen iframe.prev {
-    top: -100vh;
-    transform: translateY(0);
-}
-.partscreen iframe.prev {
-    top: -100vh;
-    transform: translate(-50%, 0);
+    margin: calc((100vh - var(--clips-container-height)) / 2) auto;
 }
 
 button {
@@ -142,14 +122,6 @@ button {
         transform: translateX(-50%) scale(1.05);
     }
 }
-
-/* .partscreen .strike-block {
-    top: calc(5vh + 48px);
-}
-
-.fullscreen .strike-block {
-    top: calc(48px);
-} */
 
 .fire {
     font-size: 24px;

@@ -6,35 +6,6 @@ body {
 }
 
 
-
-.sentence-cont {
-    position: relative;
-    top: -20;
-    left: 0;
-    width: 100vw;
-    height: var(--word-block-height);
-    z-index: -10;
-}
-
-.word {
-    transition: color .5s ease, top .3s ease;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    display: flex;
-    font-size: var(--word-size);
-    cursor: text;
-    color: var(--main-color);
-    z-index: -10;
-
-    background-color: var(--word-back);
-    padding: 10px 20px;
-    border-radius: 10px;
-    backdrop-filter: blur(10px);
-}
-
-
 #explanation {
     position: fixed;
     bottom: 50%;
@@ -80,65 +51,7 @@ body {
     width: 16px;
 }
 
-.answers {
-    position: absolute;
-    bottom: 20vh;
-    left: 50%;
-    transform: translate(-50%, 50%);
-    display: flex;
-    z-index: 10;
-    width: 100%;
-    flex-wrap: wrap;
-    justify-content: center;
-}
 
-
-.answers button.answer {
-    width: 100px;
-    height: 100px;
-    max-width: calc(100vw / 3);
-    max-height: calc(100vw / 3);
-    margin: 5px;
-    font-size: 20px;
-    background-color: var(--secondary-color);
-    cursor: pointer;
-    border: none;
-    transition: .1s;
-    z-index: 10;
-
-    padding: 10px 20px;
-    border-radius: 10px;
-    backdrop-filter: blur(10px);
-
-    font-weight: 900;
-}
-
-.answers button.answer:hover {
-    filter: brightness(.95);
-}
-
-.answers button.sentence-answer {
-    max-width: calc(100vw);
-    padding: 10px 20px;
-    margin: 5px;
-    font-size: 20px;
-    background-color: var(--secondary-color);
-    cursor: pointer;
-    border: none;
-    transition: .1s;
-    z-index: 10;
-    border-radius: 10px;
-    backdrop-filter: blur(10px);
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    white-space: nowrap;
-}
-
-.answers button.sentence-answer:hover {
-    filter: brightness(.95);
-}
 
 .correct canvas {
     opacity: .2;

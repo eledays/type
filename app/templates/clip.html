@@ -1,14 +1,14 @@
 <canvas></canvas>
 
 <div class="word-container">
-    <p class="word">
+    <p class="word-block">
         {{ word_parts[0] }}
         <span class="missing-letter"> </span>
         {{ word_parts[1] }}
     </p>
 </div>
 
-<div class="answers">
+<div class="answers-container">
     {% for answer in answers %}
     <button class="answer">
         {{ answer }}
