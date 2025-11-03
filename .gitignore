@@ -6,6 +6,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -15,7 +16,6 @@ __pycache__/
 # Flask stuff:
 instance/
 .webassets-cache
-migrations
 
 # TypeScript compiled output
 /app/static/js/dist/
@@ -35,3 +35,4 @@ app/secure_static/*
 errors.csv
 words.csv
 backups
+TODO.local.md

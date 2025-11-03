@@ -6,7 +6,12 @@ import os
 
 class Config:
 
-    SQLALCHEMY_DATABASE_URI = "sqlite:///app.db"
+    SQLALCHEMY_DATABASE_URI = "postgresql://{}:{}@postgres:{}/{}".format(
+        os.getenv("POSTGRES_USER", "type_user"),
+        os.getenv("POSTGRES_PASSWORD", "password"),
+        os.getenv("POSTGRES_PORT", "5432"),
+        os.getenv("POSTGRES_DB", "type_db"),
+    )
     BACKUP_PATH = "backups/"
     BACKUP_PERIOD = 1  # дни
     SECRET_KEY = os.getenv("SECRET_KEY")
