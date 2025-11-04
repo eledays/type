@@ -13,37 +13,33 @@
 
 ## Установка
 1. Клонируйте репозиторий:
-    ```bash
-    git clone https://github.com/eledays/type.git
-    ```
+```bash
+git clone https://github.com/eledays/type.git
+```
 2. Перейдите в директорию проекта:
-    ```bash
-    cd type
-    ```
-3. Установите зависимости:
-    ```bash
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install -r requirements.txt
-    ```
-4. Распарсите данные (если умеете, если не умеете, то пропустите этот пункт)
-5. Настройте `.env`
-    ```
-    BOT_TOKEN=  # токен Телеграм бота
-    ADMIN_ID=  # Телеграм id админа бота
-    SECRET_KEY=  # случайное значение секретного ключа
-    ```
-6. Запустите приложение в первый раз, чтобы создать базу данных с помощью команды
-   ```bash
-   python app.py
-   ```
-7. Загрузите дамп базы данных с помощью следующей команды:
-   ```bash
-   python json_to_db.py
-   ```
+```bash
+cd type
+```
+3. Настройте `.env` по примеру `.env.example`
+4. Установите [Docker](https://www.docker.com/)
+5. Соберите и поднимите контейнеры
+```bash
+docker compose up -d --build
+```
+6. Посмотреть логи
+```bash
+docker compose logs -f type-app
+```
+
+## Перенос БД с sqlite
+```bash
+sudo apt install pgloader
+source .env
+pgloader sqlite:///путь/до/бд/app.db postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}
+```
 
 ## Использование
-1. Запустите проект:
-    ```bash
-    python app.py
-    ```
+1. Поднимите контейнер:
+```bash
+docker compose up -d
+```
