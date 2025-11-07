@@ -31,7 +31,7 @@ class Word(db.Model):
     right_answer: Column[str] = Column(String(128), nullable=False)
 
     task_number: Column[int] = Column(Integer)
-    category_id: Column[int] = Column(Integer, ForeignKey('category.id'), nullable=False)
+    category_id: Column[int] = Column(Integer, ForeignKey('category.id'), nullable=True)
     category: _RelationshipDeclared[Any] = relationship('Category', back_populates='words')
     mistake: Column[bool] = Column(Boolean, default=False)
 

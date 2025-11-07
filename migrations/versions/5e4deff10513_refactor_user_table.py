@@ -61,8 +61,10 @@ def upgrade() -> None:
                existing_type=sa.TEXT(),
                type_=sa.String(length=128),
                nullable=False)
-    op.drop_index('idx_16470_sqlite_autoindex_category_1', table_name='category')
-    op.create_unique_constraint(None, 'category', ['name'])
+    # Удаление SQLite индекса не требуется для PostgreSQL
+    # op.drop_index('idx_16470_sqlite_autoindex_category_1', table_name='category')
+    # Unique constraint уже существует, создан в initial_migration
+    # op.create_unique_constraint(None, 'category', ['name'])
     op.alter_column('paronym', 'id',
                existing_type=sa.BIGINT(),
                type_=sa.Integer(),
@@ -76,8 +78,10 @@ def upgrade() -> None:
                existing_type=sa.BIGINT(),
                type_=sa.Integer(),
                nullable=False)
-    op.drop_index('idx_16489_sqlite_autoindex_paronym_1', table_name='paronym')
-    op.create_unique_constraint(None, 'paronym', ['word'])
+    # Удаление SQLite индекса не требуется для PostgreSQL
+    # op.drop_index('idx_16489_sqlite_autoindex_paronym_1', table_name='paronym')
+    # Unique constraint уже существует, создан в initial_migration
+    # op.create_unique_constraint(None, 'paronym', ['word'])
     op.alter_column('paronym_group', 'id',
                existing_type=sa.BIGINT(),
                type_=sa.Integer(),
@@ -100,8 +104,10 @@ def upgrade() -> None:
                existing_type=sa.TEXT(),
                type_=sa.String(),
                existing_nullable=True)
-    op.drop_index('idx_16494_sqlite_autoindex_sentence_1', table_name='sentence')
-    op.create_unique_constraint(None, 'sentence', ['sentence'])
+    # Удаление SQLite индекса не требуется для PostgreSQL
+    # op.drop_index('idx_16494_sqlite_autoindex_sentence_1', table_name='sentence')
+    # Unique constraint уже существует, создан в initial_migration
+    # op.create_unique_constraint(None, 'sentence', ['sentence'])
     # Изменения settings будут выполнены после миграции данных
     op.alter_column('settings', 'strike',
                existing_type=sa.BOOLEAN(),
@@ -129,6 +135,9 @@ def upgrade() -> None:
     
     # 1. Обработка слов: удаляем подчеркивания и находим missing_part_index
     import json
+    import logging
+    
+    logger = logging.getLogger('alembic.runtime.migration')
     
     words_result = connection.execute(sa.text("SELECT id, word, answers FROM word ORDER BY id"))
     processed_words = {}
@@ -147,23 +156,37 @@ def upgrade() -> None:
         try:
             answers = json.loads(answers_json) if isinstance(answers_json, str) else answers_json
             right_answer = answers[0] if answers and len(answers) > 0 else ""
-        except (json.JSONDecodeError, IndexError, TypeError):
+            if not right_answer:
+                logger.warning(f"Word ID {word_id} ('{original_word}'): empty right_answer from answers: {answers_json}")
+        except (json.JSONDecodeError, IndexError, TypeError) as e:
+            logger.error(f"Word ID {word_id} ('{original_word}'): failed to parse answers JSON: {e}")
             right_answer = ""
         
         # Проверяем на дубликаты
         if cleaned_word in processed_words:
             # Это дубликат, удаляем его и переносим связанные данные
             original_word_id = processed_words[cleaned_word]
+            logger.info(f"Found duplicate word '{cleaned_word}': keeping ID {original_word_id}, merging ID {word_id}")
             
             # Переносим действия пользователей
             connection.execute(sa.text("""
                 UPDATE action SET word_id = :original_id WHERE word_id = :duplicate_id
             """), {'original_id': original_word_id, 'duplicate_id': word_id})
             
-            # Переносим предложения
+            # Переносим предложения (избегаем дубликатов предложений)
             connection.execute(sa.text("""
-                UPDATE sentence SET word_id = :original_id WHERE word_id = :duplicate_id
+                UPDATE sentence 
+                SET word_id = :original_id 
+                WHERE word_id = :duplicate_id
+                AND sentence NOT IN (
+                    SELECT sentence FROM sentence WHERE word_id = :original_id
+                )
             """), {'original_id': original_word_id, 'duplicate_id': word_id})
+            
+            # Удаляем оставшиеся предложения-дубликаты
+            connection.execute(sa.text("""
+                DELETE FROM sentence WHERE word_id = :duplicate_id
+            """), {'duplicate_id': word_id})
             
             # Помечаем для удаления
             words_to_delete.append(word_id)
@@ -186,6 +209,8 @@ def upgrade() -> None:
             processed_words[cleaned_word] = word_id
     
     # Удаляем дубликаты
+    if words_to_delete:
+        logger.info(f"Deleting {len(words_to_delete)} duplicate words")
     for word_id in words_to_delete:
         connection.execute(sa.text("DELETE FROM word WHERE id = :word_id"), {'word_id': word_id})
     
@@ -199,6 +224,7 @@ def upgrade() -> None:
     
     # 3. Переносим данные пользователей из action и settings в новую таблицу user
     # Получаем уникальных пользователей из action и settings
+    logger.info("Migrating user data from action and settings tables")
     connection.execute(sa.text("""
         WITH all_users AS (
             SELECT user_id as telegram_id, MIN(datetime) as created_at
@@ -218,6 +244,9 @@ def upgrade() -> None:
         FROM all_users
         GROUP BY telegram_id
     """))
+    
+    users_count = connection.execute(sa.text("SELECT COUNT(*) FROM \"user\"")).scalar()
+    logger.info(f"Created {users_count} user records")
     
     # 4. Заполняем маппинг старых и новых ID
     user_mapping_result = connection.execute(sa.text("""
@@ -247,6 +276,12 @@ def upgrade() -> None:
         WHERE settings.user_id = mapping.old_user_id
     """))
     
+    # 7. Изменяем тип user_id в settings после миграции данных
+    op.alter_column('settings', 'user_id',
+               existing_type=sa.BIGINT(),
+               type_=sa.Integer(),
+               nullable=False)
+    
     # Теперь делаем колонки NOT NULL
     op.alter_column('word', 'missing_part_index', nullable=False)
     op.alter_column('word', 'right_answer', nullable=False)
@@ -254,12 +289,20 @@ def upgrade() -> None:
     # Добавляем уникальное ограничение на word после обработки данных
     op.create_unique_constraint(None, 'word', ['word'])
     
-    # Очищаем недопустимые ссылки перед созданием foreign keys
-    # Удаляем слова с несуществующими category_id
-    connection.execute(sa.text("""
-        DELETE FROM word 
-        WHERE category_id NOT IN (SELECT id FROM category)
-    """))
+    # Обрабатываем слова с несуществующими category_id
+    # Вместо удаления, устанавливаем category_id в NULL для неразмеченных слов
+    orphaned_words = connection.execute(sa.text("""
+        SELECT COUNT(*) FROM word 
+        WHERE category_id IS NOT NULL AND category_id NOT IN (SELECT id FROM category)
+    """)).scalar()
+    
+    if orphaned_words and orphaned_words > 0:
+        logger.warning(f"Setting category_id to NULL for {orphaned_words} words with non-existent category_id (unmarked words)")
+        connection.execute(sa.text("""
+            UPDATE word 
+            SET category_id = NULL
+            WHERE category_id IS NOT NULL AND category_id NOT IN (SELECT id FROM category)
+        """))
     
     # Добавляем foreign keys после миграции данных
     op.create_foreign_key(None, 'action', 'user', ['user_id'], ['id'])
@@ -289,8 +332,15 @@ def upgrade() -> None:
     op.alter_column('word', 'category_id',
                existing_type=sa.BIGINT(),
                type_=sa.Integer(),
-               nullable=False)
-    op.drop_index('idx_16484_sqlite_autoindex_word_1', table_name='word')
+               nullable=True)  # Делаем nullable для неразмеченных слов
+    # Удаление SQLite индекса не требуется для PostgreSQL
+    # op.drop_index('idx_16484_sqlite_autoindex_word_1', table_name='word')
+    # Unique constraint на word уже добавлен выше после обработки данных
+    
+    # Очистка: явно удаляем временную таблицу (хотя она временная и будет удалена автоматически)
+    op.execute("DROP TABLE IF EXISTS user_id_mapping")
+    
+    logger.info("Migration completed successfully")
     # Уникальное ограничение и foreign key будут добавлены после обработки данных
     # ### end Alembic commands ###
 
@@ -298,9 +348,12 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_constraint(None, 'word', type_='foreignkey')
-    op.drop_constraint(None, 'word', type_='unique')
-    op.create_index('idx_16484_sqlite_autoindex_word_1', 'word', ['word'], unique=True)
+    # Примечание: downgrade может не восстановить данные полностью из-за потери информации при слиянии дубликатов
+    
+    # Удаляем foreign keys с правильными именами
+    op.drop_constraint('word_category_id_fkey', 'word', type_='foreignkey')
+    op.drop_constraint('word_word_key', 'word', type_='unique')
+    
     op.alter_column('word', 'category_id',
                existing_type=sa.Integer(),
                type_=sa.BIGINT(),
@@ -329,7 +382,8 @@ def downgrade() -> None:
     op.drop_column('word', 'created_at')
     op.drop_column('word', 'right_answer')
     op.drop_column('word', 'missing_part_index')
-    op.drop_constraint(None, 'settings', type_='foreignkey')
+    
+    op.drop_constraint('settings_user_id_fkey', 'settings', type_='foreignkey')
     op.alter_column('settings', 'day_results_time',
                existing_type=postgresql.TIME(),
                nullable=True)
@@ -349,8 +403,7 @@ def downgrade() -> None:
                existing_type=sa.Integer(),
                type_=sa.BIGINT(),
                existing_nullable=False)
-    op.drop_constraint(None, 'sentence', type_='unique')
-    op.create_index('idx_16494_sqlite_autoindex_sentence_1', 'sentence', ['sentence'], unique=True)
+    
     op.alter_column('sentence', 'word_tags',
                existing_type=sa.String(),
                type_=sa.TEXT(),
@@ -368,13 +421,13 @@ def downgrade() -> None:
                type_=sa.BIGINT(),
                existing_nullable=False,
                autoincrement=True)
+    
     op.alter_column('paronym_group', 'id',
                existing_type=sa.Integer(),
                type_=sa.BIGINT(),
                existing_nullable=False,
                autoincrement=True)
-    op.drop_constraint(None, 'paronym', type_='unique')
-    op.create_index('idx_16489_sqlite_autoindex_paronym_1', 'paronym', ['word'], unique=True)
+    
     op.alter_column('paronym', 'group_id',
                existing_type=sa.Integer(),
                type_=sa.BIGINT(),
@@ -388,8 +441,7 @@ def downgrade() -> None:
                type_=sa.BIGINT(),
                existing_nullable=False,
                autoincrement=True)
-    op.drop_constraint(None, 'category', type_='unique')
-    op.create_index('idx_16470_sqlite_autoindex_category_1', 'category', ['name'], unique=True)
+    
     op.alter_column('category', 'name',
                existing_type=sa.String(length=128),
                type_=sa.TEXT(),
@@ -399,8 +451,9 @@ def downgrade() -> None:
                type_=sa.BIGINT(),
                existing_nullable=False,
                autoincrement=True)
-    op.drop_constraint(None, 'action', type_='foreignkey')
-    op.drop_constraint(None, 'action', type_='foreignkey')
+    
+    op.drop_constraint('action_user_id_fkey', 'action', type_='foreignkey')
+    op.drop_constraint('action_word_id_fkey', 'action', type_='foreignkey')
     op.drop_index(op.f('ix_action_word_id'), table_name='action')
     op.drop_index(op.f('ix_action_user_id'), table_name='action')
     op.alter_column('action', 'datetime',
@@ -424,6 +477,7 @@ def downgrade() -> None:
                type_=sa.BIGINT(),
                existing_nullable=False,
                autoincrement=True)
+    
     op.drop_index(op.f('ix_user_telegram_id'), table_name='user')
     op.drop_table('user')
     # ### end Alembic commands ###
