@@ -38,6 +38,11 @@ source .env
 pgloader sqlite:///путь/до/бд/app.db postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}
 ```
 
+## Наполнение базы данных
+
+📖 **[Подробная документация по формату данных](docs/database/data-format.md)**
+
+
 ## Использование
 1. Поднимите контейнер:
 ```bash

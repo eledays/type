@@ -5,7 +5,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 # Фоновые задачи
 with app.app_context():
-    do_backup()
+    # do_backup()
 
     scheduler = BackgroundScheduler()
     scheduler.add_job(do_backup, trigger="interval", days=app.config.get('BACKUP_PERIOD'))
