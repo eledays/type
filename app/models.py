@@ -1,7 +1,7 @@
 from sqlalchemy.orm.relationships import _RelationshipDeclared, RelationshipProperty
 from app import app, db
 
-from sqlalchemy import Column, ColumnElement, Integer, String, Boolean, JSON, ForeignKey, DateTime, Time
+from sqlalchemy import Column, ColumnElement, Integer, String, Boolean, JSON, ForeignKey, DateTime, Time, Float, BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -38,6 +38,10 @@ class Word(db.Model):
     created_at: Column[datetime] = Column(DateTime, default=datetime.now)
     updated_at: Column[datetime] = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
+    # Relationships
+    user_stats: _RelationshipDeclared[list['UserWordStat']] = relationship('UserWordStat', back_populates='word', lazy='dynamic')
+    global_stats: _RelationshipDeclared[list['WordGlobalStat']] = relationship('WordGlobalStat', back_populates='word', lazy='dynamic')
+
     def __repr__(self) -> str:
         return f"<Word(id={self.id} word='{self.word}')>"
 
@@ -71,13 +75,14 @@ class User(db.Model):
     __tablename__ = 'user'
     
     id: Column[int] = Column(Integer, primary_key=True)
-    telegram_id: Column[int] = Column(Integer, unique=True, nullable=True, index=True) 
+    telegram_id: Column[int] = Column(BigInteger, unique=True, nullable=True, index=True)
     created_at: Column[dt.datetime] = Column(DateTime, default=dt.datetime.utcnow, nullable=False)
     
     # Relationships
     actions: _RelationshipDeclared[list['Action']] = relationship('Action', back_populates='user', lazy='dynamic')
     settings: _RelationshipDeclared[Optional['Settings']] = relationship('Settings', back_populates='user', uselist=False)
-    
+    word_stats: _RelationshipDeclared[list['UserWordStat']] = relationship('UserWordStat', back_populates='user', lazy='dynamic')
+
     def __repr__(self) -> str:
         return f"<User(id={self.id}, telegram_id={self.telegram_id})>"
 
@@ -97,3 +102,46 @@ class Settings(db.Model):
     
     def __repr__(self) -> str:
         return f"<Settings(user_id={self.user_id}, strike={self.strike}, notification={self.notification})>"
+
+
+class UserWordStat(db.Model):
+    __tablename__ = 'user_word_stat'
+
+    user_id: Column[int] = Column(Integer, ForeignKey('user.id'), primary_key=True)
+    word_id: Column[int] = Column(Integer, ForeignKey('word.id'), primary_key=True)
+
+    correct_count: Column[int] = Column(Integer, default=0)
+    wrong_count: Column[int] = Column(Integer, default=0)
+    skip_count: Column[int] = Column(Integer, default=0)
+
+    success_streak: Column[int] = Column(Integer, default=0)
+    last_seen: Column[dt.datetime] = Column(DateTime)
+    last_action: Column[int] = Column(Integer)
+
+    time_score: Column[float] = Column(Float, default=1.0, index=True)
+    difficulty_score: Column[float] = Column(Float, default=0.0, index=True)
+
+    # Relationships
+    user: _RelationshipDeclared['User'] = relationship('User', back_populates='word_stats')
+    word: _RelationshipDeclared['Word'] = relationship('Word', back_populates='user_stats')
+
+    def __repr__(self) -> str:
+        return f"<UserWordStat(user_id={self.user_id}, word_id={self.word_id}, correct_count={self.correct_count}, wrong_count={self.wrong_count}, skip_count={self.skip_count})>"
+
+
+class WordGlobalStat(db.Model):
+    __tablename__ = 'word_global_stat'
+
+    word_id: Column[int] = Column(Integer, ForeignKey('word.id'), primary_key=True)
+
+    correct_count: Column[int] = Column(Integer, default=0)
+    wrong_count: Column[int] = Column(Integer, default=0)
+    skip_count: Column[int] = Column(Integer, default=0)
+
+    difficulty_score: Column[float] = Column(Float, default=0.0, index=True)
+
+    # Relationships
+    word: _RelationshipDeclared['Word'] = relationship('Word')
+
+    def __repr__(self) -> str:
+        return f"<WordGlobalStat(word_id={self.word_id}, correct_count={self.correct_count}, wrong_count={self.wrong_count}, skip_count={self.skip_count})>"
