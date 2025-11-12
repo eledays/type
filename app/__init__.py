@@ -13,6 +13,10 @@ db = SQLAlchemy(app)
 from flask_migrate import Migrate
 migrate = Migrate(app, db)
 
+import logging
+logging.basicConfig(level=logging.INFO)
+logger: logging.Logger = logging.getLogger(__name__)
+
 import os
 bot = None
 
