@@ -26,33 +26,9 @@
     </div>
     {% endif %}
 
-    {% if demo %}
-    <div class="demo-message">
-        <p onclick="window.location.href = 'https://t.me/type_eleday_bot'">Перейти в полную версию</p>
-        <span class="material-symbols-rounded notranslate" onclick="closeMessage()">close</span>
-    </div>
-    {% endif %}
-
     <div class="fire" id="fire"></div>
-
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script>
-        Telegram.WebApp.expand();
-        Telegram.WebApp.requestFullscreen();
-        Telegram.WebApp.lockOrientation();
-    </script>
 
     <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
     <script src="{{ url_for('static', filename='js/framesManaging.js') }}"></script>
-
-    {% if demo %}
-    <script>
-        function closeMessage() {
-            if (document.querySelector('.demo-message')) {
-                document.querySelector('.demo-message').remove();
-            }
-        }
-    </script>
-    {% endif %}
 </body>
 </html>

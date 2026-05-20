@@ -21,7 +21,6 @@ addEventListener('DOMContentLoaded', () => {
         let answer = answersElement.querySelectorAll('button')[i];
         answer.addEventListener('click', (event) => handleAnswerClick(event, i));
     }
-    Telegram.WebApp.BackButton.hide();
 });
 
 touchArea.addEventListener('touchstart', (event) => {

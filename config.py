@@ -16,5 +16,3 @@ class Config:
         11: 'Правописание суффиксов (кроме -Н-/-НН-)',
     }
     URL = 'https://type.eleday.ru/'
-    SEND_NOTIFICATION_PERIOD = 1  # как часто будет проверка, нужно ли сейчас отправить увеодмление (в минутах)
-    ENABLE_TELEGRAM = True  # включить телеграм бота

@@ -9,15 +9,8 @@ window.addEventListener('message', (event) => {
             if (data.status === 'yes') {
                 swipeNextFrame();
             }
-            else {
-                Telegram.WebApp.showPopup({
-                    title: "Вы уверены?",
-                    message: "Если перелистнуть, серия обнулится. Перелистываем?",
-                    buttons: [
-                    { id: "no", type: "default", text: "Нет" },
-                    { id: "yes", type: "destructive", text: "Да" }
-                    ]
-                });
+            else if (confirm('Если перелистнуть, серия обнулится. Перелистываем?')) {
+                swipeNextFrame();
             }
         });
     }
@@ -28,12 +21,6 @@ window.addEventListener('message', (event) => {
         swipePrevFrame();
     }
 });
-
-Telegram.WebApp.onEvent('popupClosed', function(button) {
-    if (button.button_id === "yes") {
-        swipeNextFrame();
-    }
-});  
 
 var currentFrame = document.querySelector('iframe.current');
 var nextFrame = document.querySelector('iframe.next');
@@ -195,9 +182,4 @@ function strike(strikeData) {
     }
 }
 
-addEventListener('DOMContentLoaded', () => {
-    Telegram.WebApp.SettingsButton.show();
-    Telegram.WebApp.SettingsButton.onClick(() => {
-        window.parent.location.href = `/settings?referrer=${encodeURIComponent(window.parent.location.pathname)}`;
-    });
-});
+addEventListener('DOMContentLoaded', () => {});

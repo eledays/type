@@ -25,7 +25,7 @@ def mistakes():
     if 'user_id' not in session:
         return 'Not authenticated', 401
 
-    return render_template('index.html', strike=session.get('strike', 0, get_strike(session.get('user_id'))),
+    return render_template('index.html', strike=session.get('strike', get_strike(session.get('user_id'))),
                            params=f'mistakes=true')
 
 

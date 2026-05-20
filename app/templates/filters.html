@@ -35,7 +35,6 @@
             </div>
         </div>
     </div>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
         function backToReferrer() {
             const referrer = new URLSearchParams(window.location.search).get('referrer');
@@ -65,8 +64,7 @@
             }
         });
 
-        Telegram.WebApp.BackButton.show();
-        Telegram.WebApp.BackButton.onClick(backToReferrer);
+        window.backToReferrer = backToReferrer;
     </script>
     <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
 </body>

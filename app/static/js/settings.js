@@ -52,6 +52,5 @@ function backToReferrer() {
 }
 
 addEventListener('DOMContentLoaded', () => {
-    Telegram.WebApp.BackButton.show();
-    Telegram.WebApp.BackButton.onClick(backToReferrer);
+    window.backToReferrer = backToReferrer;
 });

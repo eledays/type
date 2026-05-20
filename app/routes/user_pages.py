@@ -3,9 +3,6 @@ from app.models import Word, Action, Category, Settings
 from app.paronym.models import Sentence
 from app.utils import add_action, get_strike
 
-if app.config.get('ENABLE_TELEGRAM', False):
-    from app import bot
-
 from flask import render_template, jsonify, request, session, render_template_string, redirect
 from sqlalchemy import and_, func, case
 from pymorphy3.analyzer import MorphAnalyzer
@@ -18,10 +15,8 @@ from secrets import token_hex
 
 @app.route('/')
 def index():
-    if 'user_id' not in session and app.config.get('ENABLE_TELEGRAM', False):
+    if 'user_id' not in session:
         return render_template('auth.html')
-    elif 'user_id' not in session and not app.config.get('ENABLE_TELEGRAM', False):
-        session['user_id'] = int(10000000000000 * random.random() + 10000000000000)
 
     user_id = session.get('user_id')
     user_settings = Settings.query.filter(Settings.user_id == user_id).first()
@@ -38,7 +33,7 @@ def index():
 
 @app.route('/demo')
 def demo_page():
-    return render_template('index.html', strike=None, demo=True, params='demo=true')
+    return redirect('/')
 
 
 @app.route('/get_frame')
@@ -241,4 +236,3 @@ def action_swipe_next():
         return jsonify({'status': 'success', 'strike': 0}), 200
     else:
         return jsonify({'status': 'error', 'error': 'no word id'}), 400
-
