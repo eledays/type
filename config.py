@@ -7,6 +7,7 @@ class Config:
     BACKUP_PATH = 'backups/'
     BACKUP_PERIOD = 1  # дни
     SECRET_KEY = getenv('SECRET_KEY')
+    FLASK_PORT = getenv('FLASK_PORT', 5000)
     STRIKE_LEVELS = [50, 100, 500, 1000]
     TASKS = {
         4: 'Ударения',
