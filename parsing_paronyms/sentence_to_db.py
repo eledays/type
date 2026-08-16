@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 from app import app, db
-from app.paronym.models import Paronym, Sentence
+from app.models import Paronym, Sentence
 import pymorphy3
 
 def get_paronyms(word) -> list[str]:

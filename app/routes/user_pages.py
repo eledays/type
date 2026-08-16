@@ -1,6 +1,5 @@
 from app import app, db
-from app.models import Word, Action, Category, Settings
-from app.paronym.models import Sentence
+from app.models import Action, Category, Sentence, Settings, Word
 from app.utils import add_action, get_strike
 
 from flask import render_template, jsonify, request, session, render_template_string, redirect

@@ -1,0 +1,42 @@
+from __future__ import annotations
+
+import random
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Boolean, ForeignKey, Integer, JSON, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app import db
+
+if TYPE_CHECKING:
+    from app.models.action import Action
+    from app.models.category import Category
+
+
+class Word(db.Model):
+    __tablename__ = "word"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    word: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    explanation: Mapped[str | None] = mapped_column(String(2048))
+    answers: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    task_number: Mapped[int | None] = mapped_column(Integer)
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey("category.id"), nullable=False
+    )
+    mistake: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+
+    category: Mapped[Category] = relationship(back_populates="words")
+    actions: Mapped[list[Action]] = relationship(back_populates="word")
+
+    def get_answers(self) -> list[str]:
+        """Return the available answers in a new, random order."""
+        return random.sample(self.answers, k=len(self.answers))
+
+    def get_html(self) -> str:
+        """Return the word with missing letters represented by placeholders."""
+        return self.word.replace(
+            "_", '<span class="missing-letter"> </span>'
+        )

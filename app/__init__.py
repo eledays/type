@@ -17,4 +17,3 @@ bot = None
 
 from app import models, utils
 from app.routes import admin, core, filters, user_pages, users
-from app.paronym import models as models_par
