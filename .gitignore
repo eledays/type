@@ -15,7 +15,6 @@ __pycache__/
 # Flask stuff:
 instance/
 .webassets-cache
-migrations
 
 # Other:
 mistakes.txt

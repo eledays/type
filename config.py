@@ -3,11 +3,11 @@ from os import getenv
 
 class Config:
 
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///app.db'
+    SQLALCHEMY_DATABASE_URI = getenv('DATABASE_URL', 'sqlite:///app.db')
     BACKUP_PATH = 'backups/'
     BACKUP_PERIOD = 1  # дни
     SECRET_KEY = getenv('SECRET_KEY')
-    FLASK_PORT = getenv('FLASK_PORT', 5000)
+    FLASK_PORT = int(getenv('FLASK_PORT', 5000))
     STRIKE_LEVELS = [50, 100, 500, 1000]
     TASKS = {
         4: 'Ударения',

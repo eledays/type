@@ -1,10 +1,11 @@
 from app import app, db
 from app.models import Action
 
-from db_to_json import export_to_json
-
 from datetime import datetime, timedelta
+from pathlib import Path
+
 from sqlalchemy import desc
+from sqlalchemy.engine import make_url
 
 
 def add_action(user_id, word_id, action):
@@ -16,8 +17,28 @@ def add_action(user_id, word_id, action):
 
 
 def do_backup():
-    print('backup')
-    export_to_json('instance/app.db', app.config.get('BACKUP_PATH') + datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '.json')
+    """Export the current database when the scheduler is run explicitly."""
+    from db_to_json import export_to_json
+
+    database_url = make_url(app.config["SQLALCHEMY_DATABASE_URI"])
+    if database_url.get_backend_name() != "sqlite" or not database_url.database:
+        raise RuntimeError(
+            "JSON backups are supported only for file-based SQLite databases."
+        )
+
+    database_path = Path(database_url.database)
+    if not database_path.is_absolute():
+        database_path = Path(app.instance_path) / database_path
+
+    if not database_path.is_file():
+        raise FileNotFoundError(
+            "Database does not exist. Run `flask --app app db upgrade` first."
+        )
+
+    backup_directory = Path(app.config["BACKUP_PATH"])
+    backup_directory.mkdir(parents=True, exist_ok=True)
+    backup_path = backup_directory / f'{datetime.now():%Y-%m-%d_%H-%M-%S}.json'
+    export_to_json(str(database_path), str(backup_path))
 
 
 def get_strike(user_id):

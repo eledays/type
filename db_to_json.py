@@ -4,6 +4,9 @@ import json
 
 
 def export_to_json(db_path, json_path):
+    if not os.path.isfile(db_path):
+        raise FileNotFoundError(f'Database does not exist: {db_path}')
+
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()

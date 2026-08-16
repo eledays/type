@@ -1,6 +1,5 @@
 from app import app
 from app.utils import do_backup
-from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 
