@@ -5,8 +5,12 @@ from app.utils import get_user_stats
 from flask import render_template, jsonify, request, session
 
 import datetime
-import os
 import random
+
+
+def is_admin(user_id: int | str | None) -> bool:
+    admin_id = app.config["ADMIN_ID"]
+    return admin_id is not None and str(user_id) == str(admin_id)
 
 
 @app.before_request
@@ -36,7 +40,7 @@ def settings():
         db.session.add(user_settings)
         db.session.commit()
 
-    admin = str(user_id) == str(os.getenv('ADMIN_ID'))
+    admin = is_admin(user_id)
     if admin and session.get('admin', False):
         admin = 2
     elif admin and not session.get('admin', False):
@@ -58,7 +62,7 @@ def set_settings():
     user_id = session.get('user_id')
     user_settings = Settings.query.filter(Settings.user_id == user_id).first()
 
-    if 'admin' in request.json and str(user_id) == str(os.getenv('ADMIN_ID')):
+    if 'admin' in request.json and is_admin(user_id):
         session['admin'] = request.json.get('admin')
         return 'ok', 200
 

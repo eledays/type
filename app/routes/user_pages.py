@@ -7,7 +7,6 @@ from sqlalchemy import and_, func, case
 from pymorphy3.analyzer import MorphAnalyzer
 
 import datetime
-import os
 import random
 from secrets import token_hex
 
@@ -45,7 +44,12 @@ def get_frame():
     demo = request.args.get('demo', False)
 
     user_id = session.get('user_id')
-    admin = (str(user_id) == str(os.getenv('ADMIN_ID'))) and admin
+    admin_id = app.config["ADMIN_ID"]
+    admin = (
+        admin_id is not None
+        and str(user_id) == str(admin_id)
+        and admin
+    )
     if task_id == '5':
         sentence = Sentence.query.order_by(func.random()).first()
         info_str = [f'Фильтр: "Задание №{task_id}"']

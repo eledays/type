@@ -16,10 +16,18 @@ def get_background():
         session['strike'] = get_strike(user_id)
 
     levels = app.config['STRIKE_LEVELS']
+    privileged_ids = {
+        str(configured_id)
+        for configured_id in (
+            app.config["SECURE_ID"],
+            app.config["ADMIN_ID"],
+        )
+        if configured_id is not None
+    }
 
     if user_id is None:
         path = 'dark'
-    elif str(user_id) in [str(os.getenv('SECURE_ID')), str(os.getenv('ADMIN_ID'))] and session['strike'] >= levels[0]:
+    elif str(user_id) in privileged_ids and session['strike'] >= levels[0]:
         filename = random.choice(os.listdir(f'app/secure_static/backs/'))
         response = send_file(f'secure_static/backs/{filename}')
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'

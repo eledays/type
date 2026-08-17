@@ -1,11 +1,8 @@
-from dotenv import load_dotenv
-load_dotenv('.env')
-
 from flask import Flask
 app = Flask(__name__)
 
-from config import Config
-app.config.from_object(Config)
+from config import settings
+app.config.from_mapping(settings.to_flask_config())
 
 from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy(app)

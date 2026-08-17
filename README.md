@@ -26,9 +26,11 @@
     ```
 4. Настройте `.env`
     ```
-    ADMIN_ID=  # id администратора
-    SECRET_KEY=  # случайное значение секретного ключа
-    DATABASE_URL=sqlite:///app.db  # необязательно
+    SECRET_KEY=replace-with-a-random-secret-key
+    DATABASE_URL=sqlite:///app.db
+    FLASK_PORT=5000
+    # ADMIN_ID=10000000000000  # необязательно
+    # SECURE_ID=10000000000001  # необязательно
     ```
 5. Примените миграции базы данных:
    ```bash

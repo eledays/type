@@ -3,8 +3,6 @@ from app.models import Word
 
 from flask import render_template, request, session
 
-import os
-
 
 @app.route('/add_explanation', methods=['POST'])
 def add_explanation():
@@ -13,7 +11,8 @@ def add_explanation():
 
     user_id = session.get('user_id')
 
-    if str(user_id) != str(os.getenv('ADMIN_ID')):
+    admin_id = app.config["ADMIN_ID"]
+    if admin_id is None or str(user_id) != str(admin_id):
         return 'Access denied', 403
 
     word_id = request.json.get('word_id')
@@ -37,7 +36,8 @@ def delete_answer():
 
     user_id = session.get('user_id')
 
-    if str(user_id) != str(os.getenv('ADMIN_ID')):
+    admin_id = app.config["ADMIN_ID"]
+    if admin_id is None or str(user_id) != str(admin_id):
         return 'Access denied', 403
 
     word_id = request.json.get('word_id')
