@@ -4,16 +4,24 @@ from app.models import Action
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from sqlalchemy import desc
+from flask import session
+from sqlalchemy import desc, select
 from sqlalchemy.engine import make_url
 
 
-def add_action(user_id, word_id, action):
-    if user_id is None or action is None:
-        return None
-    action = Action(user_id=user_id, word_id=word_id, action=action)
-    db.session.add(action)
+def add_action(
+    user_id: int,
+    word_id: int | None,
+    action: int,
+) -> Action:
+    action_record = Action(
+        user_id=user_id,
+        word_id=word_id,
+        action=action,
+    )
+    db.session.add(action_record)
     db.session.commit()
+    return action_record
 
 
 def do_backup():
@@ -41,16 +49,24 @@ def do_backup():
     export_to_json(str(database_path), str(backup_path))
 
 
-def get_strike(user_id):
+def get_strike(user_id: int) -> int:
     with app.app_context():
-        actions = Action.query.filter(
-            Action.user_id == user_id,
-            Action.action.in_([Action.RIGHT_ANSWER, Action.WRONG_ANSWER, Action.SKIP])
-        ).order_by(desc(Action.datetime)).all()
+        actions = db.session.scalars(
+            select(Action.action)
+            .where(
+                Action.user_id == user_id,
+                Action.action.in_([
+                    Action.RIGHT_ANSWER,
+                    Action.WRONG_ANSWER,
+                    Action.SKIP,
+                ]),
+            )
+            .order_by(desc(Action.datetime))
+        )
 
         streak = 0
         for action in actions:
-            if action.action == Action.RIGHT_ANSWER:
+            if action == Action.RIGHT_ANSWER:
                 streak += 1
             else:
                 break
@@ -58,14 +74,28 @@ def get_strike(user_id):
         return streak
 
 
-def get_user_stats(user_id: int):
-    with app.app_context():
-        actions = Action.query.filter(
-            Action.user_id == user_id,
-            Action.action.in_([Action.RIGHT_ANSWER, Action.WRONG_ANSWER, Action.SKIP])
-        ).order_by(Action.datetime).all()
+def get_cached_strike(user_id: int) -> int:
+    """Return the streak stored in the session, loading it only when absent."""
+    if "strike" not in session:
+        session["strike"] = get_strike(user_id)
+    return int(session["strike"])
 
-        total_attempts = 0
+
+def get_user_stats(user_id: int) -> dict[str, int | float]:
+    with app.app_context():
+        actions = db.session.execute(
+            select(Action.action, Action.datetime)
+            .where(
+                Action.user_id == user_id,
+                Action.action.in_([
+                    Action.RIGHT_ANSWER,
+                    Action.WRONG_ANSWER,
+                    Action.SKIP,
+                ]),
+            )
+            .order_by(Action.datetime)
+        )
+
         mistakes = 0
         skips = 0
         correct = 0
@@ -74,15 +104,15 @@ def get_user_stats(user_id: int):
 
         total_time = timedelta()
         last_time = None
+        timed_intervals = 0
         max_pause = timedelta(minutes=10)
 
         for action in actions:
-            total_attempts += 1
-
             if last_time is not None:
                 pause = action.datetime - last_time
                 if pause <= max_pause:
                     total_time += pause
+                    timed_intervals += 1
             last_time = action.datetime
 
             if action.action == Action.RIGHT_ANSWER:
@@ -96,14 +126,19 @@ def get_user_stats(user_id: int):
                 skips += 1
                 current_streak = 0
 
-        percent_correct = (correct / total_attempts * 100) if total_attempts else 0
-        avg_time = (total_time / total_attempts) if total_attempts else timedelta()
+        answered = correct + mistakes
+        percent_correct = (correct / answered * 100) if answered else 0
+        average_seconds = (
+            total_time.total_seconds() / timed_intervals
+            if timed_intervals
+            else 0
+        )
 
         return {
             "correct": correct,
             "mistakes": mistakes,
             "skips": skips,
             "correct_percent": round(percent_correct, 1),
-            "avg_time_per_word": round(avg_time.seconds, 1),
-            "best_streak": best_streak
+            "avg_time_per_word": round(average_seconds, 1),
+            "best_streak": best_streak,
         }

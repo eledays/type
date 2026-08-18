@@ -1,42 +1,25 @@
 from app import app
-from app.models import Action, Settings
-from app.utils import get_strike
+from app.models import Action
+from app.utils import get_cached_strike
 
-from flask import jsonify, request, send_file, session
+from flask import jsonify, request, send_file
+from flask_login import current_user, login_required
 import os
 import random
 
 
 @app.route('/get_background')
+@login_required
 def get_background():
-    user_id = session.get('user_id', None)
-    user_settings = Settings.query.filter(Settings.user_id == user_id).first()
+    user = current_user
 
-    if 'strike' not in session and user_id:
-        session['strike'] = get_strike(user_id)
+    strike = get_cached_strike(user.id)
 
     levels = app.config['STRIKE_LEVELS']
-    privileged_ids = {
-        str(configured_id)
-        for configured_id in (
-            app.config["SECURE_ID"],
-            app.config["ADMIN_ID"],
-        )
-        if configured_id is not None
-    }
 
-    if user_id is None:
+    if strike < levels[0] or not user.settings.strike:
         path = 'dark'
-    elif str(user_id) in privileged_ids and session['strike'] >= levels[0]:
-        filename = random.choice(os.listdir(f'app/secure_static/backs/'))
-        response = send_file(f'secure_static/backs/{filename}')
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
-        return response
-    elif session['strike'] < levels[0] or not user_settings.strike:
-        path = 'dark'
-    elif session['strike'] < levels[1]:
+    elif strike < levels[1]:
         path = 'yellow'
     else:
         path = 'dark'
@@ -55,24 +38,30 @@ def favicon():
 
 
 @app.route('/can_swipe', methods=['GET'])
+@login_required
 def can_swipe():
-    user_id = session.get('user_id', None)
-    user_settings = Settings.query.filter(Settings.user_id == user_id).first() if user_id else None
+    user = current_user
     word_id = request.args.get('word_id')
 
-    if user_settings is None:
-        return jsonify({'status': 'yes'}), 200
-
-    if not user_settings.strike:
+    if not user.settings.strike:
         return jsonify({'status': 'yes'}), 200
 
     if word_id is None:
         return jsonify({'status': 'error', 'message': 'No word id'}), 401
 
-    word_id = int(word_id)
-    last_words = Action.query.filter(Action.user_id == user_id).order_by(Action.datetime.desc()).limit(3)
+    try:
+        word_id = int(word_id)
+    except ValueError:
+        return jsonify({'status': 'error', 'message': 'Invalid word id'}), 400
+
+    last_words = (
+        Action.query
+        .filter(Action.user_id == user.id)
+        .order_by(Action.datetime.desc())
+        .limit(3)
+    )
     last_ids = [e.word_id for e in last_words]
-    strike = session.get('strike', get_strike(user_id))
+    strike = get_cached_strike(user.id)
 
     if word_id in last_ids or strike <= 3:
         return jsonify({'status': 'yes'}), 200

@@ -1,89 +1,117 @@
+from datetime import datetime
+from typing import cast
+
+from flask import jsonify, render_template, request, session
+from flask_login import current_user, login_required, login_user
+
 from app import app, db
-from app.models import Word, Settings
+from app.models import Settings, User, Word
 from app.utils import get_user_stats
 
-from flask import render_template, jsonify, request, session
 
-import datetime
-import random
-
-
-def is_admin(user_id: int | str | None) -> bool:
-    admin_id = app.config["ADMIN_ID"]
-    return admin_id is not None and str(user_id) == str(admin_id)
+BOOLEAN_SETTINGS = {"strike", "notification", "day_results"}
+TIME_SETTINGS = {"notification_time", "day_results_time"}
 
 
 @app.before_request
-def ensure_browser_user():
-    if request.endpoint == 'static':
+def ensure_authenticated_user() -> None:
+    if request.endpoint == "static":
         return
 
-    if 'user_id' not in session:
-        session['user_id'] = random.randint(10_000_000_000_000, 19_999_999_999_999)
-
-    user_settings = Settings.query.filter(Settings.user_id == session['user_id']).first()
-    if user_settings is None:
-        user_settings = Settings(user_id=session['user_id'])
-        db.session.add(user_settings)
-        db.session.commit()
-
-@app.route('/settings')
-def settings():
-    if 'user_id' not in session:
-        return render_template('auth.html')
-
-    user_id = session.get('user_id')
-    user_settings = Settings.query.filter(Settings.user_id == user_id).first()
-
-    if user_settings is None:
-        user_settings = Settings(user_id=user_id)
-        db.session.add(user_settings)
-        db.session.commit()
-
-    admin = is_admin(user_id)
-    if admin and session.get('admin', False):
-        admin = 2
-    elif admin and not session.get('admin', False):
-        admin = 1
-
-    stats = get_user_stats(user_id)
-    if admin:
-        stats["explanations"] = Word.query.filter(Word.explanation.isnot(None)).count()
-        stats["users"] = Settings.query.count()
-
-    return render_template('settings.html', settings=user_settings, admin=admin, stats=stats)
-
-
-@app.route('/set_settings', methods=['POST'])
-def set_settings():
-    if 'user_id' not in session:
-        return jsonify({'status': 'error', 'message': 'User not authenticated'}), 401
-
-    user_id = session.get('user_id')
-    user_settings = Settings.query.filter(Settings.user_id == user_id).first()
-
-    if 'admin' in request.json and is_admin(user_id):
-        session['admin'] = request.json.get('admin')
-        return 'ok', 200
-
-    for k, v in request.json.items():
-        if hasattr(user_settings, k):
-            if k.endswith('_time'):
-                v = datetime.datetime.strptime(v, '%H:%M').time()
-            setattr(user_settings, k, v)
-        else:
-            db.session.rollback()
-            return 'Unknown field', 400
-    db.session.commit()
-
-    return 'ok', 200
-
-
-@app.route('/set_user_id', methods=['POST'])
-def set_user_id():
-    user_id = request.json.get('user_id')
-    if user_id is not None:
-        session['user_id'] = user_id
-        return jsonify({'status': 'success'})
+    user = None
+    if current_user.is_authenticated:
+        user = cast(User, current_user._get_current_object())
     else:
-        return jsonify({'status': 'error'}), 400
+        legacy_user_id = session.pop("user_id", None)
+        if not isinstance(legacy_user_id, bool):
+            try:
+                parsed_legacy_id = int(legacy_user_id)
+            except (TypeError, ValueError):
+                parsed_legacy_id = None
+            if parsed_legacy_id is not None:
+                user = db.session.get(User, parsed_legacy_id)
+                if user is None:
+                    user = User.query.filter_by(
+                        telegram_id=parsed_legacy_id
+                    ).first()
+
+    if user is None:
+        user = User(settings=Settings())
+        db.session.add(user)
+        db.session.commit()
+        session.clear()
+    elif user.settings is None:
+        user.settings = Settings()
+        db.session.commit()
+
+    if not current_user.is_authenticated:
+        login_user(user, remember=True)
+
+
+@app.route("/settings")
+@login_required
+def settings():
+    user = cast(User, current_user._get_current_object())
+    admin_mode = 0
+    if user.is_admin:
+        admin_mode = 2 if session.get("admin", False) else 1
+
+    stats = get_user_stats(user.id)
+    stats["user_id"] = user.id
+    if user.is_admin:
+        stats["explanations"] = Word.query.filter(
+            Word.explanation.isnot(None)
+        ).count()
+        stats["users"] = User.query.count()
+
+    return render_template(
+        "settings.html",
+        settings=user.settings,
+        admin=admin_mode,
+        stats=stats,
+    )
+
+
+@app.route("/set_settings", methods=["POST"])
+@login_required
+def set_settings():
+    user = cast(User, current_user._get_current_object())
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"status": "error", "message": "Invalid JSON"}), 400
+
+    if "admin" in payload:
+        if not user.is_admin:
+            return jsonify({"status": "error", "message": "Access denied"}), 403
+        if set(payload) != {"admin"} or not isinstance(payload["admin"], bool):
+            return jsonify({"status": "error", "message": "Invalid admin value"}), 400
+        session["admin"] = payload["admin"]
+        return jsonify({"status": "success"})
+
+    unknown_fields = set(payload) - BOOLEAN_SETTINGS - TIME_SETTINGS
+    if unknown_fields:
+        return jsonify({
+            "status": "error",
+            "message": f"Unknown settings: {', '.join(sorted(unknown_fields))}",
+        }), 400
+
+    for field, value in payload.items():
+        if field in BOOLEAN_SETTINGS:
+            if not isinstance(value, bool):
+                return jsonify({
+                    "status": "error",
+                    "message": f"{field} must be boolean",
+                }), 400
+        else:
+            try:
+                value = datetime.strptime(value, "%H:%M").time()
+            except (TypeError, ValueError):
+                return jsonify({
+                    "status": "error",
+                    "message": f"{field} must use HH:MM format",
+                }), 400
+
+        setattr(user.settings, field, value)
+
+    db.session.commit()
+    return jsonify({"status": "success"})

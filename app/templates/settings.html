@@ -39,7 +39,7 @@
                 </div>
                 <div class="setting-item" id="day_results" onclick="handleClick('day_results')">
                     <span class="setting-name">Итоги дня</span>
-                    {% if settings.strike %}
+                    {% if settings.day_results %}
                         <span class="setting-value on">Включены</span>
                     {% else %}
                         <span class="setting-value off">Выключены</span>
@@ -68,6 +68,10 @@
         <div class="stats-block">
             <h2>Cтатистика</h2>
             <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">ID пользователя</div>
+                    <div class="stat-value">{{ stats.user_id }}</div>
+                </div>
                 <div class="stat-item">
                     <div class="stat-label">Верных</div>
                     <div class="stat-value">{{ stats.correct }}</div>

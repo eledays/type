@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app import db
 
 if TYPE_CHECKING:
+    from app.models.user import User
     from app.models.word import Word
 
 
@@ -21,7 +22,11 @@ class Action(db.Model):
     SAVE_WORD: ClassVar[int] = 103
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("user.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     word_id: Mapped[int | None] = mapped_column(
         ForeignKey("word.id", ondelete="SET NULL")
     )
@@ -30,4 +35,5 @@ class Action(db.Model):
         DateTime, nullable=False, default=datetime.now
     )
 
+    user: Mapped[User] = relationship(back_populates="actions")
     word: Mapped[Word | None] = relationship(back_populates="actions")

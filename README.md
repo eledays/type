@@ -29,8 +29,6 @@
     SECRET_KEY=replace-with-a-random-secret-key
     DATABASE_URL=sqlite:///app.db
     FLASK_PORT=5000
-    # ADMIN_ID=10000000000000  # необязательно
-    # SECURE_ID=10000000000001  # необязательно
     ```
 5. Примените миграции базы данных:
    ```bash
@@ -50,4 +48,20 @@
 ```bash
 flask --app app db stamp 5f01b47acedc
 flask --app app db upgrade
+```
+
+При миграции старые `user_id` сохраняются в `User.telegram_id`. Внутренний `User.id` создаётся отдельно и автоматически.
+
+## Администратор
+
+ID текущего пользователя показан на странице настроек. Выдать ему права администратора:
+
+```sql
+UPDATE "user" SET is_admin = TRUE WHERE id = <USER_ID>;
+```
+
+Отозвать права:
+
+```sql
+UPDATE "user" SET is_admin = FALSE WHERE id = <USER_ID>;
 ```

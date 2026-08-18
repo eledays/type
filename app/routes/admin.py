@@ -1,28 +1,19 @@
 from app import app, db
+from app.auth import admin_required
 from app.models import Word
 
-from flask import render_template, request, session
+from flask import request
 
 
 @app.route('/add_explanation', methods=['POST'])
+@admin_required
 def add_explanation():
-    if 'user_id' not in session:
-        return render_template('auth.html')
+    payload = request.get_json(silent=True) or {}
+    word_id = payload.get('word_id')
+    explanation = payload.get('explanation')
+    word = db.session.get(Word, word_id) if isinstance(word_id, int) else None
 
-    user_id = session.get('user_id')
-
-    admin_id = app.config["ADMIN_ID"]
-    if admin_id is None or str(user_id) != str(admin_id):
-        return 'Access denied', 403
-
-    word_id = request.json.get('word_id')
-    explanation = request.json.get('explanation')
-
-    print(word_id)
-
-    word = Word.query.filter(Word.id == word_id).first()
-
-    if word:
+    if word is not None and isinstance(explanation, str):
         word.explanation = explanation
         db.session.commit()
         return 'ok', 200
@@ -30,26 +21,17 @@ def add_explanation():
 
 
 @app.route('/delete_answer', methods=['POST'])
+@admin_required
 def delete_answer():
-    if 'user_id' not in session:
-        return render_template('auth.html')
+    payload = request.get_json(silent=True) or {}
+    word_id = payload.get('word_id')
+    answer = payload.get('answer')
+    word = db.session.get(Word, word_id) if isinstance(word_id, int) else None
 
-    user_id = session.get('user_id')
-
-    admin_id = app.config["ADMIN_ID"]
-    if admin_id is None or str(user_id) != str(admin_id):
-        return 'Access denied', 403
-
-    word_id = request.json.get('word_id')
-    answer = request.json.get('answer')
-
-    word = Word.query.filter(Word.id == word_id).first()
-    print(word_id, type(word.answers), answer in word.answers)
-    if word:
+    if word is not None and answer in word.answers:
         answers = word.answers[:]
         answers.remove(answer)
         word.answers = answers
         db.session.commit()
-        print(word.answers)
         return 'ok', 200
     return 'Error', 400

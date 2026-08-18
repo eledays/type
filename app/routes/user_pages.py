@@ -1,30 +1,25 @@
 from app import app, db
-from app.models import Action, Category, Sentence, Settings, Word
-from app.utils import add_action, get_strike
+from app.models import Action, Category, Sentence, Word
+from app.utils import add_action, get_cached_strike
 
-from flask import render_template, jsonify, request, session, render_template_string, redirect
+from flask import jsonify, redirect, render_template, request, session
+from flask_login import current_user, login_required
 from sqlalchemy import and_, func, case
 from pymorphy3.analyzer import MorphAnalyzer
 
 import datetime
 import random
-from secrets import token_hex
 
 
 @app.route('/')
+@login_required
 def index():
-    if 'user_id' not in session:
-        return render_template('auth.html')
-
-    user_id = session.get('user_id')
-    user_settings = Settings.query.filter(Settings.user_id == user_id).first()
-
-    if user_settings is None:
-        user_settings = Settings(user_id=user_id)
-        db.session.add(user_settings)
-        db.session.commit()
-
-    strike = session.get('strike', get_strike(user_id)) if user_settings.strike else None
+    user = current_user
+    strike = (
+        get_cached_strike(user.id)
+        if user.settings.strike
+        else None
+    )
 
     return render_template('index.html', strike=strike)
 
@@ -35,38 +30,47 @@ def demo_page():
 
 
 @app.route('/get_frame')
+@login_required
 def get_frame():
     task_id = request.args.get('task_id', '')
     category_id = request.args.get('category_id', '')
-    category = Category.query.get(category_id)
+    category = (
+        db.session.get(Category, int(category_id))
+        if category_id.isdigit()
+        else None
+    )
     mistakes = request.args.get('mistakes', '')
     admin = session.get('admin', False)
     demo = request.args.get('demo', False)
 
-    user_id = session.get('user_id')
-    admin_id = app.config["ADMIN_ID"]
-    admin = (
-        admin_id is not None
-        and str(user_id) == str(admin_id)
-        and admin
-    )
+    user = current_user
+    user_id = user.id
+    admin = user.is_admin and admin
     if task_id == '5':
         sentence = Sentence.query.order_by(func.random()).first()
         info_str = [f'Фильтр: "Задание №{task_id}"']
+        if sentence is None:
+            return 'No sentences available', 404
         return render_template('frame_inner.html', word=sentence, info_str=info_str)
 
     if task_id:
-        words = Word.query.filter(Word.task_number == task_id)
+        base_words = Word.query.filter(Word.task_number == task_id)
         info_str = [f'Фильтр: "Задание №{task_id}"']
     elif category_id:
-        words = Word.query.filter(Word.category_id == category_id)
+        if category is None:
+            return 'Category not found', 404
+        base_words = Word.query.filter(Word.category_id == category.id)
         info_str = [f'Фильтр: "Категория "{category.name}""']
     elif mistakes:
         stats = (
             db.session.query(
                 Action.word_id,
-                func.sum(case((Action.action == Action.WRONG_ANSWER, 1), else_=0)).label('wrong_count'),
-                func.sum(case((Action.action == Action.RIGHT_ANSWER, 1), else_=0)).label('right_count')
+                func.sum(
+                    case((Action.action == Action.WRONG_ANSWER, 1), else_=0)
+                ).label('wrong_count'),
+                func.sum(
+                    case((Action.action == Action.RIGHT_ANSWER, 1), else_=0)
+                ).label('right_count')
             )
             .filter(Action.user_id == user_id)
             .group_by(Action.word_id)
@@ -87,10 +91,10 @@ def get_frame():
         else:
             return 'No words available', 404
     else:
-        words = Word.query
+        base_words = Word.query
         info_str = []
 
-    words = words.outerjoin(Action, and_(
+    unseen_words = base_words.outerjoin(Action, and_(
         Word.id == Action.word_id,
         Action.user_id == user_id
     )).filter(Action.id.is_(None))
@@ -98,43 +102,59 @@ def get_frame():
     stats = (
         db.session.query(
             Action.word_id,
-            func.sum(case((Action.action == Action.WRONG_ANSWER, 1), else_=0)).label('wrong_count'),
-            func.sum(case((Action.action == Action.RIGHT_ANSWER, 1), else_=0)).label('right_count')
+            func.sum(
+                case((Action.action == Action.WRONG_ANSWER, 1), else_=0)
+            ).label('wrong_count'),
+            func.sum(
+                case((Action.action == Action.RIGHT_ANSWER, 1), else_=0)
+            ).label('right_count')
         )
         .filter(Action.user_id == user_id)
         .group_by(Action.word_id)
         .subquery()
     )
 
-    # Основной запрос: присоединяем статистику к Word
+    difficulty = stats.c.wrong_count - stats.c.right_count
     difficult_words = (
-        db.session.query(Word, (stats.c.wrong_count - stats.c.right_count).label('diff'))
+        base_words
         .join(stats, Word.id == stats.c.word_id)
-        .order_by((stats.c.wrong_count - stats.c.right_count).desc())
+        .filter(difficulty > 0)
+        .order_by(difficulty.desc())
+        .limit(50)
+        .all()
     )
 
-    words_len = words.count()
+    unseen_count = unseen_words.count()
+    difficult_count = len(difficult_words)
+    choose_unseen = (
+        unseen_count > 0
+        and (
+            difficult_count == 0
+            or random.randrange(unseen_count + difficult_count) < unseen_count
+        )
+    )
 
-    difficult_words = list(set(words.all()) & set(difficult_words.all()))
-
-    diff_word_len = len(difficult_words)
-    difficult_words = difficult_words[:50]
-
-    if (random.random() * (words_len + diff_word_len) > diff_word_len or not difficult_words) and words.count():
-        print(1)
-        word = words.order_by(func.random()).first()
+    if choose_unseen:
+        word = unseen_words.order_by(func.random()).first()
         info_str.append('Это слово встретилось первый раз')
     elif difficult_words:
-        print(2)
-        word = random.choice(difficult_words)[0]
-        info_str.append('Это слово встретилось из-за большого количества ошибок')
+        word = random.choice(difficult_words)
+        info_str.append(
+            'Это слово встретилось из-за большого '
+            'количества ошибок'
+        )
     else:
-        print(3)
-        word = Word.query.order_by(func.random()).first()
+        word = base_words.order_by(func.random()).first()
         info_str.append('Это слово встретилось случайно')
 
     if word:
-        return render_template('frame_inner.html', word=word, info_str=info_str, admin=admin, demo=demo)
+        return render_template(
+            'frame_inner.html',
+            word=word,
+            info_str=info_str,
+            admin=admin,
+            demo=demo,
+        )
     else:
         return 'No words available', 404
 
@@ -149,15 +169,25 @@ def get_frame():
 
 
 @app.route('/check_word', methods=['POST'])
+@login_required
 def check_word():
-    user_id = session.get('user_id', None)
-    user_settings = Settings.query.filter(Settings.user_id == user_id).first() if user_id else None
+    user = current_user
+    user_id = user.id
 
-    note_id = request.json.get('id')
-    answer = request.json.get('answer')
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({'error': 'Invalid JSON'}), 400
+
+    note_id = payload.get('id')
+    answer = payload.get('answer')
+    if not isinstance(note_id, int) or not isinstance(answer, str):
+        return jsonify({'error': 'Invalid id or answer'}), 400
+
     is_paronym = len(answer) > 2 and answer.islower()
     if not is_paronym:
-        note = Word.query.get(note_id)
+        note = db.session.get(Word, note_id)
+        if note is None:
+            return jsonify({'error': 'Word not found'}), 404
         if '_' in note.word:
             full_note = note.word.replace('_', note.answers[0])
         else:
@@ -165,16 +195,21 @@ def check_word():
         explanation = note.explanation
         right_answer = note.answers[0]
     else:
-        note = Sentence.query.get(note_id)
+        note = db.session.get(Sentence, note_id)
+        if note is None:
+            return jsonify({'error': 'Sentence not found'}), 404
         parse_word = MorphAnalyzer().parse(note.word.word)[0]
-        word_in_right_form = parse_word.inflect(set(note.word_tags.split(','))).word
+        inflected_word = parse_word.inflect(set(note.word_tags.split(',')))
+        word_in_right_form = (
+            inflected_word.word if inflected_word else parse_word.word
+        )
         full_note = note.sentence.replace('_______', word_in_right_form)
         right_answer = word_in_right_form
         explanation = None
 
     if note and answer == right_answer:
-        if user_settings and user_settings.strike:
-            session['strike'] = session.get('strike', get_strike(user_id)) + 1
+        if user.settings.strike:
+            session['strike'] = get_cached_strike(user_id) + 1
 
         if not is_paronym:
             add_action(user_id=user_id, word_id=note_id, action=Action.RIGHT_ANSWER)
@@ -186,7 +221,7 @@ def check_word():
                 'levels': app.config['STRIKE_LEVELS']
             }})
     else:
-        if user_settings and user_settings.strike:
+        if user.settings.strike:
             session['strike'] = 0
 
         if not is_paronym:
@@ -201,6 +236,7 @@ def check_word():
 
 
 @app.route('/mistake_report', methods=['POST'])
+@login_required
 def mistake_report():
     word_id = request.json.get('id')
     word = Word.query.get(word_id)
@@ -218,24 +254,36 @@ def mistake_report():
 
 
 @app.route('/action/swipe_next', methods=['POST'])
+@login_required
 def action_swipe_next():
-    if 'user_id' not in session:
-        return jsonify({'status': 'error', 'message': 'User not authenticated'}), 401
+    user = current_user
+    user_id = user.id
 
-    user_id = session.get('user_id')
-    user_settings = Settings.query.filter(Settings.user_id == user_id).first()
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({'status': 'error', 'error': 'invalid JSON'}), 400
+    try:
+        word_id = int(payload.get('word_id'))
+    except (TypeError, ValueError):
+        return jsonify({'status': 'error', 'error': 'invalid word id'}), 400
 
-    word_id = int(request.json.get('word_id'))
-    user_id = session.get('user_id')
-    if word_id is not None:
-        last_words = Action.query.filter(Action.user_id == user_id).order_by(Action.datetime.desc()).limit(3)
+    if db.session.get(Word, word_id) is not None:
+        last_words = (
+            Action.query
+            .filter(Action.user_id == user_id)
+            .order_by(Action.datetime.desc())
+            .limit(3)
+        )
         last_ids = [e.word_id for e in last_words]
         if word_id in last_ids:
-            return jsonify({'status': 'success', 'strike': session.get('strike', get_strike(user_id))}), 200
+            return jsonify({
+                'status': 'success',
+                'strike': get_cached_strike(user_id),
+            }), 200
 
-        if user_settings.strike:
+        if user.settings.strike:
             session['strike'] = 0
         add_action(user_id=user_id, word_id=word_id, action=Action.SKIP)
         return jsonify({'status': 'success', 'strike': 0}), 200
     else:
-        return jsonify({'status': 'error', 'error': 'no word id'}), 400
+        return jsonify({'status': 'error', 'error': 'word not found'}), 404

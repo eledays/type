@@ -32,8 +32,6 @@ class AppSettings(BaseSettings):
         default=1, validation_alias="BACKUP_PERIOD", gt=0
     )
     secret_key: SecretStr = Field(validation_alias="SECRET_KEY")
-    admin_id: int | None = Field(default=None, validation_alias="ADMIN_ID")
-    secure_id: int | None = Field(default=None, validation_alias="SECURE_ID")
     flask_port: int = Field(
         default=5000, validation_alias="FLASK_PORT", ge=1, le=65_535
     )
@@ -83,8 +81,6 @@ class AppSettings(BaseSettings):
             "BACKUP_PATH": self.backup_path,
             "BACKUP_PERIOD": self.backup_period,
             "SECRET_KEY": self.secret_key.get_secret_value(),
-            "ADMIN_ID": self.admin_id,
-            "SECURE_ID": self.secure_id,
             "FLASK_PORT": self.flask_port,
             "STRIKE_LEVELS": self.strike_levels,
             "TASKS": self.tasks,

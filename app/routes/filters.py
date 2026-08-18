@@ -1,31 +1,35 @@
-from app import app
+from app import app, db
 from app.models import Category
-from app.utils import get_strike
+from app.utils import get_cached_strike
 
-from flask import render_template, session
+from flask import render_template
+from flask_login import current_user, login_required
 
 
 @app.route('/task/<int:task_id>')
+@login_required
 def task(task_id):
-    return render_template('index.html', strike=session.get('strike', get_strike(session.get('user_id'))),
+    user = current_user
+    return render_template('index.html', strike=get_cached_strike(user.id),
                            params=f'task_id={task_id}')
 
 
 @app.route('/category/<int:category_id>')
+@login_required
 def category(category_id):
-    category = Category.query.get(category_id)
+    user = current_user
+    category = db.session.get(Category, category_id)
     if not category:
         return 'Category not found', 404
-    return render_template('index.html', strike=session.get('strike', get_strike(session.get('user_id'))),
+    return render_template('index.html', strike=get_cached_strike(user.id),
                            params=f'category_id={category_id}')
 
 
 @app.route('/mistakes')
+@login_required
 def mistakes():
-    if 'user_id' not in session:
-        return 'Not authenticated', 401
-
-    return render_template('index.html', strike=session.get('strike', get_strike(session.get('user_id'))),
+    user = current_user
+    return render_template('index.html', strike=get_cached_strike(user.id),
                            params=f'mistakes=true')
 
 
