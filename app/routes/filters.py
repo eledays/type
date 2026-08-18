@@ -1,12 +1,15 @@
-from app import app, db
+from app.extensions import db
 from app.models import Category
 from app.utils import get_cached_strike
 
-from flask import render_template
+from flask import Blueprint, current_app, render_template
 from flask_login import current_user, login_required
 
 
-@app.route('/task/<int:task_id>')
+bp = Blueprint("filters", __name__)
+
+
+@bp.route('/task/<int:task_id>')
 @login_required
 def task(task_id):
     user = current_user
@@ -14,7 +17,7 @@ def task(task_id):
                            params=f'task_id={task_id}')
 
 
-@app.route('/category/<int:category_id>')
+@bp.route('/category/<int:category_id>')
 @login_required
 def category(category_id):
     user = current_user
@@ -25,7 +28,7 @@ def category(category_id):
                            params=f'category_id={category_id}')
 
 
-@app.route('/mistakes')
+@bp.route('/mistakes')
 @login_required
 def mistakes():
     user = current_user
@@ -33,7 +36,11 @@ def mistakes():
                            params=f'mistakes=true')
 
 
-@app.route('/filters')
+@bp.route('/filters')
 def filters():
     categories = Category.query.all()
-    return render_template('filters.html', categories=categories, tasks=app.config['TASKS'])
+    return render_template(
+        'filters.html',
+        categories=categories,
+        tasks=current_app.config['TASKS'],
+    )

@@ -1,21 +1,23 @@
-from app import app
 from app.models import Action
 from app.utils import get_cached_strike
 
-from flask import jsonify, request, send_file
+from flask import Blueprint, current_app, jsonify, request, send_file
 from flask_login import current_user, login_required
 import os
 import random
 
 
-@app.route('/get_background')
+bp = Blueprint("core", __name__)
+
+
+@bp.route('/get_background')
 @login_required
 def get_background():
     user = current_user
 
     strike = get_cached_strike(user.id)
 
-    levels = app.config['STRIKE_LEVELS']
+    levels = current_app.config['STRIKE_LEVELS']
 
     if strike < levels[0] or not user.settings.strike:
         path = 'dark'
@@ -32,12 +34,12 @@ def get_background():
     return response
 
 
-@app.route('/favicon.ico')
+@bp.route('/favicon.ico')
 def favicon():
     return send_file('static/img/fav.ico', mimetype='image/x-icon')
 
 
-@app.route('/can_swipe', methods=['GET'])
+@bp.route('/can_swipe', methods=['GET'])
 @login_required
 def can_swipe():
     user = current_user
@@ -69,7 +71,7 @@ def can_swipe():
         return jsonify({'status': 'no'}), 200
 
 
-# @app.after_request
+# @bp.after_app_request
 # def add_cache_control_headers(response):
 #     if request.path.endswith('.css') or request.path.endswith('.js'):
 #         response.headers['Cache-Control'] = 'public, max-age=31536000'

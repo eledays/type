@@ -1,5 +1,6 @@
 import csv
-from app import app, db
+from app import create_app
+from app.extensions import db
 from app.models import Word, Category
 import sqlalchemy
 
@@ -32,6 +33,7 @@ def import_csv_to_db(csv_file_path):
                 print(f"IntegrityError: Could not add word '{row['word']}' with category '{row['category']}'. It may already exist.")
 
 if __name__ == "__main__":
+    app = create_app()
     with app.app_context():
         db.create_all()
         import_csv_to_db('../words/words.csv')

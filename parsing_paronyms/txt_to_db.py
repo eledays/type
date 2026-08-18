@@ -1,4 +1,5 @@
-from app import app, db
+from app import create_app
+from app.extensions import db
 from app.models import Paronym, ParonymGroup
 from pathlib import Path
 
@@ -32,6 +33,7 @@ def import_txt_to_db(inp_file_path):
 
 
 if __name__ == '__main__':
+    app = create_app()
     with app.app_context():
         db.create_all()
         import_txt_to_db('../words/paronyms.txt')

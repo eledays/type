@@ -6,7 +6,7 @@ from flask_login import UserMixin
 from sqlalchemy import BigInteger, Boolean, Integer, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app import db
+from app.extensions import db
 
 if TYPE_CHECKING:
     from app.models.action import Action

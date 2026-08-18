@@ -1,16 +1,16 @@
 import re
 from pathlib import Path
-from app import app, db
+from app import create_app
+from app.extensions import db
 from app.models import Paronym, Sentence
 import pymorphy3
 
 def get_paronyms(word) -> list[str]:
-    with app.app_context():
-        par = Paronym.query.filter_by(word=word.strip()).first()
-        if par is None:
-            return list()
+    par = Paronym.query.filter_by(word=word.strip()).first()
+    if par is None:
+        return list()
 
-        return par.get_all_group_paronyms()
+    return par.get_all_group_paronyms()
 
 
 def to_base_form(word) -> str:
@@ -21,30 +21,32 @@ def to_base_form(word) -> str:
 
 def to_db(sentence: str, word: str, correct_word: str):
     base_word = to_base_form(correct_word.lower().rstrip())
-    with app.app_context():
-        corr_word_bd = Paronym.query.filter_by(word=base_word).first()
-        if not corr_word_bd:
-            return
+    corr_word_bd = Paronym.query.filter_by(word=base_word).first()
+    if not corr_word_bd:
+        return
 
     sentence = sentence.replace(word.upper(), '_______')
     morph = pymorphy3.MorphAnalyzer()
     tags = ','.join(morph.parse(correct_word.lower().rstrip())[0].tag.grammemes)
 
-    with app.app_context():
-        if Sentence.query.filter_by(sentence=sentence).first():
-            return
+    if Sentence.query.filter_by(sentence=sentence).first():
+        return
 
-        new_sentence = Sentence(
-            sentence=sentence,
-            word_tags=tags,
-            word_id=corr_word_bd.id,
-        )
-        db.session.add(new_sentence)
-        db.session.commit()
-        print(f'Предложение {sentence} успешно добавлено в базу данных correct_word { base_word } и тегами {tags}')
+    new_sentence = Sentence(
+        sentence=sentence,
+        word_tags=tags,
+        word_id=corr_word_bd.id,
+    )
+    db.session.add(new_sentence)
+    db.session.commit()
+    print(f'Предложение {sentence} успешно добавлено в базу данных correct_word { base_word } и тегами {tags}')
 
 
 if __name__ == '__main__':
+    app = create_app()
+    app_context = app.app_context()
+    app_context.push()
+
     with Path('../words/sentence.txt').open(mode='r', encoding='utf8') as file:
         data = file.readlines()
 
@@ -98,3 +100,5 @@ if __name__ == '__main__':
             print("Паронимы не найдены.")
             print(sentence)
             print(base_word)
+
+    app_context.pop()

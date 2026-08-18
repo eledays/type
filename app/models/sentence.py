@@ -7,7 +7,7 @@ from pymorphy3 import MorphAnalyzer
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app import db
+from app.extensions import db
 from app.models.paronym import Paronym
 
 

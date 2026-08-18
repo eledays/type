@@ -1,4 +1,9 @@
-from app import app
+from app import create_app
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=app.config.get('FLASK_PORT'))
+    app = create_app()
+    app.run(
+        debug=app.config.get('DEBUG'), 
+        host=app.config.get('FLASK_HOST'), 
+        port=app.config.get('FLASK_PORT')
+    )

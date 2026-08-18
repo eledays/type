@@ -1,8 +1,8 @@
-from app import app, db
+from app.extensions import db
 from app.models import Action, Category, Sentence, Word
 from app.utils import add_action, get_cached_strike
 
-from flask import jsonify, redirect, render_template, request, session
+from flask import Blueprint, current_app, jsonify, redirect, render_template, request, session
 from flask_login import current_user, login_required
 from sqlalchemy import and_, func, case
 from pymorphy3.analyzer import MorphAnalyzer
@@ -11,7 +11,10 @@ import datetime
 import random
 
 
-@app.route('/')
+bp = Blueprint("user_pages", __name__)
+
+
+@bp.route('/')
 @login_required
 def index():
     user = current_user
@@ -24,12 +27,12 @@ def index():
     return render_template('index.html', strike=strike)
 
 
-@app.route('/demo')
+@bp.route('/demo')
 def demo_page():
     return redirect('/')
 
 
-@app.route('/get_frame')
+@bp.route('/get_frame')
 @login_required
 def get_frame():
     task_id = request.args.get('task_id', '')
@@ -159,7 +162,7 @@ def get_frame():
         return 'No words available', 404
 
 
-# @app.route('/get_word')
+# @bp.route('/get_word')
 # def word():
 #     word = Word.query.order_by(db.func.random()).first()
 #     return jsonify({'html_word': word.get_html(),
@@ -168,7 +171,7 @@ def get_frame():
 #                     'id': word.id})
 
 
-@app.route('/check_word', methods=['POST'])
+@bp.route('/check_word', methods=['POST'])
 @login_required
 def check_word():
     user = current_user
@@ -218,7 +221,7 @@ def check_word():
             'correct': True, 'full_word': full_note, 'explanation': explanation,
             'strike': {
                 'n': session.get('strike', None),
-                'levels': app.config['STRIKE_LEVELS']
+                'levels': current_app.config['STRIKE_LEVELS']
             }})
     else:
         if user.settings.strike:
@@ -231,11 +234,11 @@ def check_word():
             'correct': False, 'full_word': full_note, 'explanation': explanation,
             'strike': {
                 'n': session.get('strike'),
-                'levels': app.config['STRIKE_LEVELS']
+                'levels': current_app.config['STRIKE_LEVELS']
             }})
 
 
-@app.route('/mistake_report', methods=['POST'])
+@bp.route('/mistake_report', methods=['POST'])
 @login_required
 def mistake_report():
     word_id = request.json.get('id')
@@ -253,7 +256,7 @@ def mistake_report():
     return 'ok', 200
 
 
-@app.route('/action/swipe_next', methods=['POST'])
+@bp.route('/action/swipe_next', methods=['POST'])
 @login_required
 def action_swipe_next():
     user = current_user

@@ -1,19 +1,20 @@
 from datetime import datetime
 from typing import cast
 
-from flask import jsonify, render_template, request, session
+from flask import Blueprint, jsonify, render_template, request, session
 from flask_login import current_user, login_required, login_user
 
-from app import app, db
+from app.extensions import db
 from app.models import Settings, User, Word
 from app.utils import get_user_stats
 
 
 BOOLEAN_SETTINGS = {"strike", "notification", "day_results"}
 TIME_SETTINGS = {"notification_time", "day_results_time"}
+bp = Blueprint("users", __name__)
 
 
-@app.before_request
+@bp.before_app_request
 def ensure_authenticated_user() -> None:
     if request.endpoint == "static":
         return
@@ -48,7 +49,7 @@ def ensure_authenticated_user() -> None:
         login_user(user, remember=True)
 
 
-@app.route("/settings")
+@bp.route("/settings")
 @login_required
 def settings():
     user = cast(User, current_user._get_current_object())
@@ -72,7 +73,7 @@ def settings():
     )
 
 
-@app.route("/set_settings", methods=["POST"])
+@bp.route("/set_settings", methods=["POST"])
 @login_required
 def set_settings():
     user = cast(User, current_user._get_current_object())

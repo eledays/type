@@ -1,11 +1,14 @@
-from app import app, db
 from app.auth import admin_required
+from app.extensions import db
 from app.models import Word
 
-from flask import request
+from flask import Blueprint, request
 
 
-@app.route('/add_explanation', methods=['POST'])
+bp = Blueprint("admin", __name__)
+
+
+@bp.route('/add_explanation', methods=['POST'])
 @admin_required
 def add_explanation():
     payload = request.get_json(silent=True) or {}
@@ -20,7 +23,7 @@ def add_explanation():
     return 'Error', 400
 
 
-@app.route('/delete_answer', methods=['POST'])
+@bp.route('/delete_answer', methods=['POST'])
 @admin_required
 def delete_answer():
     payload = request.get_json(silent=True) or {}

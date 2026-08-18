@@ -1,13 +1,28 @@
-from app import app
-from app.utils import do_backup
 from apscheduler.schedulers.blocking import BlockingScheduler
 
+from app import create_app
+from app.utils import do_backup
 
-with app.app_context():
+
+def main() -> None:
+    app = create_app()
+
+    def backup() -> None:
+        with app.app_context():
+            do_backup()
+
     print("Starting scheduler...")
-    do_backup()
+    backup()
 
     scheduler = BlockingScheduler()
-    scheduler.add_job(do_backup, trigger="interval", days=app.config.get('BACKUP_PERIOD'))
+    scheduler.add_job(
+        backup,
+        trigger="interval",
+        days=app.config.get('BACKUP_PERIOD'),
+    )
 
     scheduler.start()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,30 +1,31 @@
+from collections.abc import Mapping
+from typing import Any
+
 from flask import Flask
-from flask_login import LoginManager
-app = Flask(__name__)
+from app.extensions import db, migrate, login_manager
 
 from config import settings
-app.config.from_mapping(settings.to_flask_config())
-
-from flask_sqlalchemy import SQLAlchemy
-db = SQLAlchemy(app)
-
-from flask_migrate import Migrate
-migrate = Migrate(app, db, compare_type=True, render_as_batch=True)
-
-login_manager = LoginManager(app)
-
-bot = None
-
-from app import models
 
 
-@login_manager.user_loader
-def load_user(user_id: str) -> models.User | None:
-    try:
-        parsed_user_id = int(user_id)
-    except (TypeError, ValueError):
-        return None
-    return db.session.get(models.User, parsed_user_id)
+def create_app(config: Mapping[str, Any] | None = None) -> Flask:
+    app = Flask(__name__)
+    app.config.from_mapping(settings.to_flask_config())
+    if config is not None:
+        app.config.from_mapping(config)
 
+    db.init_app(app)
+    migrate.init_app(
+        app,
+        db,
+        compare_type=True,
+        render_as_batch=True,
+    )
+    login_manager.init_app(app)
 
-from app.routes import admin, core, filters, user_pages, users
+    from app.auth import load_user
+    from app.routes import register_blueprints
+
+    login_manager.user_loader(load_user)
+    register_blueprints(app)
+
+    return app

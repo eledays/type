@@ -18,6 +18,7 @@ class AppSettings(BaseSettings):
         frozen=True,
     )
 
+    # Database settings
     database_url: str = Field(
         default="sqlite:///app.db",
         validation_alias=AliasChoices(
@@ -25,19 +26,28 @@ class AppSettings(BaseSettings):
         ),
         min_length=1,
     )
+
+    # Backup settings
     backup_path: Path = Field(
         default=Path("backups"), validation_alias="BACKUP_PATH"
     )
     backup_period: float = Field(
         default=1, validation_alias="BACKUP_PERIOD", gt=0
     )
+
+    # Flask settings
     secret_key: SecretStr = Field(validation_alias="SECRET_KEY")
+    debug: bool = Field(default=False, validation_alias="DEBUG")
+    flask_host: str = Field(
+        default='localhost', validation_alias="FLASK_HOST"
+    )
     flask_port: int = Field(
         default=5000, validation_alias="FLASK_PORT", ge=1, le=65_535
     )
     strike_levels: tuple[int, ...] = Field(
         default=(50, 100, 500, 1000), validation_alias="STRIKE_LEVELS"
     )
+
     tasks: dict[int, str] = Field(
         default_factory=lambda: {
             4: "Ударения",
@@ -77,11 +87,13 @@ class AppSettings(BaseSettings):
     def to_flask_config(self) -> dict[str, Any]:
         """Return validated settings using Flask extension key names."""
         return {
+            "DEBUG": self.debug,
+            "FLASK_PORT": self.flask_port,
+            "FLASK_HOST": self.flask_host,
             "SQLALCHEMY_DATABASE_URI": self.database_url,
             "BACKUP_PATH": self.backup_path,
             "BACKUP_PERIOD": self.backup_period,
             "SECRET_KEY": self.secret_key.get_secret_value(),
-            "FLASK_PORT": self.flask_port,
             "STRIKE_LEVELS": self.strike_levels,
             "TASKS": self.tasks,
             "URL": self.url,
