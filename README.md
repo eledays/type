@@ -34,6 +34,10 @@
    ```bash
    flask --app app db upgrade
    ```
+6. Заполните базу небольшим набором слов для разработки:
+   ```bash
+   flask --app app csv_to_db fixtures/test_words.csv
+   ```
 
 ## Использование
 1. Запустите проект:

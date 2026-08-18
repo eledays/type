@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 from flask import Flask
+from flask.cli import with_appcontext
 from pymorphy3 import MorphAnalyzer
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -16,6 +17,7 @@ from app.models import Category, Paronym, ParonymGroup, Sentence, Word
     "csv_path",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
+@with_appcontext
 def csv_to_db(csv_path: Path) -> None:
     """Import words and categories from CSV_PATH."""
     imported = 0
@@ -76,6 +78,7 @@ def csv_to_db(csv_path: Path) -> None:
     "txt_path",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
+@with_appcontext
 def txt_to_db(txt_path: Path) -> None:
     """Import paronym groups from TXT_PATH."""
     imported = 0
@@ -202,6 +205,7 @@ def _sentence_blocks(lines: list[str]) -> list[tuple[list[str], str]]:
     "txt_path",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
+@with_appcontext
 def sentence_to_db(txt_path: Path) -> None:
     """Import paronym exercise sentences from TXT_PATH."""
     analyzer = MorphAnalyzer()
