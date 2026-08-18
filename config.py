@@ -62,6 +62,20 @@ class AppSettings(BaseSettings):
         default="https://type.eleday.ru/", validation_alias="URL"
     )
 
+    # Yandex OAuth settings
+    yandex_client_id: str | None = Field(
+        default=None, validation_alias="YANDEX_CLIENT_ID"
+    )
+    yandex_client_secret: SecretStr | None = Field(
+        default=None, validation_alias="YANDEX_CLIENT_SECRET"
+    )
+    yandex_redirect_uri: str | None = Field(
+        default=None, validation_alias="YANDEX_REDIRECT_URI"
+    )
+    anonymous_action_limit: int = Field(
+        default=30, validation_alias="ANONYMOUS_ACTION_LIMIT", ge=1
+    )
+
     @field_validator("secret_key")
     @classmethod
     def validate_secret_key(cls, value: SecretStr) -> SecretStr:
@@ -97,6 +111,14 @@ class AppSettings(BaseSettings):
             "STRIKE_LEVELS": self.strike_levels,
             "TASKS": self.tasks,
             "URL": self.url,
+            "YANDEX_CLIENT_ID": self.yandex_client_id,
+            "YANDEX_CLIENT_SECRET": (
+                self.yandex_client_secret.get_secret_value()
+                if self.yandex_client_secret is not None
+                else None
+            ),
+            "YANDEX_REDIRECT_URI": self.yandex_redirect_uri,
+            "ANONYMOUS_ACTION_LIMIT": self.anonymous_action_limit,
         }
 
 

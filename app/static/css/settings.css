@@ -271,3 +271,104 @@ p {
     -webkit-appearance: none;
     margin: 0;
 }
+
+.profile-block {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    align-items: center;
+    gap: 16px;
+}
+
+.profile-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--tg-theme-secondary-bg-color);
+}
+
+.profile-placeholder {
+    display: grid;
+    place-items: center;
+    font-size: 30px;
+    font-weight: 700;
+}
+
+.profile-identity h2,
+.profile-identity p {
+    margin: 0;
+    text-align: left;
+}
+
+.profile-block form,
+.profile-block .yandex-login {
+    grid-column: 1 / -1;
+}
+
+.yandex-login,
+.continue-anonymous {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 10px;
+    text-decoration: none;
+}
+
+.yandex-login {
+    background: #111;
+    color: #fff;
+    font-weight: 700;
+}
+
+.yandex-mark {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #fc3f1d;
+    color: #fff;
+}
+
+.continue-anonymous {
+    color: var(--tg-theme-hint-color, #777);
+}
+
+.logout-button {
+    text-align: center;
+    color: #d33;
+}
+
+.auth-page {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+}
+
+.auth-card {
+    width: 100%;
+    text-align: center;
+}
+
+.auth-card p {
+    margin: 12px 0 24px;
+}
+
+.auth-logo {
+    font-size: 40px;
+    font-weight: 700;
+}
+
+.flash {
+    margin: 12px 0;
+    padding: 10px;
+    border-radius: 8px;
+    background: var(--tg-theme-secondary-bg-color);
+}
+
+.flash.error {
+    color: #c33;
+}

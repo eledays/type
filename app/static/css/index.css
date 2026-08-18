@@ -17,6 +17,23 @@ iframe {
     /* pointer-events: none; */
     z-index: -1;
 }
+
+.anonymous-notice {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    max-width: calc(100vw - 24px);
+    padding: 8px 14px;
+    border-radius: 18px;
+    background: rgba(0, 0, 0, .55);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    font-size: 12px;
+    text-decoration: none;
+    white-space: nowrap;
+}
 .fullscreen iframe {
     position: fixed;
     top: 0;

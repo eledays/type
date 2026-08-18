@@ -75,7 +75,14 @@ function handleAnswerClick(event) {
         },
         body: JSON.stringify({id: word_id, answer: event.srcElement.innerText.trim()})
     })
-    .then(response => response.json())
+    .then(async response => {
+        const data = await response.json();
+        if (response.status === 403 && data.login_url) {
+            window.parent.location.href = data.login_url;
+            throw new Error(data.error);
+        }
+        return data;
+    })
     .then(data => {
         word.full_word = data.full_word;
         if (data.correct) correctAnswer(data);

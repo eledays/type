@@ -29,6 +29,10 @@
     SECRET_KEY=replace-with-a-random-secret-key
     DATABASE_URL=sqlite:///app.db
     FLASK_PORT=5000
+    YANDEX_CLIENT_ID=your-client-id
+    YANDEX_CLIENT_SECRET=your-client-secret
+    YANDEX_REDIRECT_URI=http://localhost:5000/auth/yandex/callback
+    ANONYMOUS_ACTION_LIMIT=30
     ```
 5. Примените миграции базы данных:
    ```bash
@@ -65,6 +69,15 @@ flask --app app db upgrade
 ```
 
 При миграции старые `user_id` сохраняются в `User.telegram_id`. Внутренний `User.id` создаётся отдельно и автоматически.
+
+## Вход через Яндекс
+
+Создайте на `oauth.yandex.ru` приложение типа «Для авторизации пользователей»
+и включите права «Логин, имя и фамилия, пол» и «Портрет пользователя».
+Callback URL должен в точности совпадать с
+`YANDEX_REDIRECT_URI`. По умолчанию анонимный пользователь может совершить 30
+действий; лимит меняется через `ANONYMOUS_ACTION_LIMIT`. При последующем входе
+его ответы и пропуски автоматически переносятся в Яндекс-профиль.
 
 ## Администратор
 

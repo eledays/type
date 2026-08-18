@@ -1,5 +1,5 @@
 from app.extensions import db
-from app.models import Action
+from app.models import Action, User
 
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -21,6 +21,24 @@ def add_action(
     db.session.add(action_record)
     db.session.commit()
     return action_record
+
+
+def get_anonymous_actions_remaining(user: User) -> int | None:
+    """Return a guest quota, or ``None`` for a registered account."""
+    if not user.is_anonymous_account:
+        return None
+    used = db.session.scalar(
+        select(db.func.count(Action.id)).where(
+            Action.user_id == user.id,
+            Action.action.in_([
+                Action.RIGHT_ANSWER,
+                Action.WRONG_ANSWER,
+                Action.SKIP,
+            ]),
+        )
+    ) or 0
+    limit = int(current_app.config["ANONYMOUS_ACTION_LIMIT"])
+    return max(0, limit - used)
 
 
 def do_backup():

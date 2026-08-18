@@ -1,6 +1,6 @@
 from app.extensions import db
 from app.models import Category
-from app.utils import get_cached_strike
+from app.utils import get_anonymous_actions_remaining, get_cached_strike
 
 from flask import Blueprint, current_app, render_template
 from flask_login import current_user, login_required
@@ -13,8 +13,12 @@ bp = Blueprint("filters", __name__)
 @login_required
 def task(task_id):
     user = current_user
-    return render_template('index.html', strike=get_cached_strike(user.id),
-                           params=f'task_id={task_id}')
+    return render_template(
+        'index.html',
+        strike=get_cached_strike(user.id),
+        params=f'task_id={task_id}',
+        anonymous_remaining=get_anonymous_actions_remaining(user),
+    )
 
 
 @bp.route('/category/<int:category_id>')
@@ -24,16 +28,24 @@ def category(category_id):
     category = db.session.get(Category, category_id)
     if not category:
         return 'Category not found', 404
-    return render_template('index.html', strike=get_cached_strike(user.id),
-                           params=f'category_id={category_id}')
+    return render_template(
+        'index.html',
+        strike=get_cached_strike(user.id),
+        params=f'category_id={category_id}',
+        anonymous_remaining=get_anonymous_actions_remaining(user),
+    )
 
 
 @bp.route('/mistakes')
 @login_required
 def mistakes():
     user = current_user
-    return render_template('index.html', strike=get_cached_strike(user.id),
-                           params=f'mistakes=true')
+    return render_template(
+        'index.html',
+        strike=get_cached_strike(user.id),
+        params='mistakes=true',
+        anonymous_remaining=get_anonymous_actions_remaining(user),
+    )
 
 
 @bp.route('/filters')

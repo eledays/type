@@ -4,7 +4,14 @@ window.addEventListener('message', (event) => {
         fetch(`/can_swipe?word_id=${word_id}`, {
             method: 'GET'
         })
-        .then((data) => data.json())
+        .then(async (response) => {
+            const data = await response.json();
+            if (response.status === 403 && data.login_url) {
+                window.location.href = data.login_url;
+                throw new Error(data.error);
+            }
+            return data;
+        })
         .then((data) => {
             if (data.status === 'yes') {
                 swipeNextFrame();
@@ -91,7 +98,14 @@ function swipeNextFrame(doFetch=true) {
             },
             body: JSON.stringify({word_id: word_id})
         })
-        .then((data) => data.json())
+        .then(async (response) => {
+            const data = await response.json();
+            if (response.status === 403 && data.login_url) {
+                window.location.href = data.login_url;
+                throw new Error(data.error);
+            }
+            return data;
+        })
         .then((data) => {
             strike({n: data.strike})
         });

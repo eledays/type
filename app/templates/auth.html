@@ -3,15 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>type — Лента слов</title>
+    <title>type — Вход</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
-    <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/themes/light.css') }}"> -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
 
     <link rel="icon" href="{{ url_for('static', filename='img/fav.ico') }}" type="image/x-icon">
 </head>
 <body>
-    Авторизация не требуется. <a href="/">Открыть приложение</a>
+    <main class="cont auth-page">
+        <section class="settings-block auth-card">
+            <div class="auth-logo">type</div>
+            <h1>Сохраните прогресс</h1>
+            <p>Войдите через Яндекс — ответы из анонимного режима автоматически перенесутся в профиль.</p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endwith %}
+
+            {% if oauth_configured %}
+                <a class="yandex-login" href="{{ url_for('auth.yandex_login', next=next_url) }}">
+                    <span class="yandex-mark">Я</span>
+                    Войти через Яндекс
+                </a>
+            {% else %}
+                <div class="flash error">Вход временно недоступен: OAuth не настроен.</div>
+            {% endif %}
+            <a class="continue-anonymous" href="{{ next_url }}">Продолжить без входа</a>
+        </section>
+    </main>
 </body>
 </html>

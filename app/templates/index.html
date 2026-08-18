@@ -13,6 +13,11 @@
     <link rel="icon" href="{{ url_for('static', filename='img/fav.ico') }}" type="image/x-icon">
 </head>
 <body>
+    {% if anonymous_remaining is defined and anonymous_remaining is not none %}
+    <a class="anonymous-notice" href="{{ url_for('auth.login_page', next=request.full_path) }}">
+        Анонимный режим · осталось действий: {{ anonymous_remaining }} · Войти
+    </a>
+    {% endif %}
     <iframe src="/get_frame?{{ params }}" class="current"></iframe>
     <iframe src="/get_frame?{{ params }}" class="next"></iframe>
 

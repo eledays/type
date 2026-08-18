@@ -21,6 +21,8 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
         render_as_batch=True,
     )
     login_manager.init_app(app)
+    login_manager.login_view = "auth.login_page"
+    login_manager.login_message = None
 
     from app.auth import load_user
     from app.cli import register_commands

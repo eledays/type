@@ -1,8 +1,21 @@
 from app.extensions import db
 from app.models import Action, Category, Sentence, Word
-from app.utils import add_action, get_cached_strike
+from app.utils import (
+    add_action,
+    get_anonymous_actions_remaining,
+    get_cached_strike,
+)
 
-from flask import Blueprint, current_app, jsonify, redirect, render_template, request, session
+from flask import (
+    Blueprint,
+    current_app,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_login import current_user, login_required
 from sqlalchemy import and_, func, case
 from pymorphy3.analyzer import MorphAnalyzer
@@ -24,7 +37,11 @@ def index():
         else None
     )
 
-    return render_template('index.html', strike=strike)
+    return render_template(
+        'index.html',
+        strike=strike,
+        anonymous_remaining=get_anonymous_actions_remaining(user),
+    )
 
 
 @bp.route('/demo')
@@ -177,6 +194,13 @@ def check_word():
     user = current_user
     user_id = user.id
 
+    if get_anonymous_actions_remaining(user) == 0:
+        return jsonify({
+            'error': 'anonymous_limit_reached',
+            'message': 'Войдите через Яндекс, чтобы продолжить.',
+            'login_url': url_for('auth.login_page', next=request.referrer or '/'),
+        }), 403
+
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
         return jsonify({'error': 'Invalid JSON'}), 400
@@ -266,6 +290,13 @@ def mistake_report():
 def action_swipe_next():
     user = current_user
     user_id = user.id
+
+    if get_anonymous_actions_remaining(user) == 0:
+        return jsonify({
+            'status': 'error',
+            'error': 'anonymous_limit_reached',
+            'login_url': url_for('auth.login_page', next=request.referrer or '/'),
+        }), 403
 
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):

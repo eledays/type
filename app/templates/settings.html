@@ -14,6 +14,32 @@
 </head>
 <body>
     <div class="cont">
+        <div class="settings-block profile-block">
+            {% if user.avatar_url %}
+                <img class="profile-avatar" src="{{ user.avatar_url }}" alt="Портрет {{ user.display_name }}" referrerpolicy="no-referrer">
+            {% else %}
+                <div class="profile-avatar profile-placeholder">{{ user.display_name[:1]|upper }}</div>
+            {% endif %}
+            <div class="profile-identity">
+                <h2>{{ user.display_name }}</h2>
+                {% if user.yandex_login %}
+                    <p>@{{ user.yandex_login }}</p>
+                {% else %}
+                    <p>Анонимный профиль</p>
+                {% endif %}
+            </div>
+            {% if user.is_anonymous_account %}
+                {% if oauth_configured %}
+                    <a class="yandex-login compact" href="{{ url_for('auth.yandex_login', next=request.path) }}">
+                        <span class="yandex-mark">Я</span> Войти и сохранить прогресс
+                    </a>
+                {% endif %}
+            {% else %}
+                <form method="post" action="{{ url_for('auth.logout') }}">
+                    <button class="logout-button" type="submit">Выйти</button>
+                </form>
+            {% endif %}
+        </div>
         <div class="settings-block">
             <h2>Настройки</h2>
             <div class="settings-list">

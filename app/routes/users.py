@@ -1,7 +1,14 @@
 from datetime import datetime
 from typing import cast
 
-from flask import Blueprint, jsonify, render_template, request, session
+from flask import (
+    Blueprint,
+    current_app,
+    jsonify,
+    render_template,
+    request,
+    session,
+)
 from flask_login import current_user, login_required, login_user
 
 from app.extensions import db
@@ -16,41 +23,45 @@ bp = Blueprint("users", __name__)
 
 @bp.before_app_request
 def ensure_authenticated_user() -> None:
+    """Restore a legacy identity or create a browser-bound guest account."""
     if request.endpoint == "static":
         return
 
-    user = None
     if current_user.is_authenticated:
-        user = cast(User, current_user._get_current_object())
-    else:
-        legacy_user_id = session.pop("user_id", None)
-        if not isinstance(legacy_user_id, bool):
-            try:
-                parsed_legacy_id = int(legacy_user_id)
-            except (TypeError, ValueError):
-                parsed_legacy_id = None
-            if parsed_legacy_id is not None:
-                user = db.session.get(User, parsed_legacy_id)
-                if user is None:
-                    user = User.query.filter_by(
-                        telegram_id=parsed_legacy_id
-                    ).first()
+        return
 
+    legacy_user_id = session.pop("user_id", None)
+    if isinstance(legacy_user_id, bool):
+        return
+    try:
+        parsed_legacy_id = int(legacy_user_id)
+    except (TypeError, ValueError):
+        parsed_legacy_id = None
+
+    user = (
+        db.session.get(User, parsed_legacy_id)
+        if parsed_legacy_id is not None
+        else None
+    )
+    if user is None and parsed_legacy_id is not None:
+        user = User.query.filter_by(telegram_id=parsed_legacy_id).first()
     if user is None:
-        user = User()
-        user.settings = Settings()
+        user = User(settings=Settings())
         db.session.add(user)
         db.session.commit()
-        session.clear()
-    elif user.settings is None:
+        # The remember cookie lets a guest return later and still merge the
+        # accumulated progress when they decide to sign in.
+        login_user(user, remember=True)
+        return
+
+    if user.settings is None:
         user.settings = Settings()
         db.session.commit()
-
-    if not current_user.is_authenticated:
-        login_user(user, remember=True)
+    login_user(user, remember=not user.is_anonymous_account)
 
 
 @bp.route("/settings")
+@bp.route("/profile")
 @login_required
 def settings():
     user = cast(User, current_user._get_current_object())
@@ -68,9 +79,14 @@ def settings():
 
     return render_template(
         "settings.html",
+        user=user,
         settings=user.settings,
         admin=admin_mode,
         stats=stats,
+        oauth_configured=bool(
+            current_app.config.get("YANDEX_CLIENT_ID")
+            and current_app.config.get("YANDEX_CLIENT_SECRET")
+        ),
     )
 
 
