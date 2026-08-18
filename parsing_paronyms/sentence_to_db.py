@@ -32,11 +32,10 @@ def to_db(sentence: str, word: str, correct_word: str):
     if Sentence.query.filter_by(sentence=sentence).first():
         return
 
-    new_sentence = Sentence(
-        sentence=sentence,
-        word_tags=tags,
-        word_id=corr_word_bd.id,
-    )
+    new_sentence = Sentence()
+    new_sentence.sentence = sentence
+    new_sentence.word_tags = tags
+    new_sentence.word_id = corr_word_bd.id
     db.session.add(new_sentence)
     db.session.commit()
     print(f'Предложение {sentence} успешно добавлено в базу данных correct_word { base_word } и тегами {tags}')

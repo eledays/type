@@ -23,7 +23,9 @@ def import_txt_to_db(inp_file_path):
 
             for paronym in paronyms:
                 try:
-                    par = Paronym(word=paronym, group_id=group_id)
+                    par = Paronym()
+                    par.word = paronym
+                    par.group_id = group_id
                     db.session.add(par)
                     db.session.commit()
                     print(f"Added word '{paronym}'")

@@ -37,7 +37,8 @@ def ensure_authenticated_user() -> None:
                     ).first()
 
     if user is None:
-        user = User(settings=Settings())
+        user = User()
+        user.settings = Settings()
         db.session.add(user)
         db.session.commit()
         session.clear()

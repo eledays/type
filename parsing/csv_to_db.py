@@ -19,12 +19,16 @@ def import_csv_to_db(csv_file_path):
                 # Find or create the category
                 category = Category.query.filter_by(name=category_name).first()
                 if not category:
-                    category = Category(name=category_name)
+                    category = Category()
+                    category.name = category_name
                     db.session.add(category)
                     db.session.commit()
 
                 # Create the word
-                word = Word(word=word_text, answers=answers, category_id=category.id)
+                word = Word()
+                word.word = word_text
+                word.answers = answers
+                word.category_id = category.id
                 db.session.add(word)
                 db.session.commit()
                 print(f"Added word '{word_text}' with category '{category_name}'.")

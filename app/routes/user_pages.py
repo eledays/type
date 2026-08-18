@@ -215,7 +215,8 @@ def check_word():
             session['strike'] = get_cached_strike(user_id) + 1
 
         if not is_paronym:
-            add_action(user_id=user_id, word_id=note_id, action=Action.RIGHT_ANSWER)
+            add_action(user_id=user_id, word_id=note_id,
+                       action=Action.RIGHT_ANSWER)
 
         return jsonify({
             'correct': True, 'full_word': full_note, 'explanation': explanation,
@@ -228,7 +229,8 @@ def check_word():
             session['strike'] = 0
 
         if not is_paronym:
-            add_action(user_id=user_id, word_id=note_id, action=Action.WRONG_ANSWER)
+            add_action(user_id=user_id, word_id=note_id,
+                       action=Action.WRONG_ANSWER)
 
         return jsonify({
             'correct': False, 'full_word': full_note, 'explanation': explanation,
@@ -241,7 +243,10 @@ def check_word():
 @bp.route('/mistake_report', methods=['POST'])
 @login_required
 def mistake_report():
-    word_id = request.json.get('id')
+    json = request.get_json(silent=True)
+    if not isinstance(json, dict):
+        return 'Invalid JSON', 400
+    word_id = json.get('id')
     word = Word.query.get(word_id)
 
     if word is None:
@@ -266,8 +271,8 @@ def action_swipe_next():
     if not isinstance(payload, dict):
         return jsonify({'status': 'error', 'error': 'invalid JSON'}), 400
     try:
-        word_id = int(payload.get('word_id'))
-    except (TypeError, ValueError):
+        word_id = int(payload['word_id'])
+    except (TypeError, ValueError, KeyError):
         return jsonify({'status': 'error', 'error': 'invalid word id'}), 400
 
     if db.session.get(Word, word_id) is not None:

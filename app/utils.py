@@ -14,11 +14,10 @@ def add_action(
     word_id: int | None,
     action: int,
 ) -> Action:
-    action_record = Action(
-        user_id=user_id,
-        word_id=word_id,
-        action=action,
-    )
+    action_record = Action()
+    action_record.user_id = user_id
+    action_record.word_id = word_id
+    action_record.action = action
     db.session.add(action_record)
     db.session.commit()
     return action_record
