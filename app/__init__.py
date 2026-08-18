@@ -23,9 +23,11 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     login_manager.init_app(app)
 
     from app.auth import load_user
+    from app.cli import register_commands
     from app.routes import register_blueprints
 
     login_manager.user_loader(load_user)
+    register_commands(app)
     register_blueprints(app)
 
     return app

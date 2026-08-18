@@ -41,6 +41,16 @@
     python run_dev.py
     ```
 
+## Импорт данных
+
+```bash
+flask --app app csv_to_db path/to/words.csv
+flask --app app txt_to_db path/to/paronyms.txt
+flask --app app sentence_to_db path/to/sentences.txt
+```
+
+Перед импортом база должна быть обновлена командой `flask --app app db upgrade`.
+
 ## Миграции
 
 Если у вас уже есть база, созданная до перехода на Flask-Migrate, сначала сделайте её резервную копию. Затем отметьте baseline и примените миграции:
