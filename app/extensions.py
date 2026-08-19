@@ -1,8 +1,64 @@
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
+from flask import current_app, session
 from flask_login import LoginManager
+from flask_login.config import (
+    COOKIE_DURATION,
+    COOKIE_HTTPONLY,
+    COOKIE_NAME,
+    COOKIE_SAMESITE,
+    COOKIE_SECURE,
+)
+from flask_login.utils import encode_cookie
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 
 
+class TimezoneAwareLoginManager(LoginManager):
+    """Flask-Login 0.6.3 with a Python 3.12-safe remember cookie.
+
+    Flask-Login has this change queued for its unreleased 0.7.0 version. The
+    override can be removed after upgrading to that release.
+    """
+
+    def _set_cookie(self, response: Any) -> None:
+        config = current_app.config
+        cookie_name = config.get("REMEMBER_COOKIE_NAME", COOKIE_NAME)
+        domain = config.get("REMEMBER_COOKIE_DOMAIN")
+        path = config.get("REMEMBER_COOKIE_PATH", "/")
+        secure = config.get("REMEMBER_COOKIE_SECURE", COOKIE_SECURE)
+        httponly = config.get("REMEMBER_COOKIE_HTTPONLY", COOKIE_HTTPONLY)
+        samesite = config.get("REMEMBER_COOKIE_SAMESITE", COOKIE_SAMESITE)
+
+        if "_remember_seconds" in session:
+            duration = timedelta(seconds=session["_remember_seconds"])
+        else:
+            duration = config.get(
+                "REMEMBER_COOKIE_DURATION", COOKIE_DURATION
+            )
+        if isinstance(duration, int):
+            duration = timedelta(seconds=duration)
+        try:
+            expires = datetime.now(timezone.utc) + duration
+        except TypeError as error:
+            raise Exception(
+                "REMEMBER_COOKIE_DURATION must be a datetime.timedelta, "
+                f"instead got: {duration}"
+            ) from error
+
+        response.set_cookie(
+            cookie_name,
+            value=encode_cookie(str(session["_user_id"])),
+            expires=expires,
+            domain=domain,
+            path=path,
+            secure=secure,
+            httponly=httponly,
+            samesite=samesite,
+        )
+
+
 db = SQLAlchemy()
 migrate = Migrate()
-login_manager = LoginManager()
+login_manager = TimezoneAwareLoginManager()

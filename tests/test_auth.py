@@ -29,6 +29,17 @@ class TestAuth(AppTestCase):
         response = self.client.get("/auth/yandex")
         assert response.status_code == 503
 
+    def test_guest_remember_cookie_has_an_expiration(self) -> None:
+        response = self.client.get("/")
+
+        remember_cookie = next(
+            header
+            for header in response.headers.getlist("Set-Cookie")
+            if header.startswith("remember_token=")
+        )
+        assert "Expires=" in remember_cookie
+        assert "HttpOnly" in remember_cookie
+
     def test_yandex_login_builds_authorization_redirect_and_stores_state(self) -> None:
         self.app.config.update(
             YANDEX_CLIENT_ID="client-id",
