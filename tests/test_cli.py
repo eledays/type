@@ -62,6 +62,46 @@ class TestImportCommands(AppTestCase):
         assert result.exit_code != 0
         assert "должен входить в список вариантов" in result.output
 
+    def test_csv_import_creates_full_paronym_exercises(self) -> None:
+        source = self.fixture(
+            "mixed.csv",
+            "м_локо;о;а,о;Корни\n"
+            "paronym;Это был _______ метод.;эффективный;"
+            "эффектный,эффективный;nomn,sing,masc\n"
+            "paronym;Он произвёл _______ впечатление.;эффектный;"
+            "эффектный,эффективный;nomn,sing,neut\n",
+        )
+
+        first = self.runner.invoke(args=["csv_to_db", str(source)])
+        second = self.runner.invoke(args=["csv_to_db", str(source)])
+
+        assert first.exit_code == 0, first.output
+        assert second.exit_code == 0, second.output
+        assert "Паронимов: 2" in first.output
+        assert "Упражнений на паронимы: 2" in first.output
+        with self.app.app_context():
+            assert SpellingExercise.query.count() == 1
+            assert ParonymGroup.query.count() == 1
+            assert Paronym.query.count() == 2
+            assert ParonymExercise.query.count() == 2
+            exercises = ParonymExercise.query.order_by(
+                ParonymExercise.id
+            ).all()
+            assert [exercise.paronym.word for exercise in exercises] == [
+                "эффективный",
+                "эффектный",
+            ]
+
+    def test_csv_import_rejects_incomplete_paronym_rows(self) -> None:
+        source = self.fixture(
+            "broken-paronym.csv",
+            "paronym;Это _______ метод.;эффективный;"
+            "эффектный,эффективный;\n",
+        )
+        result = self.runner.invoke(args=["csv_to_db", str(source)])
+        assert result.exit_code != 0
+        assert "Некорректная строка паронимов" in result.output
+
     def test_paronym_import_creates_groups_and_extends_existing_group(self) -> None:
         first_source = self.fixture("first.txt", "эффектный – эффективный\n")
         second_source = self.fixture("second.txt", "эффективный – эффектность\n")

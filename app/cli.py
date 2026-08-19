@@ -18,6 +18,109 @@ from app.models import (
 )
 
 
+def _ensure_paronym_group(
+    paronym_words: list[str],
+    line_number: int,
+) -> tuple[dict[str, Paronym], int, int]:
+    """Создаёт или дополняет одну непротиворечивую группу паронимов.
+
+    :param paronym_words: Нормальные формы слов из одной группы.
+    :param line_number: Номер исходной строки для сообщения об ошибке.
+    :return: Словарь паронимов, число созданных и число найденных слов.
+    :raises click.ClickException: Если слов мало или они принадлежат разным
+        существующим группам.
+    """
+    unique_words = list(dict.fromkeys(
+        word.strip().lower() for word in paronym_words if word.strip()
+    ))
+    if len(unique_words) < 2:
+        raise click.ClickException(
+            f"В строке {line_number} должна быть пара или группа паронимов."
+        )
+
+    existing = {
+        paronym.word: paronym
+        for paronym in Paronym.query.filter(Paronym.word.in_(unique_words))
+    }
+    group_ids = {paronym.group_id for paronym in existing.values()}
+    if len(group_ids) > 1:
+        raise click.ClickException(
+            f"Строка {line_number} объединяет паронимы из разных "
+            "существующих групп."
+        )
+
+    if group_ids:
+        group_id = group_ids.pop()
+    else:
+        group = ParonymGroup()
+        db.session.add(group)
+        db.session.flush()
+        group_id = group.id
+
+    imported = 0
+    skipped = 0
+    for word in unique_words:
+        if word in existing:
+            skipped += 1
+            continue
+        paronym = Paronym(word=word, group_id=group_id)
+        db.session.add(paronym)
+        existing[word] = paronym
+        imported += 1
+    db.session.flush()
+    return existing, imported, skipped
+
+
+def _import_paronym_csv_row(
+    values: list[str],
+    line_number: int,
+) -> tuple[int, int, bool]:
+    """Импортирует группу паронимов и упражнение из строки CSV.
+
+    :param values: Поля строки после удаления окружающих пробелов.
+    :param line_number: Номер строки в исходном CSV-файле.
+    :return: Число созданных и найденных паронимов, а также признак создания
+        упражнения.
+    :raises click.ClickException: Если строка не соответствует формату.
+    """
+    if len(values) != 5 or values[0] != "paronym":
+        raise click.ClickException(
+            f"Некорректная строка {line_number}: ожидаются либо "
+            "word;correct_answer;answer1,answer2;category, либо "
+            "paronym;sentence;correct_paronym;group;word_tags"
+        )
+    _, sentence_text, correct_word, raw_group, word_tags = values
+    group_words = [word.strip().lower() for word in raw_group.split(",")]
+    correct_word = correct_word.lower()
+    if (
+        not sentence_text
+        or "_______" not in sentence_text
+        or not correct_word
+        or not word_tags
+    ):
+        raise click.ClickException(
+            f"Некорректная строка паронимов {line_number}."
+        )
+    if correct_word not in group_words:
+        raise click.ClickException(
+            f"В строке {line_number} правильный пароним должен входить в группу."
+        )
+
+    paronyms, imported, skipped = _ensure_paronym_group(
+        group_words,
+        line_number,
+    )
+    if ParonymExercise.query.filter_by(sentence=sentence_text).first() is not None:
+        return imported, skipped, False
+    db.session.add(ParonymExercise(
+        sentence=sentence_text,
+        paronym=paronyms[correct_word],
+        word_tags=word_tags,
+        task_number=5,
+    ))
+    return imported, skipped, True
+
+
 @click.command("csv_to_db")
 @click.argument(
     "csv_path",
@@ -32,12 +135,27 @@ def csv_to_db(csv_path: Path) -> None:
     """
     imported = 0
     skipped = 0
+    imported_paronyms = 0
+    skipped_paronyms = 0
+    imported_paronym_exercises = 0
+    skipped_paronym_exercises = 0
 
     try:
         with csv_path.open(encoding="utf-8", newline="") as file:
             rows = csv.reader(file, delimiter=";")
             for line_number, row in enumerate(rows, start=1):
                 values = [value.strip() for value in row]
+                if values and values[0] == "paronym":
+                    new_paronyms, known_paronyms, exercise_created = (
+                        _import_paronym_csv_row(values, line_number)
+                    )
+                    imported_paronyms += new_paronyms
+                    skipped_paronyms += known_paronyms
+                    if exercise_created:
+                        imported_paronym_exercises += 1
+                    else:
+                        skipped_paronym_exercises += 1
+                    continue
                 if len(values) == 4:
                     word_text, correct_answer, raw_answers, category_name = values
                 else:
@@ -93,7 +211,13 @@ def csv_to_db(csv_path: Path) -> None:
         db.session.rollback()
         raise
 
-    click.echo(f"Импортировано слов: {imported}; пропущено: {skipped}.")
+    click.echo(
+        f"Импортировано слов: {imported}; пропущено: {skipped}. "
+        f"Паронимов: {imported_paronyms}; уже существовало: "
+        f"{skipped_paronyms}. Упражнений на паронимы: "
+        f"{imported_paronym_exercises}; пропущено: "
+        f"{skipped_paronym_exercises}."
+    )
 
 
 @click.command("txt_to_db")
@@ -124,38 +248,12 @@ def txt_to_db(txt_path: Path) -> None:
                         "паронимов, разделённых символом '–'."
                     )
 
-                existing = {
-                    paronym.word: paronym
-                    for paronym in Paronym.query.filter(
-                        Paronym.word.in_(paronyms)
-                    )
-                }
-                group_ids = {
-                    paronym.group_id for paronym in existing.values()
-                }
-                if len(group_ids) > 1:
-                    raise click.ClickException(
-                        f"Строка {line_number} объединяет паронимы из разных "
-                        "существующих групп."
-                    )
-
-                if group_ids:
-                    group_id = group_ids.pop()
-                else:
-                    group = ParonymGroup()
-                    db.session.add(group)
-                    db.session.flush()
-                    group_id = group.id
-
-                for word in paronyms:
-                    if word in existing:
-                        skipped += 1
-                        continue
-                    paronym = Paronym()
-                    paronym.word = word
-                    paronym.group_id = group_id
-                    db.session.add(paronym)
-                    imported += 1
+                _, new_count, known_count = _ensure_paronym_group(
+                    paronyms,
+                    line_number,
+                )
+                imported += new_count
+                skipped += known_count
 
         db.session.commit()
     except (OSError, UnicodeError, SQLAlchemyError) as error:
