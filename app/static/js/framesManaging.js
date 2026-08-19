@@ -107,7 +107,10 @@ function swipeNextFrame(doFetch=true) {
             return data;
         })
         .then((data) => {
-            strike({n: data.strike})
+            strike({n: data.strike});
+            if (typeof window.updateAnonymousRemaining === 'function') {
+                window.updateAnonymousRemaining(data.anonymous_remaining);
+            }
         });
     }
 

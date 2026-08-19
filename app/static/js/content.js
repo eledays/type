@@ -84,6 +84,9 @@ function handleAnswerClick(event) {
         return data;
     })
     .then(data => {
+        if (typeof window.parent.updateAnonymousRemaining === 'function') {
+            window.parent.updateAnonymousRemaining(data.anonymous_remaining);
+        }
         word.full_word = data.full_word;
         if (data.correct) correctAnswer(data);
         else incorrectAnswer(data);

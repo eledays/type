@@ -97,7 +97,12 @@ class RouteMapTest(unittest.TestCase):
             json={"word_id": word_id, "answer": "о"},
         )
         self.assertEqual(attempt_response.status_code, 200)
-        self.assertTrue(attempt_response.get_json()["correct"])
+        attempt = attempt_response.get_json()
+        self.assertTrue(attempt["correct"])
+        self.assertEqual(
+            attempt["anonymous_remaining"],
+            self.app.config["ANONYMOUS_ACTION_LIMIT"] - 1,
+        )
         with self.app.app_context():
             self.assertEqual(Action.query.count(), 1)
 
@@ -114,6 +119,25 @@ class RouteMapTest(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.get_json()["correct"])
+
+    def test_skip_returns_updated_anonymous_limit(self) -> None:
+        with self.app.app_context():
+            category = Category(name="Пропуск")
+            word = Word(word="р_ка", answers=["е", "и"], category=category)
+            db.session.add(word)
+            db.session.commit()
+            word_id = word.id
+
+        response = self.client.post(
+            "/api/v1/attempts/skip", json={"word_id": word_id}
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["status"], "success")
+        self.assertEqual(
+            payload["anonymous_remaining"],
+            self.app.config["ANONYMOUS_ACTION_LIMIT"] - 1,
+        )
 
 
 if __name__ == "__main__":

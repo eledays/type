@@ -5,7 +5,14 @@ from flask_login import current_user, login_required
 
 from app.models import User
 from app.routes.practice import api_bp
-from app.services.practice import PracticeError, can_swipe, check_answer, report_word, skip_word
+from app.services.practice import (
+    PracticeError,
+    can_swipe,
+    check_answer,
+    report_word,
+    skip_word,
+)
+from app.utils import get_anonymous_actions_remaining
 
 
 def error_response(error: PracticeError):
@@ -28,11 +35,11 @@ def create_attempt():
     if not isinstance(note_id, int) or not isinstance(answer, str):
         return jsonify({"error": "invalid_attempt", "message": "Invalid id or answer"}), 400
     try:
-        result = check_answer(
-            cast(User, current_user._get_current_object()), note_id, answer
-        )
+        user = cast(User, current_user._get_current_object())
+        result = check_answer(user, note_id, answer)
     except PracticeError as error:
         return error_response(error)
+    result["anonymous_remaining"] = get_anonymous_actions_remaining(user)
     return jsonify(result)
 
 
@@ -54,7 +61,8 @@ def skip_attempt():
             "message": "Invalid word id",
         }), 400
     try:
-        strike = skip_word(cast(User, current_user._get_current_object()), word_id)
+        user = cast(User, current_user._get_current_object())
+        strike = skip_word(user, word_id)
     except PracticeError as error:
         payload: dict[str, Any] = {
             "status": "error",
@@ -66,7 +74,11 @@ def skip_attempt():
                 "auth.login", next=request.referrer or "/"
             )
         return jsonify(payload), error.status
-    return jsonify({"status": "success", "strike": strike})
+    return jsonify({
+        "status": "success",
+        "strike": strike,
+        "anonymous_remaining": get_anonymous_actions_remaining(user),
+    })
 
 
 @api_bp.get("/swipe-permission")

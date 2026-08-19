@@ -15,7 +15,8 @@
 <body>
     {% if anonymous_remaining is defined and anonymous_remaining is not none %}
     <a class="anonymous-notice" href="{{ url_for('auth.login', next=request.full_path) }}">
-        Анонимный режим · осталось действий: {{ anonymous_remaining }} · Войти
+        Анонимный режим · осталось действий:
+        <span id="anonymous-remaining">{{ anonymous_remaining }}</span> · Войти
     </a>
     {% endif %}
     <iframe src="{{ card_url }}" class="current"></iframe>
@@ -38,6 +39,12 @@
             'swipePermission': url_for('practice_api.swipe_permission'),
             'skipAttempt': url_for('practice_api.skip_attempt')
         }|tojson }};
+
+        window.updateAnonymousRemaining = (remaining) => {
+            if (remaining === null || remaining === undefined) return;
+            const counter = document.getElementById('anonymous-remaining');
+            if (counter) counter.textContent = remaining;
+        };
     </script>
     <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
     <script src="{{ url_for('static', filename='js/framesManaging.js') }}"></script>
