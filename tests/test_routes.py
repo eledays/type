@@ -1,27 +1,10 @@
-import os
-import unittest
+from tests.base import AppTestCase
+
+from app.extensions import db
+from app.models import Action, Category, User, Word
 
 
-os.environ["DEBUG"] = "false"
-
-from app import create_app  # noqa: E402
-from app.extensions import db  # noqa: E402
-from app.models import Action, Category, User, Word  # noqa: E402
-
-
-class RouteMapTest(unittest.TestCase):
-    def setUp(self) -> None:
-        self.app = create_app({
-            "TESTING": True,
-            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        })
-        with self.app.app_context():
-            db.create_all()
-        self.client = self.app.test_client()
-
-    def tearDown(self) -> None:
-        with self.app.app_context():
-            db.drop_all()
+class TestRouteMap(AppTestCase):
 
     def test_canonical_routes_and_methods_are_registered(self) -> None:
         routes = {
@@ -45,7 +28,7 @@ class RouteMapTest(unittest.TestCase):
             ("/api/v1/admin/words/<int:word_id>/explanation", "PATCH"),
             ("/api/v1/admin/words/<int:word_id>/answers", "DELETE"),
         }
-        self.assertTrue(expected <= routes)
+        assert expected <= routes
 
     def test_filter_legacy_routes_redirect_to_canonical_query(self) -> None:
         cases = {
@@ -55,25 +38,24 @@ class RouteMapTest(unittest.TestCase):
             "/settings": "/profile",
         }
         for old_url, canonical_url in cases.items():
-            with self.subTest(old_url=old_url):
-                response = self.client.get(old_url)
-                self.assertEqual(response.status_code, 308)
-                self.assertEqual(response.location, canonical_url)
+            response = self.client.get(old_url)
+            assert response.status_code == 308
+            assert response.location == canonical_url
 
     def test_index_uses_canonical_card_url(self) -> None:
         response = self.client.get("/?task=5")
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(b'/practice/cards/next?task=5', response.data)
-        self.assertNotIn(b'/get_frame', response.data)
+        assert response.status_code == 200
+        assert b'/practice/cards/next?task=5' in response.data
+        assert b'/get_frame' not in response.data
 
     def test_settings_are_updated_through_patch_api(self) -> None:
         response = self.client.patch(
             "/api/v1/profile/settings", json={"strike": False}
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json(), {"status": "success"})
+        assert response.status_code == 200
+        assert response.get_json() == {"status": "success"}
         with self.app.app_context():
-            self.assertFalse(User.query.one().settings.strike)
+            assert not User.query.one().settings.strike
 
     def test_practice_card_and_attempt_flow(self) -> None:
         with self.app.app_context():
@@ -89,22 +71,22 @@ class RouteMapTest(unittest.TestCase):
             word_id = word.id
 
         card_response = self.client.get("/practice/cards/next?task=4")
-        self.assertEqual(card_response.status_code, 200)
-        self.assertIn("м".encode(), card_response.data)
+        assert card_response.status_code == 200
+        assert "м".encode() in card_response.data
 
         attempt_response = self.client.post(
             "/api/v1/attempts",
             json={"word_id": word_id, "answer": "о"},
         )
-        self.assertEqual(attempt_response.status_code, 200)
+        assert attempt_response.status_code == 200
         attempt = attempt_response.get_json()
-        self.assertTrue(attempt["correct"])
-        self.assertEqual(
-            attempt["anonymous_remaining"],
-            self.app.config["ANONYMOUS_ACTION_LIMIT"] - 1,
+        assert attempt["correct"]
+        assert (
+            attempt["anonymous_remaining"]
+            == self.app.config["ANONYMOUS_ACTION_LIMIT"] - 1
         )
         with self.app.app_context():
-            self.assertEqual(Action.query.count(), 1)
+            assert Action.query.count() == 1
 
     def test_legacy_attempt_adapter_preserves_request_body(self) -> None:
         with self.app.app_context():
@@ -117,8 +99,8 @@ class RouteMapTest(unittest.TestCase):
         response = self.client.post(
             "/check_word", json={"id": word_id, "answer": "о"}
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.get_json()["correct"])
+        assert response.status_code == 200
+        assert response.get_json()["correct"]
 
     def test_skip_returns_updated_anonymous_limit(self) -> None:
         with self.app.app_context():
@@ -131,14 +113,10 @@ class RouteMapTest(unittest.TestCase):
         response = self.client.post(
             "/api/v1/attempts/skip", json={"word_id": word_id}
         )
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         payload = response.get_json()
-        self.assertEqual(payload["status"], "success")
-        self.assertEqual(
-            payload["anonymous_remaining"],
-            self.app.config["ANONYMOUS_ACTION_LIMIT"] - 1,
+        assert payload["status"] == "success"
+        assert (
+            payload["anonymous_remaining"]
+            == self.app.config["ANONYMOUS_ACTION_LIMIT"] - 1
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

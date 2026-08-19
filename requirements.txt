@@ -29,3 +29,4 @@ wtforms==3.2.1
 zipp==3.21.0
 tqdm~=4.67.1
 pymorphy3~=2.0.4
+pytest>=8.0,<10
