@@ -12,7 +12,7 @@
     <div class="touch-area"></div>
     <canvas></canvas>
 
-    <div class="{% if 'task_id=5' not in request.url %}word-cont{% else %}sentence-cont{% endif %}">
+    <div class="{% if word.sentence is defined %}sentence-cont{% else %}word-cont{% endif %}">
         <p class="word">
             {{ word.get_html()|safe }}
         </p>
@@ -33,11 +33,11 @@
     <div class="menu">
         <div class="buttons">
             <div class="block">
-                <button class="settings" onclick="window.parent.location.href = `/profile?referrer=${encodeURIComponent(window.parent.location.pathname)}`">
+                <button class="settings" onclick="window.parent.location.href = `{{ url_for('profile.index') }}?referrer=${encodeURIComponent(window.parent.location.pathname + window.parent.location.search)}`">
                     <span class="material-symbols-rounded notranslate">settings</span>
                     <p>Профиль</p>
                 </button>  
-                <button class="filters" onclick="window.parent.location.href = `/filters?referrer=${encodeURIComponent(window.parent.location.pathname)}`">
+                <button class="filters" onclick="window.parent.location.href = `{{ url_for('practice.filters') }}?referrer=${encodeURIComponent(window.parent.location.pathname + window.parent.location.search)}`">
                     <span class="material-symbols-rounded notranslate">filter_list</span>
                     <p>Фильтры</p>
                 </button>
@@ -66,7 +66,15 @@
         </div>
     </div>
 
-    <script>var word_id = "{{ word.id }}";</script>
+    <script>
+        var word_id = {{ word.id|tojson }};
+        window.routeConfig = {{ {
+            'createAttempt': url_for('practice_api.create_attempt'),
+            'reportWord': url_for('practice_api.create_word_report', word_id=word.id),
+            'updateExplanation': url_for('admin_api.patch_explanation', word_id=word.id),
+            'deleteAnswer': url_for('admin_api.remove_answer', word_id=word.id)
+        }|tojson }};
+    </script>
 
     <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
     <script src="{{ url_for('static', filename='js/swiping.js') }}"></script>

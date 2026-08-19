@@ -21,14 +21,15 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
         render_as_batch=True,
     )
     login_manager.init_app(app)
-    login_manager.login_view = "auth.login_page"
+    login_manager.login_view = "auth.login"
     login_manager.login_message = None
 
-    from app.auth import load_user
     from app.cli import register_commands
     from app.routes import register_blueprints
+    from app.security.session import ensure_authenticated_user, load_user
 
     login_manager.user_loader(load_user)
+    app.before_request(ensure_authenticated_user)
     register_commands(app)
     register_blueprints(app)
 

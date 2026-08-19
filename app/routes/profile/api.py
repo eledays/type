@@ -1,0 +1,38 @@
+from typing import cast
+
+from flask import jsonify, request, send_file, session
+from flask_login import current_user, login_required
+
+from app.models import User
+from app.routes.profile import api_bp
+from app.services.profile import InvalidSettings, update_settings
+from app.services.backgrounds import choose_background
+
+
+@api_bp.get("/background")
+@login_required
+def background():
+    user = cast(User, current_user._get_current_object())
+    response = send_file(choose_background(user))
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
+@api_bp.patch("/settings")
+@login_required
+def patch_settings():
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"status": "error", "message": "Invalid JSON"}), 400
+    user = cast(User, current_user._get_current_object())
+    try:
+        update_settings(user, payload)
+    except PermissionError as error:
+        return jsonify({"status": "error", "message": str(error)}), 403
+    except InvalidSettings as error:
+        return jsonify({"status": "error", "message": str(error)}), 400
+    if "admin" in payload:
+        session["admin"] = payload["admin"]
+    return jsonify({"status": "success"})

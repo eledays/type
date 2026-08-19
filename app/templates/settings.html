@@ -84,7 +84,7 @@
                         <span class="setting-value on">Включена</span>
                     {% endif %}
                 </div>
-                <button class="setting-item filters" onclick="window.parent.location.href = `/filters?referrer=${encodeURIComponent(window.parent.location.pathname)}`">
+                <button class="setting-item filters" onclick="window.parent.location.href = `{{ url_for('practice.filters') }}?referrer=${encodeURIComponent(window.parent.location.pathname + window.parent.location.search)}`">
                     <span class="setting-name">Фильтры</span>
                 </button>
                 {% endif %}
@@ -138,6 +138,12 @@
         </div>
     </div>
 
+    <script>
+        window.routeConfig = {{ {
+            'updateSettings': url_for('profile_api.patch_settings'),
+            'home': url_for('practice.index')
+        }|tojson }};
+    </script>
     <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
     <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
 </body>

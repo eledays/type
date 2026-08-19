@@ -49,6 +49,11 @@
     python run_dev.py
     ```
 
+## Архитектура
+
+Соглашения по структуре blueprint, URL, API и совместимости описаны в
+[`docs/routing.md`](docs/routing.md).
+
 ## Импорт данных
 
 ```bash

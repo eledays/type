@@ -47,12 +47,12 @@ answersElement.querySelectorAll('button').forEach((e) => {
         if (answerLongPressTimer !== null) clearInterval(answerLongPressTimer);
         
         answerLongPressTimer = setTimeout(() => {
-            fetch('/delete_answer', {
-                method: 'POST',
+            fetch(window.routeConfig.deleteAnswer, {
+                method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({word_id: word_id, answer: e.innerText.trim()})
+                body: JSON.stringify({answer: e.innerText.trim()})
             });
             e.remove();
         }, longPressTime);
@@ -68,12 +68,12 @@ answersElement.querySelectorAll('button').forEach((e) => {
 function handleAnswerClick(event) {
     console.log(event);
     
-    fetch('/check_word', {
+    fetch(window.routeConfig.createAttempt, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({id: word_id, answer: event.srcElement.innerText.trim()})
+        body: JSON.stringify({word_id: word_id, answer: event.srcElement.innerText.trim()})
     })
     .then(async response => {
         const data = await response.json();
@@ -179,12 +179,12 @@ function sendReport() {
     let button = document.querySelector('.menu button#mistake');
     button.querySelector('p').innerText = 'Отправка...';
 
-    fetch('/mistake_report', {
+    fetch(window.routeConfig.reportWord, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({id: word.id})
+        body: JSON.stringify({})
     })
     .then(() => {
         button.querySelector('p').innerText = 'Запрос отправлен';

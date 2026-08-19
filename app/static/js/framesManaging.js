@@ -1,7 +1,7 @@
 window.addEventListener('message', (event) => {
     if (event.data === 'swipeNext') {
         let word_id = currentFrame.contentWindow.word_id
-        fetch(`/can_swipe?word_id=${word_id}`, {
+        fetch(`${window.routeConfig.swipePermission}?word_id=${word_id}`, {
             method: 'GET'
         })
         .then(async (response) => {
@@ -91,7 +91,7 @@ function swipeNextFrame(doFetch=true) {
     if (doFetch) {
         // Уязвимость: Обработка потери свайпа частично на стороне клиента
         
-        fetch('/action/swipe_next', {
+        fetch(window.routeConfig.skipAttempt, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -114,12 +114,12 @@ function swipeNextFrame(doFetch=true) {
     let explanationInput = currentFrame.contentWindow.explanationInput;
 
     if (explanationInput && explanationInput.value !== 'None' && explanationInput.value) {
-        fetch('/add_explanation', {
-            method: 'POST',
+        fetch(currentFrame.contentWindow.routeConfig.updateExplanation, {
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({word_id: word_id, explanation: explanationInput.value})
+            body: JSON.stringify({explanation: explanationInput.value})
         });
     }
     if (explanationInput && currentFrame.contentWindow.document.activeElement === explanationInput) {

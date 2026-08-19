@@ -16,21 +16,21 @@
             <h1>Фильтры</h1>
 
             <div class="filters">
-                <a href="/" class="filter" id="all">Сбросить фильтры</a>
-                <a href="/mistakes" class="filter" id="mistakes">Неверно решенные</a>
+                <a href="{{ url_for('practice.index') }}" class="filter" id="all">Сбросить фильтры</a>
+                <a href="{{ url_for('practice.index', mode='mistakes') }}" class="filter" id="mistakes">Неверно решенные</a>
             </div>
 
             <h2>По номеру задания</h2>
             <div class="filters">
                 {% for task in tasks %}
-                    <a href="/task/{{ task }}" class="filter">{{ task }}. {{ tasks[task] }}</a>
+                    <a href="{{ url_for('practice.index', task=task) }}" class="filter">{{ task }}. {{ tasks[task] }}</a>
                 {% endfor %}
             </div>
 
             <h2>По категории (ФИПИ)</h2>
             <div class="filters">
                 {% for category in categories %}
-                    <a href="/category/{{ category.id }}" class="filter">{{ category.name }}</a>
+                    <a href="{{ url_for('practice.index', category=category.id) }}" class="filter">{{ category.name }}</a>
                 {% endfor %}
             </div>
         </div>

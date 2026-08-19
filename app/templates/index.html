@@ -14,12 +14,12 @@
 </head>
 <body>
     {% if anonymous_remaining is defined and anonymous_remaining is not none %}
-    <a class="anonymous-notice" href="{{ url_for('auth.login_page', next=request.full_path) }}">
+    <a class="anonymous-notice" href="{{ url_for('auth.login', next=request.full_path) }}">
         Анонимный режим · осталось действий: {{ anonymous_remaining }} · Войти
     </a>
     {% endif %}
-    <iframe src="/get_frame?{{ params }}" class="current"></iframe>
-    <iframe src="/get_frame?{{ params }}" class="next"></iframe>
+    <iframe src="{{ card_url }}" class="current"></iframe>
+    <iframe src="{{ card_url }}" class="next"></iframe>
 
     <button class="error" onclick="document.querySelector('.current').contentWindow.switchMenu()">
         <span class="material-symbols-rounded notranslate">error</span>
@@ -33,6 +33,12 @@
 
     <div class="fire" id="fire"></div>
 
+    <script>
+        window.routeConfig = {{ {
+            'swipePermission': url_for('practice_api.swipe_permission'),
+            'skipAttempt': url_for('practice_api.skip_attempt')
+        }|tojson }};
+    </script>
     <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
     <script src="{{ url_for('static', filename='js/framesManaging.js') }}"></script>
 </body>

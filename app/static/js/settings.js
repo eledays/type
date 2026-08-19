@@ -13,8 +13,8 @@ function handleClick(id) {
     console.log(child);
     
 
-    fetch('/set_settings', {
-        method: 'POST',
+    fetch(window.routeConfig.updateSettings, {
+        method: 'PATCH',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({[id]: value})
     })
@@ -34,8 +34,8 @@ function handleClick(id) {
 
 function handleTimeInput(id) {
     let item = document.querySelector(`.time-control#${id} #time-input`);
-    fetch('/set_settings', {
-        method: 'POST',
+    fetch(window.routeConfig.updateSettings, {
+        method: 'PATCH',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({[id + '_time']: item.value})
     });
@@ -47,7 +47,7 @@ function backToReferrer() {
     if (referrer) {
         window.location.href = referrer;
     } else {
-        window.location.href = '/';
+        window.location.href = window.routeConfig.home;
     }
 }
 
