@@ -27,14 +27,6 @@ class AppSettings(BaseSettings):
         min_length=1,
     )
 
-    # Backup settings
-    backup_path: Path = Field(
-        default=Path("backups"), validation_alias="BACKUP_PATH"
-    )
-    backup_period: float = Field(
-        default=1, validation_alias="BACKUP_PERIOD", gt=0
-    )
-
     # Flask settings
     secret_key: SecretStr = Field(validation_alias="SECRET_KEY")
     debug: bool = Field(default=False, validation_alias="DEBUG")
@@ -105,8 +97,6 @@ class AppSettings(BaseSettings):
             "FLASK_PORT": self.flask_port,
             "FLASK_HOST": self.flask_host,
             "SQLALCHEMY_DATABASE_URI": self.database_url,
-            "BACKUP_PATH": self.backup_path,
-            "BACKUP_PERIOD": self.backup_period,
             "SECRET_KEY": self.secret_key.get_secret_value(),
             "STRIKE_LEVELS": self.strike_levels,
             "TASKS": self.tasks,

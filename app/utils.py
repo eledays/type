@@ -1,12 +1,10 @@
 from app.extensions import db
 from app.models import Action, User
 
-from datetime import datetime, timedelta
-from pathlib import Path
+from datetime import timedelta
 
 from flask import current_app, session
 from sqlalchemy import desc, select
-from sqlalchemy.engine import make_url
 
 
 def add_action(
@@ -39,31 +37,6 @@ def get_anonymous_actions_remaining(user: User) -> int | None:
     ) or 0
     limit = int(current_app.config["ANONYMOUS_ACTION_LIMIT"])
     return max(0, limit - used)
-
-
-def do_backup():
-    """Export the current database when the scheduler is run explicitly."""
-    from db_to_json import export_to_json
-
-    database_url = make_url(current_app.config["SQLALCHEMY_DATABASE_URI"])
-    if database_url.get_backend_name() != "sqlite" or not database_url.database:
-        raise RuntimeError(
-            "JSON backups are supported only for file-based SQLite databases."
-        )
-
-    database_path = Path(database_url.database)
-    if not database_path.is_absolute():
-        database_path = Path(current_app.instance_path) / database_path
-
-    if not database_path.is_file():
-        raise FileNotFoundError(
-            "Database does not exist. Run `flask --app app db upgrade` first."
-        )
-
-    backup_directory = Path(current_app.config["BACKUP_PATH"])
-    backup_directory.mkdir(parents=True, exist_ok=True)
-    backup_path = backup_directory / f'{datetime.now():%Y-%m-%d_%H-%M-%S}.json'
-    export_to_json(str(database_path), str(backup_path))
 
 
 def get_strike(user_id: int) -> int:
