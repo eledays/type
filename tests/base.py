@@ -8,7 +8,7 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key-for-test-suite")
 
 from app import create_app  # noqa: E402
 from app.extensions import db  # noqa: E402
-from app.models import Category, Settings, User, Word  # noqa: E402
+from app.models import Category, Settings, SpellingExercise, User  # noqa: E402
 
 
 class AppTestCase:
@@ -46,17 +46,19 @@ class AppTestCase:
         self,
         word: str = "м_локо",
         answers: list[str] | None = None,
+        correct_answer: str = "о",
         task_number: int | None = 4,
         category_name: str = "Орфография",
-    ) -> Word:
+    ) -> SpellingExercise:
         category = Category.query.filter_by(name=category_name).first()
         if category is None:
             category = Category()
             category.name = category_name
             db.session.add(category)
-        model = Word()
+        model = SpellingExercise()
         model.word = word
         model.answers = answers or ["о", "а"]
+        model.correct_answer = correct_answer
         model.task_number = task_number
         model.category = category
         db.session.add(model)

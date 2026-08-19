@@ -38,8 +38,8 @@ app/routes/
 - Имена endpoint-ов имеют вид `<domain>.<action>` или
   `<domain>_api.<action>`.
 - Операции над общей карточкой используют поля `card_id` и `card_type`.
-  Имена конкретной модели (`word_id`, `sentence_id`) применяются только в
-  специализированных ресурсах.
+  Поддерживаются предметные типы `spelling` и `paronym`; действия ссылаются на
+  карточку единым полем `practice_item_id`.
 
 ## Обработчики
 
@@ -69,8 +69,8 @@ HTTP-обработчик отвечает только за:
 
 ```json
 {
-  "error": "word_not_found",
-  "message": "Word not found"
+  "error": "item_not_found",
+  "message": "Practice item not found"
 }
 ```
 

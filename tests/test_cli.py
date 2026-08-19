@@ -5,7 +5,13 @@ import pytest
 from tests.base import AppTestCase
 
 from app.extensions import db
-from app.models import Category, Paronym, ParonymGroup, Sentence, Word
+from app.models import (
+    Category,
+    Paronym,
+    ParonymExercise,
+    ParonymGroup,
+    SpellingExercise,
+)
 
 
 class TestImportCommands(AppTestCase):
@@ -22,7 +28,7 @@ class TestImportCommands(AppTestCase):
     def test_csv_import_creates_categories_words_and_skips_duplicates(self) -> None:
         source = self.fixture(
             "words.csv",
-            "м_локо;о,а;Корни\nр_ка;е,и;Корни\n",
+            "м_локо;о;а,о;Корни\nр_ка;е;и,е;Корни\n",
         )
         first = self.runner.invoke(args=["csv_to_db", str(source)])
         second = self.runner.invoke(args=["csv_to_db", str(source)])
@@ -31,19 +37,30 @@ class TestImportCommands(AppTestCase):
         assert "Импортировано слов: 0; пропущено: 2" in second.output
         with self.app.app_context():
             assert Category.query.count() == 1
-            assert Word.query.count() == 2
-            assert Word.query.filter_by(word="м_локо").one().answers == ["о", "а"]
+            assert SpellingExercise.query.count() == 2
+            word = SpellingExercise.query.filter_by(word="м_локо").one()
+            assert word.answers == ["а", "о"]
+            assert word.correct_answer == "о"
 
     def test_invalid_csv_rolls_back_the_entire_import(self) -> None:
         source = self.fixture(
-            "broken.csv", "м_локо;о,а;Корни\nнет категории;о;\n"
+            "broken.csv", "м_локо;о;о,а;Корни\nнет категории;о;о;\n"
         )
         result = self.runner.invoke(args=["csv_to_db", str(source)])
         assert result.exit_code != 0
         assert "Некорректная строка 2" in result.output
         with self.app.app_context():
-            assert Word.query.count() == 0
+            assert SpellingExercise.query.count() == 0
             assert Category.query.count() == 0
+
+    def test_csv_import_rejects_correct_answer_outside_options(self) -> None:
+        source = self.fixture(
+            "broken-answer.csv",
+            "м_локо;о;а,и;Корни\n",
+        )
+        result = self.runner.invoke(args=["csv_to_db", str(source)])
+        assert result.exit_code != 0
+        assert "должен входить в список вариантов" in result.output
 
     def test_paronym_import_creates_groups_and_extends_existing_group(self) -> None:
         first_source = self.fixture("first.txt", "эффектный – эффективный\n")
@@ -86,6 +103,6 @@ class TestImportCommands(AppTestCase):
         assert "Импортировано предложений: 1; пропущено: 0" in first.output
         assert "Импортировано предложений: 0; пропущено: 1" in second.output
         with self.app.app_context():
-            sentence = Sentence.query.one()
+            sentence = ParonymExercise.query.one()
             assert sentence.sentence == "Это был _______ метод."
-            assert sentence.word.word == "эффективный"
+            assert sentence.paronym.word == "эффективный"

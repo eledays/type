@@ -97,19 +97,19 @@ def create_attempt():
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
         return jsonify({"error": "invalid_json", "message": "Invalid JSON"}), 400
-    note_id = payload.get("card_id")
+    card_id = payload.get("card_id")
     answer = payload.get("answer")
-    note_type = payload.get("card_type")
-    if not isinstance(note_id, int) or not isinstance(answer, str):
+    card_type = payload.get("card_type")
+    if not isinstance(card_id, int) or not isinstance(answer, str):
         return jsonify({"error": "invalid_attempt", "message": "Invalid id or answer"}), 400
-    if note_type not in {"word", "sentence"}:
+    if card_type not in {"spelling", "paronym"}:
         return jsonify({
             "error": "invalid_card_type",
             "message": "Invalid card type",
         }), 400
     try:
         user = cast(User, current_user._get_current_object())
-        result = check_answer(user, note_id, answer, note_type)
+        result = check_answer(user, card_id, answer, card_type)
     except PracticeError as error:
         return error_response(error)
     result["anonymous_remaining"] = get_anonymous_actions_remaining(user)
@@ -130,15 +130,15 @@ def skip_attempt():
             "error": "invalid_json",
             "message": "Invalid JSON",
         }), 400
-    note_id = request_payload.get("card_id")
-    if not isinstance(note_id, int):
+    card_id = request_payload.get("card_id")
+    if not isinstance(card_id, int):
         return jsonify({
             "status": "error",
             "error": "invalid_card_id",
             "message": "Invalid card id",
         }), 400
-    note_type = request_payload.get("card_type")
-    if note_type not in {"word", "sentence"}:
+    card_type = request_payload.get("card_type")
+    if card_type not in {"spelling", "paronym"}:
         return jsonify({
             "status": "error",
             "error": "invalid_card_type",
@@ -155,8 +155,8 @@ def skip_attempt():
         user = cast(User, current_user._get_current_object())
         strike = skip_card(
             user,
-            note_id,
-            note_type,
+            card_id,
+            card_type,
             confirmed=confirmed,
         )
     except PracticeError as error:

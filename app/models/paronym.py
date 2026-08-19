@@ -9,7 +9,7 @@ from app.extensions import db
 
 if TYPE_CHECKING:
     from app.models.paronym_group import ParonymGroup
-    from app.models.sentence import Sentence
+    from app.models.paronym_exercise import ParonymExercise
 
 
 class Paronym(db.Model):
@@ -24,7 +24,9 @@ class Paronym(db.Model):
     )
 
     group: Mapped[ParonymGroup] = relationship(back_populates="paronyms")
-    sentences: Mapped[list[Sentence]] = relationship(back_populates="word")
+    exercises: Mapped[list[ParonymExercise]] = relationship(
+        back_populates="paronym"
+    )
 
     def get_all_group_paronyms(self) -> list[str]:
         """Возвращает все слова из группы текущего паронима.

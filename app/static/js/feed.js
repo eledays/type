@@ -110,7 +110,7 @@
             article.replaceChildren();
 
             const wordContainer = document.createElement("div");
-            wordContainer.className = card.type === "sentence"
+            wordContainer.className = card.type === "paronym"
                 ? "word-cont sentence-cont"
                 : "word-cont";
             const word = document.createElement("p");
@@ -130,7 +130,7 @@
             wordContainer.appendChild(word);
             article.appendChild(wordContainer);
 
-            if (this.admin && card.type === "word") {
+            if (this.admin && card.type === "spelling") {
                 const explanation = document.createElement("textarea");
                 explanation.className = "explanation";
                 explanation.setAttribute("aria-label", "Объяснение");
@@ -533,7 +533,7 @@
                 return item;
             }));
             const report = document.getElementById("report-button");
-            report.disabled = this.current.card.type !== "word";
+            report.disabled = this.current.card.type !== "spelling";
             report.textContent = report.disabled
                 ? "Сообщение об ошибке недоступно для этого задания"
                 : "Сообщить об ошибке в задании";
@@ -544,7 +544,7 @@
         }
 
         async saveExplanation(slot) {
-            if (!this.admin || !slot?.card || slot.card.type !== "word") return;
+            if (!this.admin || !slot?.card || slot.card.type !== "spelling") return;
             const input = slot.element.querySelector(".explanation");
             if (!input || input.value === input.dataset.initialValue) return;
             const value = input.value;
@@ -607,7 +607,7 @@
 
             this.feed.addEventListener("pointerdown", (event) => {
                 const answer = event.target.closest("[data-answer]");
-                if (answer && this.admin && this.current.card?.type === "word") {
+                if (answer && this.admin && this.current.card?.type === "spelling") {
                     this.answerLongPressTimer = setTimeout(() => {
                         this.suppressAnswerClick = true;
                         void this.deleteAnswer(answer);

@@ -5,7 +5,14 @@ import pytest
 from tests.base import AppTestCase
 
 from app.extensions import db
-from app.models import Action, Paronym, ParonymGroup, Sentence, User, Word
+from app.models import (
+    Action,
+    Paronym,
+    ParonymExercise,
+    ParonymGroup,
+    SpellingExercise,
+    User,
+)
 from app.services.practice import PracticeError, select_card
 
 
@@ -26,6 +33,7 @@ class TestPracticeApi(AppTestCase):
         assert response.headers["Cache-Control"] == "private, no-store"
         assert len({card["id"] for card in cards}) == 3
         assert excluded_id not in {card["id"] for card in cards}
+        assert {card["type"] for card in cards} == {"spelling"}
         assert all(
             {"id", "type", "prompt", "blank", "answers", "info"} <= card.keys()
             for card in cards
@@ -66,12 +74,13 @@ class TestPracticeApi(AppTestCase):
         with self.app.app_context():
             word_id = self.make_word(
                 word="проверка",
-                answers=["длинныйответ", "другой"],
+                answers=["другой", "длинныйответ"],
+                correct_answer="длинныйответ",
             ).id
 
         response = self.client.post("/api/v1/attempts", json={
             "card_id": word_id,
-            "card_type": "word",
+            "card_type": "spelling",
             "answer": "длинныйответ",
         })
         assert response.status_code == 200
@@ -82,18 +91,24 @@ class TestPracticeApi(AppTestCase):
             group = ParonymGroup()
             correct = Paronym(word="эффективный", group=group)
             Paronym(word="эффектный", group=group)
-            sentence = Sentence(
+            sentence = ParonymExercise(
                 sentence="Это _______ метод",
-                word=correct,
+                paronym=correct,
                 word_tags="nomn,sing,masc",
+                task_number=5,
             )
             db.session.add(sentence)
             db.session.commit()
             sentence_id = sentence.id
 
+        cards_response = self.client.get(
+            "/api/v1/practice/cards?task=5&limit=1"
+        )
+        assert cards_response.get_json()["cards"][0]["type"] == "paronym"
+
         response = self.client.post("/api/v1/attempts", json={
             "card_id": sentence_id,
-            "card_type": "sentence",
+            "card_type": "paronym",
             "answer": "эффективный",
         })
 
@@ -102,24 +117,24 @@ class TestPracticeApi(AppTestCase):
         assert response.get_json()["anonymous_remaining"] == 2
         with self.app.app_context():
             action = Action.query.one()
-            assert action.word_id is None
-            assert action.sentence_id == sentence_id
+            assert action.practice_item_id == sentence_id
 
     def test_duplicate_sentence_skip_is_not_recorded_twice(self) -> None:
         with self.app.app_context():
             group = ParonymGroup()
             correct = Paronym(word="адресат", group=group)
             Paronym(word="адресант", group=group)
-            sentence = Sentence(
+            sentence = ParonymExercise(
                 sentence="Письмо получил _______",
-                word=correct,
+                paronym=correct,
                 word_tags="nomn,sing,masc",
+                task_number=5,
             )
             db.session.add(sentence)
             db.session.commit()
             sentence_id = sentence.id
 
-        payload = {"card_id": sentence_id, "card_type": "sentence"}
+        payload = {"card_id": sentence_id, "card_type": "paronym"}
         first = self.client.post("/api/v1/attempts/skip", json=payload)
         second = self.client.post("/api/v1/attempts/skip", json=payload)
 
@@ -129,14 +144,13 @@ class TestPracticeApi(AppTestCase):
         assert second.get_json()["anonymous_remaining"] == 2
         with self.app.app_context():
             action = Action.query.one()
-            assert action.word_id is None
-            assert action.sentence_id == sentence_id
+            assert action.practice_item_id == sentence_id
 
     def test_attempt_rejects_invalid_payloads_and_unknown_words(self) -> None:
         cases = [
             ({}, "invalid_attempt", 400),
-            ({"card_id": "1", "answer": "о", "card_type": "word"}, "invalid_attempt", 400),
-            ({"card_id": 999, "answer": "о", "card_type": "word"}, "word_not_found", 404),
+            ({"card_id": "1", "answer": "о", "card_type": "spelling"}, "invalid_attempt", 400),
+            ({"card_id": 999, "answer": "о", "card_type": "spelling"}, "item_not_found", 404),
             ({"card_id": 1, "answer": "о"}, "invalid_card_type", 400),
         ]
         for payload, error, status in cases:
@@ -156,11 +170,11 @@ class TestPracticeApi(AppTestCase):
 
         right = self.client.post(
             "/api/v1/attempts",
-            json={"card_id": word_id, "answer": "о", "card_type": "word"},
+            json={"card_id": word_id, "answer": "о", "card_type": "spelling"},
         ).get_json()
         wrong = self.client.post(
             "/api/v1/attempts",
-            json={"card_id": word_id, "answer": "и", "card_type": "word"},
+            json={"card_id": word_id, "answer": "и", "card_type": "spelling"},
         ).get_json()
 
         assert right["correct"]
@@ -180,13 +194,13 @@ class TestPracticeApi(AppTestCase):
         for _ in range(3):
             response = self.client.post(
                 "/api/v1/attempts",
-                json={"card_id": word_id, "answer": "о", "card_type": "word"},
+                json={"card_id": word_id, "answer": "о", "card_type": "spelling"},
             )
             assert response.status_code == 200
 
         blocked = self.client.post(
             "/api/v1/attempts",
-            json={"card_id": word_id, "answer": "о", "card_type": "word"},
+            json={"card_id": word_id, "answer": "о", "card_type": "spelling"},
             headers={"Referer": "/?task=4"},
         )
         assert blocked.status_code == 403
@@ -195,7 +209,7 @@ class TestPracticeApi(AppTestCase):
 
         blocked_skip = self.client.post(
             "/api/v1/attempts/skip",
-            json={"card_id": word_id, "card_type": "word"},
+            json={"card_id": word_id, "card_type": "spelling"},
         )
         assert blocked_skip.status_code == 403
 
@@ -210,7 +224,7 @@ class TestPracticeApi(AppTestCase):
         for _ in range(5):
             response = self.client.post(
                 "/api/v1/attempts",
-                json={"card_id": word_id, "answer": "о", "card_type": "word"},
+                json={"card_id": word_id, "answer": "о", "card_type": "spelling"},
             )
             assert response.status_code == 200
             assert response.get_json()["anonymous_remaining"] is None
@@ -221,11 +235,11 @@ class TestPracticeApi(AppTestCase):
 
         first = self.client.post(
             "/api/v1/attempts/skip",
-            json={"card_id": word_id, "card_type": "word"},
+            json={"card_id": word_id, "card_type": "spelling"},
         )
         second = self.client.post(
             "/api/v1/attempts/skip",
-            json={"card_id": word_id, "card_type": "word"},
+            json={"card_id": word_id, "card_type": "spelling"},
         )
         assert first.status_code == 200
         assert second.status_code == 200
@@ -235,11 +249,11 @@ class TestPracticeApi(AppTestCase):
     def test_skip_validates_card_id(self) -> None:
         bad_skip = self.client.post(
             "/api/v1/attempts/skip",
-            json={"card_id": "1", "card_type": "word"},
+            json={"card_id": "1", "card_type": "spelling"},
         )
         unknown_skip = self.client.post(
             "/api/v1/attempts/skip",
-            json={"card_id": 999, "card_type": "word"},
+            json={"card_id": 999, "card_type": "spelling"},
         )
         assert bad_skip.status_code == 400
         assert unknown_skip.status_code == 404
@@ -255,7 +269,7 @@ class TestPracticeApi(AppTestCase):
             db.session.add_all([
                 Action(
                     user_id=user_id,
-                    word_id=word_id,
+                    practice_item_id=word_id,
                     action=Action.RIGHT_ANSWER,
                 )
                 for word_id in previous_ids
@@ -266,18 +280,18 @@ class TestPracticeApi(AppTestCase):
 
         confirmation = self.client.post("/api/v1/attempts/skip", json={
             "card_id": target_id,
-            "card_type": "word",
+            "card_type": "spelling",
         })
         assert confirmation.status_code == 409
         assert confirmation.get_json()["status"] == "confirmation_required"
         allowed_recent = self.client.post("/api/v1/attempts/skip", json={
             "card_id": previous_ids[-1],
-            "card_type": "word",
+            "card_type": "spelling",
         })
         assert allowed_recent.status_code == 200
         confirmed = self.client.post("/api/v1/attempts/skip", json={
             "card_id": target_id,
-            "card_type": "word",
+            "card_type": "spelling",
             "confirmed": True,
         })
         assert confirmed.status_code == 200
@@ -291,7 +305,7 @@ class TestPracticeApi(AppTestCase):
 
         response = self.client.post("/api/v1/attempts/skip", json={
             "card_id": word_id,
-            "card_type": "word",
+            "card_type": "spelling",
         })
 
         assert response.status_code == 409
@@ -302,18 +316,18 @@ class TestPracticeApi(AppTestCase):
             first = self.make_word(word="д_м", task_number=9, category_name="Корни")
             second = self.make_word(word="л_с", task_number=10, category_name="Лес")
             db.session.add_all([
-                Action(user_id=user_id, word_id=second.id, action=Action.WRONG_ANSWER),
-                Action(user_id=user_id, word_id=second.id, action=Action.WRONG_ANSWER),
-                Action(user_id=user_id, word_id=second.id, action=Action.RIGHT_ANSWER),
+                Action(user_id=user_id, practice_item_id=second.id, action=Action.WRONG_ANSWER),
+                Action(user_id=user_id, practice_item_id=second.id, action=Action.WRONG_ANSWER),
+                Action(user_id=user_id, practice_item_id=second.id, action=Action.RIGHT_ANSWER),
             ])
             db.session.commit()
             user = db.session.get(User, user_id)
-            assert select_card(user, task_id="9").note.id == first.id
+            assert select_card(user, task_id="9").item.id == first.id
             assert (
-                select_card(user, category_id=str(second.category_id)).note.id
+                select_card(user, category_id=str(second.category_id)).item.id
                 == second.id
             )
-            assert select_card(user, mistakes=True).note.id == second.id
+            assert select_card(user, mistakes=True).item.id == second.id
 
     def test_card_selection_returns_clear_not_found_errors(self) -> None:
         user_id = self.current_user_id()
@@ -324,7 +338,7 @@ class TestPracticeApi(AppTestCase):
             with pytest.raises(PracticeError, match="No words available"):
                 select_card(user)
 
-    def test_word_report_marks_word_and_handles_missing_word(self) -> None:
+    def test_word_report_is_recorded_without_mutating_the_item(self) -> None:
         with self.app.app_context():
             word_id = self.make_word().id
 
@@ -336,4 +350,4 @@ class TestPracticeApi(AppTestCase):
         assert missing.status_code == 404
         path.return_value.open.assert_called_once()
         with self.app.app_context():
-            assert db.session.get(Word, word_id).mistake
+            assert db.session.get(SpellingExercise, word_id) is not None

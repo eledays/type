@@ -58,6 +58,11 @@
 Соглашения по структуре blueprint, URL, API и совместимости описаны в
 [`docs/routing.md`](docs/routing.md).
 
+Все задания имеют общий идентификатор в `PracticeItem`. Специфичные данные
+хранятся в `SpellingExercise` и `ParonymExercise`, а пользовательские действия
+ссылаются только на `practice_item_id`. API-типы этих упражнений — `spelling`
+и `paronym`.
+
 ## Импорт данных
 
 ```bash
@@ -65,6 +70,10 @@ flask --app app csv_to_db path/to/words.csv
 flask --app app txt_to_db path/to/paronyms.txt
 flask --app app sentence_to_db path/to/sentences.txt
 ```
+
+Формат строк орфографического CSV:
+`слово_с_пропуском;правильный_ответ;вариант1,вариант2;категория`.
+Правильный ответ указывается отдельно и должен входить в список вариантов.
 
 Перед импортом база должна быть обновлена командой `flask --app app db upgrade`.
 

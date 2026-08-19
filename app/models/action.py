@@ -3,26 +3,20 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer
+from sqlalchemy import DateTime, ForeignKey, Index, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
 
 if TYPE_CHECKING:
-    from app.models.sentence import Sentence
+    from app.models.practice_item import PracticeItem
     from app.models.user import User
-    from app.models.word import Word
 
 
 class Action(db.Model):
     __tablename__ = "action"
     __table_args__ = (
-        CheckConstraint(
-            "word_id IS NULL OR sentence_id IS NULL",
-            name="ck_action_single_note",
-        ),
-        Index("ix_action_user_word", "user_id", "word_id"),
-        Index("ix_action_user_sentence", "user_id", "sentence_id"),
+        Index("ix_action_user_item", "user_id", "practice_item_id"),
         Index("ix_action_user_datetime", "user_id", "datetime"),
         Index("ix_action_user_action", "user_id", "action"),
     )
@@ -38,11 +32,8 @@ class Action(db.Model):
         ForeignKey("user.id", ondelete="CASCADE"),
         nullable=False,
     )
-    word_id: Mapped[int | None] = mapped_column(
-        ForeignKey("word.id", ondelete="SET NULL")
-    )
-    sentence_id: Mapped[int | None] = mapped_column(
-        ForeignKey("sentence.id", ondelete="SET NULL")
+    practice_item_id: Mapped[int] = mapped_column(
+        ForeignKey("practice_item.id", ondelete="CASCADE"), nullable=False
     )
     action: Mapped[int] = mapped_column(Integer, nullable=False)
     datetime: Mapped[datetime] = mapped_column(
@@ -50,5 +41,4 @@ class Action(db.Model):
     )
 
     user: Mapped[User] = relationship(back_populates="actions")
-    word: Mapped[Word | None] = relationship(back_populates="actions")
-    sentence: Mapped[Sentence | None] = relationship(back_populates="actions")
+    practice_item: Mapped[PracticeItem] = relationship(back_populates="actions")

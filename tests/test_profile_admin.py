@@ -6,7 +6,7 @@ import pytest
 from tests.base import AppTestCase
 
 from app.extensions import db
-from app.models import Action, User, Word
+from app.models import Action, SpellingExercise, User
 from app.utils import get_strike, get_user_stats
 
 
@@ -78,10 +78,10 @@ class TestProfile(AppTestCase):
         with self.app.app_context():
             word = self.make_word()
             actions = [
-                Action(user_id=user_id, word_id=word.id, action=Action.RIGHT_ANSWER, datetime=start),
-                Action(user_id=user_id, word_id=word.id, action=Action.RIGHT_ANSWER, datetime=start + timedelta(seconds=20)),
-                Action(user_id=user_id, word_id=word.id, action=Action.WRONG_ANSWER, datetime=start + timedelta(seconds=50)),
-                Action(user_id=user_id, word_id=word.id, action=Action.SKIP, datetime=start + timedelta(minutes=20)),
+                Action(user_id=user_id, practice_item_id=word.id, action=Action.RIGHT_ANSWER, datetime=start),
+                Action(user_id=user_id, practice_item_id=word.id, action=Action.RIGHT_ANSWER, datetime=start + timedelta(seconds=20)),
+                Action(user_id=user_id, practice_item_id=word.id, action=Action.WRONG_ANSWER, datetime=start + timedelta(seconds=50)),
+                Action(user_id=user_id, practice_item_id=word.id, action=Action.SKIP, datetime=start + timedelta(minutes=20)),
             ]
             db.session.add_all(actions)
             db.session.commit()
@@ -123,10 +123,15 @@ class TestAdminApi(AppTestCase):
             f"/api/v1/admin/words/{self.word_id}/answers",
             json={"answer": "а"},
         )
+        protected = self.client.delete(
+            f"/api/v1/admin/words/{self.word_id}/answers",
+            json={"answer": "о"},
+        )
         assert updated.status_code == 200
         assert deleted.status_code == 200
+        assert protected.status_code == 404
         with self.app.app_context():
-            word = db.session.get(Word, self.word_id)
+            word = db.session.get(SpellingExercise, self.word_id)
             assert word.explanation == "Проверочное слово"
             assert word.answers == ["о"]
 

@@ -1,7 +1,7 @@
 from tests.base import AppTestCase
 
 from app.extensions import db
-from app.models import Action, Category, User, Word
+from app.models import Action, Category, SpellingExercise, User
 
 
 class TestRouteMap(AppTestCase):
@@ -60,9 +60,10 @@ class TestRouteMap(AppTestCase):
     def test_practice_card_and_attempt_flow(self) -> None:
         with self.app.app_context():
             category = Category(name="Проверка")
-            word = Word(
+            word = SpellingExercise(
                 word="м_локо",
                 answers=["о", "а"],
+                correct_answer="о",
                 task_number=4,
                 category=category,
             )
@@ -76,7 +77,7 @@ class TestRouteMap(AppTestCase):
 
         attempt_response = self.client.post(
             "/api/v1/attempts",
-            json={"card_id": word_id, "answer": "о", "card_type": "word"},
+            json={"card_id": word_id, "answer": "о", "card_type": "spelling"},
         )
         assert attempt_response.status_code == 200
         attempt = attempt_response.get_json()
@@ -91,14 +92,19 @@ class TestRouteMap(AppTestCase):
     def test_skip_returns_updated_anonymous_limit(self) -> None:
         with self.app.app_context():
             category = Category(name="Пропуск")
-            word = Word(word="р_ка", answers=["е", "и"], category=category)
+            word = SpellingExercise(
+                word="р_ка",
+                answers=["е", "и"],
+                correct_answer="е",
+                category=category,
+            )
             db.session.add(word)
             db.session.commit()
             word_id = word.id
 
         response = self.client.post(
             "/api/v1/attempts/skip",
-            json={"card_id": word_id, "card_type": "word"},
+            json={"card_id": word_id, "card_type": "spelling"},
         )
         assert response.status_code == 200
         payload = response.get_json()

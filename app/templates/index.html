@@ -28,7 +28,7 @@
             data-card-index="{{ loop.index0 }}"
             data-card-id="{{ card.id }}"
         >
-            <div class="word-cont {% if card.type == 'sentence' %}sentence-cont{% endif %}">
+            <div class="word-cont {% if card.type == 'paronym' %}sentence-cont{% endif %}">
                 <p class="word">
                     {% for part in card.prompt.split(card.blank) %}
                         {% if not loop.first %}<span class="missing-letter" aria-hidden="true"> </span>{% endif %}
@@ -36,7 +36,7 @@
                     {% endfor %}
                 </p>
             </div>
-            {% if admin and card.type == 'word' %}
+            {% if admin and card.type == 'spelling' %}
             <textarea class="explanation" aria-label="Объяснение">{{ card.explanation or '' }}</textarea>
             {% endif %}
             <div class="answers">

@@ -10,24 +10,18 @@ from app.models import Action, User
 def add_action(
     user_id: int,
     action: int,
-    word_id: int | None = None,
-    sentence_id: int | None = None,
+    practice_item_id: int,
 ) -> Action:
-    """Создаёт действие пользователя над словом или предложением.
+    """Создаёт действие пользователя над карточкой практики.
 
     :param user_id: Идентификатор пользователя.
     :param action: Код выполненного действия.
-    :param word_id: Идентификатор слова, если действие относится к слову.
-    :param sentence_id: Идентификатор предложения, если действие относится к нему.
+    :param practice_item_id: Единый идентификатор карточки практики.
     :return: Сохранённая запись действия.
-    :raises ValueError: Если указаны оба объекта или не указан ни один.
     """
-    if (word_id is None) == (sentence_id is None):
-        raise ValueError("Action must reference exactly one note")
     action_record = Action()
     action_record.user_id = user_id
-    action_record.word_id = word_id
-    action_record.sentence_id = sentence_id
+    action_record.practice_item_id = practice_item_id
     action_record.action = action
     db.session.add(action_record)
     db.session.commit()

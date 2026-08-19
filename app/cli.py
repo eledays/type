@@ -9,7 +9,13 @@ from pymorphy3 import MorphAnalyzer
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.extensions import db
-from app.models import Category, Paronym, ParonymGroup, Sentence, Word
+from app.models import (
+    Category,
+    Paronym,
+    ParonymExercise,
+    ParonymGroup,
+    SpellingExercise,
+)
 
 
 @click.command("csv_to_db")
@@ -29,26 +35,38 @@ def csv_to_db(csv_path: Path) -> None:
 
     try:
         with csv_path.open(encoding="utf-8", newline="") as file:
-            rows = csv.DictReader(
-                file,
-                delimiter=";",
-                fieldnames=("word", "answers", "category"),
-            )
+            rows = csv.reader(file, delimiter=";")
             for line_number, row in enumerate(rows, start=1):
-                word_text = (row.get("word") or "").strip()
-                category_name = (row.get("category") or "").strip()
-                answers = [
-                    answer.strip()
-                    for answer in (row.get("answers") or "").split(",")
-                    if answer.strip()
-                ]
-                if not word_text or not category_name or not answers:
+                values = [value.strip() for value in row]
+                if len(values) == 4:
+                    word_text, correct_answer, raw_answers, category_name = values
+                else:
                     raise click.ClickException(
                         f"Некорректная строка {line_number}: ожидаются "
-                        "word;answer1,answer2;category"
+                        "word;correct_answer;answer1,answer2;category"
+                    )
+                answers = [
+                    answer.strip()
+                    for answer in raw_answers.split(",")
+                    if answer.strip()
+                ]
+                if (
+                    not word_text
+                    or not correct_answer
+                    or not category_name
+                    or not answers
+                ):
+                    raise click.ClickException(
+                        f"Некорректная строка {line_number}: ожидаются "
+                        "word;correct_answer;answer1,answer2;category"
+                    )
+                if correct_answer not in answers:
+                    raise click.ClickException(
+                        f"Некорректная строка {line_number}: правильный ответ "
+                        "должен входить в список вариантов"
                     )
 
-                if Word.query.filter_by(word=word_text).first() is not None:
+                if SpellingExercise.query.filter_by(word=word_text).first() is not None:
                     skipped += 1
                     continue
 
@@ -59,9 +77,10 @@ def csv_to_db(csv_path: Path) -> None:
                     db.session.add(category)
                     db.session.flush()
 
-                word = Word()
+                word = SpellingExercise()
                 word.word = word_text
                 word.answers = answers
+                word.correct_answer = correct_answer
                 word.category_id = category.id
                 db.session.add(word)
                 imported += 1
@@ -189,15 +208,16 @@ def _add_sentence(
         return False
 
     sentence_text = sentence_text.replace(highlighted_word.upper(), "_______")
-    if Sentence.query.filter_by(sentence=sentence_text).first() is not None:
+    if ParonymExercise.query.filter_by(sentence=sentence_text).first() is not None:
         return False
 
     parsed_word = analyzer.parse(correct_word.strip().lower())[0]
-    sentence = Sentence()
-    sentence.sentence = sentence_text
-    sentence.word_tags = ",".join(sorted(parsed_word.tag.grammemes))
-    sentence.word_id = paronym.id
-    db.session.add(sentence)
+    exercise = ParonymExercise()
+    exercise.sentence = sentence_text
+    exercise.word_tags = ",".join(sorted(parsed_word.tag.grammemes))
+    exercise.paronym_id = paronym.id
+    exercise.task_number = 5
+    db.session.add(exercise)
     return True
 
 

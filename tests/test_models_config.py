@@ -13,6 +13,21 @@ class TestModel(AppTestCase):
             assert sorted(answers) == ["а", "о"]
             assert answers is not word.answers
 
+    def test_correct_answer_does_not_depend_on_option_order(self) -> None:
+        with self.app.app_context():
+            word = self.make_word(
+                answers=["а", "о"],
+                correct_answer="о",
+            )
+            assert word.get_correct_answer() == "о"
+
+    def test_correct_answer_must_be_one_of_the_options(self) -> None:
+        with self.app.app_context(), pytest.raises(ValueError):
+            self.make_word(
+                answers=["а", "и"],
+                correct_answer="о",
+            )
+
 
 class TestConfig(AppTestCase):
     def test_settings_are_exported_with_flask_extension_names(self) -> None:

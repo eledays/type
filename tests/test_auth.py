@@ -119,7 +119,9 @@ class TestAuth(AppTestCase):
             registered = self.make_user(yandex_id="ya-existing")
             registered_id = registered.id
             db.session.add(Action(
-                user_id=guest_id, word_id=word.id, action=Action.RIGHT_ANSWER
+                user_id=guest_id,
+                practice_item_id=word.id,
+                action=Action.RIGHT_ANSWER,
             ))
             db.session.commit()
 
