@@ -241,6 +241,6 @@ def _avatar_url(profile: dict[str, Any]) -> str | None:
 @bp.post("/logout")
 @login_required
 def logout():
-    logout_user()
     session.clear()
+    logout_user()
     return redirect(url_for("user_pages.index"))
