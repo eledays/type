@@ -20,9 +20,9 @@ class Word(db.Model):
     word: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
     explanation: Mapped[str | None] = mapped_column(String(2048))
     answers: Mapped[list[str]] = mapped_column(JSON, nullable=False)
-    task_number: Mapped[int | None] = mapped_column(Integer)
+    task_number: Mapped[int | None] = mapped_column(Integer, index=True)
     category_id: Mapped[int] = mapped_column(
-        ForeignKey("category.id"), nullable=False
+        ForeignKey("category.id"), nullable=False, index=True
     )
     mistake: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
@@ -32,11 +32,8 @@ class Word(db.Model):
     actions: Mapped[list[Action]] = relationship(back_populates="word")
 
     def get_answers(self) -> list[str]:
-        """Return the available answers in a new, random order."""
-        return random.sample(self.answers, k=len(self.answers))
+        """Возвращает копию вариантов ответа в случайном порядке.
 
-    def get_html(self) -> str:
-        """Return the word with missing letters represented by placeholders."""
-        return self.word.replace(
-            "_", '<span class="missing-letter"> </span>'
-        )
+        :return: Новый перемешанный список вариантов.
+        """
+        return random.sample(self.answers, k=len(self.answers))

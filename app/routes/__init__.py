@@ -2,6 +2,11 @@ from flask import Flask
 
 
 def register_blueprints(app: Flask) -> None:
+    """Регистрирует все HTTP-домены приложения.
+
+    :param app: Настраиваемое Flask-приложение.
+    :return: ``None``.
+    """
     from app.routes.admin import bp as admin_api_bp
     from app.routes.auth import bp as auth_bp
     from app.routes.legacy import bp as legacy_bp

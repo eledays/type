@@ -6,6 +6,11 @@ from app.models import Settings, User
 
 
 def load_user(user_id: str) -> User | None:
+    """Загружает пользователя для Flask-Login.
+
+    :param user_id: Строковый идентификатор из пользовательской сессии.
+    :return: Пользователь или ``None`` при некорректном идентификаторе.
+    """
     try:
         parsed_user_id = int(user_id)
     except (TypeError, ValueError):
@@ -14,7 +19,10 @@ def load_user(user_id: str) -> User | None:
 
 
 def ensure_authenticated_user() -> None:
-    """Restore a legacy identity or create a browser-bound guest account."""
+    """Создаёт временного пользователя для нового браузера.
+
+    :return: ``None``.
+    """
     if request.endpoint == "static" or current_user.is_authenticated:
         return
 

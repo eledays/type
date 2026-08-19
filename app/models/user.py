@@ -46,11 +46,18 @@ class User(UserMixin, db.Model):
 
     @property
     def is_anonymous_account(self) -> bool:
-        """Whether this row represents a browser-only temporary account."""
+        """Определяет, является ли аккаунт временным браузерным.
+
+        :return: ``True`` для пользователя без внешней идентификации.
+        """
         return self.yandex_id is None and self.telegram_id is None
 
     @property
     def display_name(self) -> str:
+        """Формирует отображаемое имя пользователя.
+
+        :return: Полное имя, логин или подпись анонимного пользователя.
+        """
         full_name = " ".join(
             part for part in (self.first_name, self.last_name) if part
         )

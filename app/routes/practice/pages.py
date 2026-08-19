@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import cast
 
 from flask import current_app, render_template, request, session, url_for
@@ -5,54 +6,107 @@ from flask_login import current_user, login_required
 
 from app.models import Category, User
 from app.routes.practice import bp
-from app.services.practice import PracticeError, select_card
+from app.services.backgrounds import choose_background
+from app.services.practice import (
+    PracticeError,
+    select_cards,
+    serialize_card,
+)
 from app.utils import get_anonymous_actions_remaining, get_cached_strike
 
 
 @bp.get("/")
 @login_required
 def index():
+    """Отображает однодокументную ленту с начальным пакетом карточек.
+
+    :return: HTML-страница практики.
+    """
     user = cast(User, current_user._get_current_object())
-    card_url = url_for(
-        "practice.next_card",
-        task=request.args.get("task"),
-        category=request.args.get("category"),
-        mode=request.args.get("mode"),
+    task = request.args.get("task", "")
+    category = request.args.get("category", "")
+    mode = request.args.get("mode", "")
+    admin = user.is_admin and session.get("admin", False)
+    initial_error = None
+    try:
+        initial_cards = [
+            serialize_card(card, admin=admin)
+            for card in select_cards(
+                user,
+                int(current_app.config["PRACTICE_CARD_BATCH_SIZE"]),
+                task_id=task,
+                category_id=category,
+                mistakes=mode == "mistakes",
+            )
+        ]
+    except PracticeError as error:
+        initial_cards = []
+        initial_error = error.message
+
+    background = choose_background(user)
+    static_root = current_app.static_folder
+
+    def static_url(filename: str) -> str:
+        """Формирует версионированный URL статического ресурса.
+
+        :param filename: Путь ресурса относительно каталога ``static``.
+        :return: URL с версией на основе времени изменения файла.
+        """
+        path = Path(static_root or "app/static") / filename
+        return url_for(
+            "static",
+            filename=filename,
+            v=path.stat().st_mtime_ns,
+        )
+
+    background_name = (
+        background.relative_to(static_root).as_posix()
+        if static_root is not None
+        else background.as_posix()
     )
+    background_root = background.parent.parent
+    background_pools = {
+        theme: [
+            url_for(
+                "static",
+                filename=path.relative_to(static_root).as_posix(),
+                v=path.stat().st_mtime_ns,
+            )
+            for path in sorted((background_root / theme).glob("*.webp"))
+        ]
+        for theme in ("dark", "yellow")
+    }
     return render_template(
         "index.html",
         strike=get_cached_strike(user.id) if user.settings.strike else None,
         anonymous_remaining=get_anonymous_actions_remaining(user),
-        card_url=card_url,
+        initial_cards=initial_cards,
+        initial_error=initial_error,
+        admin=admin,
+        background_url=url_for(
+            "static",
+            filename=background_name,
+            v=background.stat().st_mtime_ns,
+        ),
+        feed_query={"task": task, "category": category, "mode": mode},
+        strike_levels=current_app.config["STRIKE_LEVELS"],
+        background_pools=background_pools,
+        card_batch_size=current_app.config["PRACTICE_CARD_BATCH_SIZE"],
+        style_url=static_url("css/style.css"),
+        index_style_url=static_url("css/index.css"),
+        feed_script_url=static_url("js/feed.min.js"),
+        favicon_url=static_url("img/fav.ico"),
     )
 
 
 @bp.get("/filters")
 def filters():
+    """Отображает страницу выбора фильтров практики.
+
+    :return: HTML-страница со списком категорий и заданий.
+    """
     return render_template(
         "filters.html",
         categories=Category.query.all(),
         tasks=current_app.config["TASKS"],
-    )
-
-
-@bp.get("/practice/cards/next")
-@login_required
-def next_card():
-    user = cast(User, current_user._get_current_object())
-    try:
-        card = select_card(
-            user,
-            task_id=request.args.get("task", ""),
-            category_id=request.args.get("category", ""),
-            mistakes=request.args.get("mode") == "mistakes",
-        )
-    except PracticeError as error:
-        return error.message, error.status
-    return render_template(
-        "frame_inner.html",
-        word=card.note,
-        info_str=card.info,
-        admin=user.is_admin and session.get("admin", False),
-        demo=False,
     )

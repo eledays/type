@@ -33,6 +33,10 @@
     YANDEX_CLIENT_SECRET=your-client-secret
     YANDEX_REDIRECT_URI=http://localhost:5000/auth/yandex/callback
     ANONYMOUS_ACTION_LIMIT=30
+    PRACTICE_CARD_BATCH_SIZE=3
+    PRACTICE_CARD_BATCH_MAX=12
+    PRACTICE_DIFFICULT_CANDIDATE_LIMIT=50
+    PRACTICE_SWIPE_GRACE_STRIKE=3
     ```
 5. Примените миграции базы данных:
    ```bash
@@ -83,6 +87,12 @@ Callback URL должен в точности совпадать с
 `YANDEX_REDIRECT_URI`. По умолчанию анонимный пользователь может совершить 30
 действий; лимит меняется через `ANONYMOUS_ACTION_LIMIT`. При последующем входе
 его ответы и пропуски автоматически переносятся в Яндекс-профиль.
+
+Размер фоновой подгрузки ленты задаётся через `PRACTICE_CARD_BATCH_SIZE`, а
+верхняя граница параметра API `limit` — через `PRACTICE_CARD_BATCH_MAX`.
+Размер пула сложных кандидатов и длина серии без подтверждения пропуска
+настраиваются через `PRACTICE_DIFFICULT_CANDIDATE_LIMIT` и
+`PRACTICE_SWIPE_GRACE_STRIKE`.
 
 ## Администратор
 

@@ -1,7 +1,13 @@
 from pathlib import Path
 from typing import Any
 
-from pydantic import AliasChoices, Field, SecretStr, field_validator
+from pydantic import (
+    AliasChoices,
+    Field,
+    SecretStr,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -67,10 +73,36 @@ class AppSettings(BaseSettings):
     anonymous_action_limit: int = Field(
         default=30, validation_alias="ANONYMOUS_ACTION_LIMIT", ge=1
     )
+    practice_card_batch_size: int = Field(
+        default=3,
+        validation_alias="PRACTICE_CARD_BATCH_SIZE",
+        ge=1,
+    )
+    practice_card_batch_max: int = Field(
+        default=12,
+        validation_alias="PRACTICE_CARD_BATCH_MAX",
+        ge=1,
+    )
+    practice_difficult_candidate_limit: int = Field(
+        default=50,
+        validation_alias="PRACTICE_DIFFICULT_CANDIDATE_LIMIT",
+        ge=1,
+    )
+    practice_swipe_grace_strike: int = Field(
+        default=3,
+        validation_alias="PRACTICE_SWIPE_GRACE_STRIKE",
+        ge=0,
+    )
 
     @field_validator("secret_key")
     @classmethod
     def validate_secret_key(cls, value: SecretStr) -> SecretStr:
+        """Проверяет минимальную длину секретного ключа.
+
+        :param value: Секретный ключ приложения.
+        :return: Проверенный секретный ключ.
+        :raises ValueError: Если ключ короче шестнадцати символов.
+        """
         if len(value.get_secret_value()) < 16:
             raise ValueError("SECRET_KEY must contain at least 16 characters")
         return value
@@ -80,6 +112,12 @@ class AppSettings(BaseSettings):
     def validate_strike_levels(
         cls, value: tuple[int, ...]
     ) -> tuple[int, ...]:
+        """Проверяет уровни серии на порядок и уникальность.
+
+        :param value: Последовательность порогов серии.
+        :return: Проверенная последовательность порогов.
+        :raises ValueError: Если пороги пусты, неположительны или не упорядочены.
+        """
         if not value:
             raise ValueError("STRIKE_LEVELS must not be empty")
         if any(level <= 0 for level in value):
@@ -90,8 +128,25 @@ class AppSettings(BaseSettings):
             )
         return value
 
+    @model_validator(mode="after")
+    def validate_practice_batch_limits(self) -> "AppSettings":
+        """Проверяет согласованность размеров пакета карточек.
+
+        :return: Проверенный объект настроек.
+        :raises ValueError: Если обычный размер пакета превышает максимум.
+        """
+        if self.practice_card_batch_size > self.practice_card_batch_max:
+            raise ValueError(
+                "PRACTICE_CARD_BATCH_SIZE must not exceed "
+                "PRACTICE_CARD_BATCH_MAX"
+            )
+        return self
+
     def to_flask_config(self) -> dict[str, Any]:
-        """Return validated settings using Flask extension key names."""
+        """Преобразует настройки в словарь ключей Flask.
+
+        :return: Проверенная конфигурация с именами, ожидаемыми расширениями.
+        """
         return {
             "DEBUG": self.debug,
             "FLASK_PORT": self.flask_port,
@@ -109,6 +164,14 @@ class AppSettings(BaseSettings):
             ),
             "YANDEX_REDIRECT_URI": self.yandex_redirect_uri,
             "ANONYMOUS_ACTION_LIMIT": self.anonymous_action_limit,
+            "PRACTICE_CARD_BATCH_SIZE": self.practice_card_batch_size,
+            "PRACTICE_CARD_BATCH_MAX": self.practice_card_batch_max,
+            "PRACTICE_DIFFICULT_CANDIDATE_LIMIT": (
+                self.practice_difficult_candidate_limit
+            ),
+            "PRACTICE_SWIPE_GRACE_STRIKE": (
+                self.practice_swipe_grace_strike
+            ),
         }
 
 

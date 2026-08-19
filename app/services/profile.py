@@ -14,6 +14,14 @@ class InvalidSettings(ValueError):
 
 
 def update_settings(user: User, payload: dict[str, Any]) -> None:
+    """Проверяет и сохраняет настройки пользователя.
+
+    :param user: Пользователь, чьи настройки изменяются.
+    :param payload: Словарь изменяемых полей и значений.
+    :return: ``None``.
+    :raises PermissionError: Если недоступный пользователь включает админ-режим.
+    :raises InvalidSettings: Если поля или значения не прошли проверку.
+    """
     if "admin" in payload:
         if not user.is_admin:
             raise PermissionError("Access denied")

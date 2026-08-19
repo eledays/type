@@ -16,6 +16,10 @@ depends_on = None
 
 
 def upgrade():
+    """Добавляет поля профиля и авторизации Яндекса.
+
+    :return: ``None``.
+    """
     with op.batch_alter_table("user", schema=None) as batch_op:
         batch_op.add_column(sa.Column("yandex_id", sa.String(64)))
         batch_op.add_column(sa.Column("yandex_login", sa.String(255)))
@@ -28,6 +32,10 @@ def upgrade():
 
 
 def downgrade():
+    """Удаляет поля профиля и авторизации Яндекса.
+
+    :return: ``None``.
+    """
     with op.batch_alter_table("user", schema=None) as batch_op:
         batch_op.drop_index("ix_user_yandex_id")
         batch_op.drop_column("avatar_url")

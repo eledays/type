@@ -2,51 +2,100 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#161616">
     <title>type — Лента слов</title>
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
-
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=close,error" />
-
-    <link rel="icon" href="{{ url_for('static', filename='img/fav.ico') }}" type="image/x-icon">
+    <script>
+        document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';
+    </script>
+    <link rel="stylesheet" href="{{ style_url }}">
+    <link rel="stylesheet" href="{{ index_style_url }}">
+    <link rel="icon" href="{{ favicon_url }}" type="image/x-icon">
 </head>
-<body>
-    {% if anonymous_remaining is defined and anonymous_remaining is not none %}
+<body style="--back-img: url('{{ background_url }}')">
+    {% if anonymous_remaining is not none %}
     <a class="anonymous-notice" href="{{ url_for('auth.login', next=request.full_path) }}">
         Анонимный режим · осталось действий:
         <span id="anonymous-remaining">{{ anonymous_remaining }}</span> · Войти
     </a>
     {% endif %}
-    <iframe src="{{ card_url }}" class="current"></iframe>
-    <iframe src="{{ card_url }}" class="next"></iframe>
 
-    <button class="error" onclick="document.querySelector('.current').contentWindow.switchMenu()">
-        <span class="material-symbols-rounded notranslate">error</span>
+    <main id="feed" class="feed" aria-live="polite">
+        {% for card in initial_cards[:3] %}
+        <article
+            class="card {% if loop.index0 == 0 %}is-current{% elif loop.index0 == 1 %}is-next{% else %}is-buffered{% endif %}"
+            data-card-index="{{ loop.index0 }}"
+            data-card-id="{{ card.id }}"
+        >
+            <div class="word-cont {% if card.type == 'sentence' %}sentence-cont{% endif %}">
+                <p class="word">
+                    {% for part in card.prompt.split(card.blank) %}
+                        {% if not loop.first %}<span class="missing-letter" aria-hidden="true"> </span>{% endif %}
+                        <span>{{ part }}</span>
+                    {% endfor %}
+                </p>
+            </div>
+            {% if admin and card.type == 'word' %}
+            <textarea class="explanation" aria-label="Объяснение">{{ card.explanation or '' }}</textarea>
+            {% endif %}
+            <div class="answers">
+                {% for answer in card.answers %}
+                <button class="{% if answer|length < 3 %}answer{% else %}sentence-answer{% endif %}" data-answer="{{ answer }}">
+                    {{ answer }}
+                </button>
+                {% endfor %}
+            </div>
+        </article>
+        {% endfor %}
+
+        <div class="feed-status {% if initial_cards %}is-hidden{% endif %}" id="feed-status" role="status">
+            {{ initial_error or 'Загружаем задания…' }}
+        </div>
+    </main>
+
+    <canvas id="effect-canvas" aria-hidden="true"></canvas>
+    <div class="fire" id="fire" aria-hidden="true"></div>
+
+    <button class="menu-trigger" id="menu-trigger" type="button" aria-label="Открыть меню">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7h.01"></path></svg>
     </button>
 
-    {% if strike != None %}
-    <div class="strike-block">
-        <p>{{ strike }}</p>
-    </div>
+    {% if strike is not none %}
+    <div class="strike-block"><p id="strike-value">{{ strike }}</p></div>
     {% endif %}
 
-    <div class="fire" id="fire"></div>
+    <div class="menu-overlay" id="menu-overlay" hidden></div>
+    <aside class="menu" id="menu" aria-hidden="true">
+        <nav class="menu-buttons">
+            <a href="{{ url_for('profile.index', referrer=request.full_path) }}">Профиль</a>
+            <a href="{{ url_for('practice.filters', referrer=request.full_path) }}">Фильтры</a>
+            <button id="report-button" type="button">Сообщить об ошибке в задании</button>
+            <button id="search-button" type="button">Найти слово в интернете</button>
+            <a href="https://music.yandex.ru" target="_blank" rel="noopener">Включить музыку</a>
+        </nav>
+        <div class="info" id="card-info"></div>
+    </aside>
 
     <script>
-        window.routeConfig = {{ {
-            'swipePermission': url_for('practice_api.swipe_permission'),
-            'skipAttempt': url_for('practice_api.skip_attempt')
+        window.feedBootstrap = {{ {
+            'cards': initial_cards,
+            'query': feed_query,
+            'admin': admin,
+            'strike': strike,
+            'strikeLevels': strike_levels,
+            'batchSize': card_batch_size,
+            'backgroundPools': background_pools
         }|tojson }};
-
-        window.updateAnonymousRemaining = (remaining) => {
-            if (remaining === null || remaining === undefined) return;
-            const counter = document.getElementById('anonymous-remaining');
-            if (counter) counter.textContent = remaining;
-        };
+        window.routeConfig = {{ {
+            'cards': url_for('practice_api.get_cards'),
+            'skipAttempt': url_for('practice_api.skip_attempt'),
+            'createAttempt': url_for('practice_api.create_attempt'),
+            'reportWord': url_for('practice_api.create_word_report', word_id=0),
+            'updateExplanation': url_for('admin_api.patch_explanation', word_id=0),
+            'deleteAnswer': url_for('admin_api.remove_answer', word_id=0)
+        }|tojson }};
     </script>
-    <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/framesManaging.js') }}"></script>
+    <script defer src="{{ feed_script_url }}"></script>
 </body>
 </html>

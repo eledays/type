@@ -1,20 +1,33 @@
-from app.extensions import db
-from app.models import Action, User
-
 from datetime import timedelta
 
 from flask import current_app, session
 from sqlalchemy import desc, select
 
+from app.extensions import db
+from app.models import Action, User
+
 
 def add_action(
     user_id: int,
-    word_id: int | None,
     action: int,
+    word_id: int | None = None,
+    sentence_id: int | None = None,
 ) -> Action:
+    """Создаёт действие пользователя над словом или предложением.
+
+    :param user_id: Идентификатор пользователя.
+    :param action: Код выполненного действия.
+    :param word_id: Идентификатор слова, если действие относится к слову.
+    :param sentence_id: Идентификатор предложения, если действие относится к нему.
+    :return: Сохранённая запись действия.
+    :raises ValueError: Если указаны оба объекта или не указан ни один.
+    """
+    if (word_id is None) == (sentence_id is None):
+        raise ValueError("Action must reference exactly one note")
     action_record = Action()
     action_record.user_id = user_id
     action_record.word_id = word_id
+    action_record.sentence_id = sentence_id
     action_record.action = action
     db.session.add(action_record)
     db.session.commit()
@@ -22,7 +35,11 @@ def add_action(
 
 
 def get_anonymous_actions_remaining(user: User) -> int | None:
-    """Return a guest quota, or ``None`` for a registered account."""
+    """Возвращает остаток анонимной квоты.
+
+    :param user: Пользователь, для которого рассчитывается квота.
+    :return: Остаток действий или ``None`` для зарегистрированного пользователя.
+    """
     if not user.is_anonymous_account:
         return None
     used = db.session.scalar(
@@ -40,6 +57,11 @@ def get_anonymous_actions_remaining(user: User) -> int | None:
 
 
 def get_strike(user_id: int) -> int:
+    """Вычисляет текущую серию верных ответов по истории действий.
+
+    :param user_id: Идентификатор пользователя.
+    :return: Количество последовательных верных ответов с конца истории.
+    """
     actions = db.session.scalars(
         select(Action.action)
         .where(
@@ -64,13 +86,22 @@ def get_strike(user_id: int) -> int:
 
 
 def get_cached_strike(user_id: int) -> int:
-    """Return the streak stored in the session, loading it only when absent."""
+    """Возвращает серию из сессии или вычисляет её при первом обращении.
+
+    :param user_id: Идентификатор пользователя.
+    :return: Текущая длина серии.
+    """
     if "strike" not in session:
         session["strike"] = get_strike(user_id)
     return int(session["strike"])
 
 
 def get_user_stats(user_id: int) -> dict[str, int | float]:
+    """Рассчитывает сводную статистику практики пользователя.
+
+    :param user_id: Идентификатор пользователя.
+    :return: Количество ответов и пропусков, точность, темп и лучшая серия.
+    """
     actions = db.session.execute(
         select(Action.action, Action.datetime)
         .where(

@@ -12,6 +12,10 @@ from app.services.backgrounds import choose_background
 @api_bp.get("/background")
 @login_required
 def background():
+    """Возвращает случайный фон для старых клиентов.
+
+    :return: Изображение без кэширования для совместимого API.
+    """
     user = cast(User, current_user._get_current_object())
     response = send_file(choose_background(user))
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -23,6 +27,10 @@ def background():
 @api_bp.patch("/settings")
 @login_required
 def patch_settings():
+    """Проверяет и изменяет настройки текущего пользователя.
+
+    :return: JSON-ответ о результате изменения.
+    """
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
         return jsonify({"status": "error", "message": "Invalid JSON"}), 400

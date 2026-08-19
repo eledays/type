@@ -3,6 +3,12 @@ from app.models import Word
 
 
 def update_explanation(word_id: int, explanation: str) -> bool:
+    """Обновляет административное объяснение слова.
+
+    :param word_id: Идентификатор слова.
+    :param explanation: Новый текст объяснения.
+    :return: ``True`` при успешном обновлении, иначе ``False``.
+    """
     word = db.session.get(Word, word_id)
     if word is None:
         return False
@@ -12,6 +18,12 @@ def update_explanation(word_id: int, explanation: str) -> bool:
 
 
 def delete_answer(word_id: int, answer: str) -> bool:
+    """Удаляет вариант ответа у слова.
+
+    :param word_id: Идентификатор слова.
+    :param answer: Удаляемый вариант ответа.
+    :return: ``True`` при успешном удалении, иначе ``False``.
+    """
     word = db.session.get(Word, word_id)
     if word is None or answer not in word.answers:
         return False

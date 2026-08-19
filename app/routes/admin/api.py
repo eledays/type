@@ -8,6 +8,11 @@ from app.services.admin import delete_answer, update_explanation
 @bp.patch("/words/<int:word_id>/explanation")
 @admin_required
 def patch_explanation(word_id: int):
+    """Обновляет объяснение слова от имени администратора.
+
+    :param word_id: Идентификатор слова из адреса запроса.
+    :return: JSON-ответ о результате обновления.
+    """
     payload = request.get_json(silent=True)
     explanation = payload.get("explanation") if isinstance(payload, dict) else None
     if not isinstance(explanation, str):
@@ -26,6 +31,11 @@ def patch_explanation(word_id: int):
 @bp.delete("/words/<int:word_id>/answers")
 @admin_required
 def remove_answer(word_id: int):
+    """Удаляет вариант ответа от имени администратора.
+
+    :param word_id: Идентификатор слова из адреса запроса.
+    :return: JSON-ответ о результате удаления.
+    """
     payload = request.get_json(silent=True)
     answer = payload.get("answer") if isinstance(payload, dict) else None
     if not isinstance(answer, str):

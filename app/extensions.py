@@ -16,13 +16,18 @@ from flask_sqlalchemy import SQLAlchemy
 
 
 class TimezoneAwareLoginManager(LoginManager):
-    """Flask-Login 0.6.3 with a Python 3.12-safe remember cookie.
+    """Совместимый с Python 3.12 менеджер cookie для Flask-Login 0.6.3.
 
-    Flask-Login has this change queued for its unreleased 0.7.0 version. The
-    override can be removed after upgrading to that release.
+    Исправление уже подготовлено для Flask-Login 0.7.0. После обновления до
+    этой версии переопределение можно удалить.
     """
 
     def _set_cookie(self, response: Any) -> None:
+        """Сохраняет cookie сессии только при наличии изменений.
+
+        :param response: Исходящий Flask-ответ.
+        :return: ``None``.
+        """
         config = current_app.config
         cookie_name = config.get("REMEMBER_COOKIE_NAME", COOKIE_NAME)
         domain = config.get("REMEMBER_COOKIE_DOMAIN")

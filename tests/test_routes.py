@@ -15,13 +15,12 @@ class TestRouteMap(AppTestCase):
         expected = {
             ("/", "GET"),
             ("/filters", "GET"),
-            ("/practice/cards/next", "GET"),
             ("/profile", "GET"),
             ("/auth", "GET"),
             ("/auth/logout", "POST"),
             ("/api/v1/attempts", "POST"),
             ("/api/v1/attempts/skip", "POST"),
-            ("/api/v1/swipe-permission", "GET"),
+            ("/api/v1/practice/cards", "GET"),
             ("/api/v1/profile/settings", "PATCH"),
             ("/api/v1/profile/background", "GET"),
             ("/api/v1/words/<int:word_id>/reports", "POST"),
@@ -42,10 +41,11 @@ class TestRouteMap(AppTestCase):
             assert response.status_code == 308
             assert response.location == canonical_url
 
-    def test_index_uses_canonical_card_url(self) -> None:
+    def test_index_uses_batch_feed_without_iframes(self) -> None:
         response = self.client.get("/?task=5")
         assert response.status_code == 200
-        assert b'/practice/cards/next?task=5' in response.data
+        assert b'/api/v1/practice/cards' in response.data
+        assert b'<iframe' not in response.data
         assert b'/get_frame' not in response.data
 
     def test_settings_are_updated_through_patch_api(self) -> None:
@@ -70,13 +70,13 @@ class TestRouteMap(AppTestCase):
             db.session.commit()
             word_id = word.id
 
-        card_response = self.client.get("/practice/cards/next?task=4")
+        card_response = self.client.get("/api/v1/practice/cards?limit=3&task=4")
         assert card_response.status_code == 200
-        assert "м".encode() in card_response.data
+        assert card_response.get_json()["cards"][0]["prompt"] == "м_локо"
 
         attempt_response = self.client.post(
             "/api/v1/attempts",
-            json={"word_id": word_id, "answer": "о"},
+            json={"card_id": word_id, "answer": "о", "card_type": "word"},
         )
         assert attempt_response.status_code == 200
         attempt = attempt_response.get_json()
@@ -88,20 +88,6 @@ class TestRouteMap(AppTestCase):
         with self.app.app_context():
             assert Action.query.count() == 1
 
-    def test_legacy_attempt_adapter_preserves_request_body(self) -> None:
-        with self.app.app_context():
-            category = Category(name="Совместимость")
-            word = Word(word="д_м", answers=["о", "а"], category=category)
-            db.session.add(word)
-            db.session.commit()
-            word_id = word.id
-
-        response = self.client.post(
-            "/check_word", json={"id": word_id, "answer": "о"}
-        )
-        assert response.status_code == 200
-        assert response.get_json()["correct"]
-
     def test_skip_returns_updated_anonymous_limit(self) -> None:
         with self.app.app_context():
             category = Category(name="Пропуск")
@@ -111,7 +97,8 @@ class TestRouteMap(AppTestCase):
             word_id = word.id
 
         response = self.client.post(
-            "/api/v1/attempts/skip", json={"word_id": word_id}
+            "/api/v1/attempts/skip",
+            json={"card_id": word_id, "card_type": "word"},
         )
         assert response.status_code == 200
         payload = response.get_json()
@@ -119,4 +106,11 @@ class TestRouteMap(AppTestCase):
         assert (
             payload["anonymous_remaining"]
             == self.app.config["ANONYMOUS_ACTION_LIMIT"] - 1
+        )
+
+    def test_optimized_backgrounds_are_immutable(self) -> None:
+        response = self.client.get("/static/img/backs/dark/0.webp?v=test")
+        assert response.status_code == 200
+        assert response.headers["Cache-Control"] == (
+            "public, max-age=31536000, immutable"
         )

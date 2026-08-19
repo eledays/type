@@ -27,5 +27,8 @@ class Paronym(db.Model):
     sentences: Mapped[list[Sentence]] = relationship(back_populates="word")
 
     def get_all_group_paronyms(self) -> list[str]:
-        """Return all words from this paronym group."""
+        """Возвращает все слова из группы текущего паронима.
+
+        :return: Список текстов паронимов.
+        """
         return [paronym.word for paronym in self.group.paronyms]

@@ -17,6 +17,10 @@ depends_on = None
 
 
 def upgrade():
+    """Добавляет модель пользователя и связывает с ней данные.
+
+    :return: ``None``.
+    """
     op.create_table(
         'user',
         sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
@@ -79,6 +83,10 @@ def upgrade():
 
 
 def downgrade():
+    """Возвращает схему к состоянию без отдельной модели пользователя.
+
+    :return: ``None``.
+    """
     with op.batch_alter_table('settings', schema=None) as batch_op:
         batch_op.drop_constraint(
             'fk_settings_user_id_user', type_='foreignkey'

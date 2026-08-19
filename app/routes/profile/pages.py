@@ -12,6 +12,10 @@ from app.utils import get_user_stats
 @bp.get("/profile")
 @login_required
 def index():
+    """Отображает профиль, настройки и статистику пользователя.
+
+    :return: HTML-страница профиля.
+    """
     user = cast(User, current_user._get_current_object())
     admin_mode = (
         2
@@ -37,6 +41,10 @@ def index():
 
 @bp.get("/settings")
 def legacy_settings_redirect():
+    """Перенаправляет старый адрес настроек на профиль.
+
+    :return: Постоянное перенаправление на страницу профиля.
+    """
     query = request.query_string.decode()
     target = url_for("profile.index")
     return redirect(f"{target}?{query}" if query else target, code=308)

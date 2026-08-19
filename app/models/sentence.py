@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import random
-from typing import ClassVar
+from functools import lru_cache
+from typing import TYPE_CHECKING, ClassVar
 
 from pymorphy3 import MorphAnalyzer
 from sqlalchemy import ForeignKey, String
@@ -9,6 +10,18 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
 from app.models.paronym import Paronym
+
+if TYPE_CHECKING:
+    from app.models.action import Action
+
+
+@lru_cache(maxsize=1)
+def get_morph_analyzer() -> MorphAnalyzer:
+    """Возвращает общий морфологический анализатор процесса.
+
+    :return: Кэшированный экземпляр ``MorphAnalyzer``.
+    """
+    return MorphAnalyzer()
 
 
 class Sentence(db.Model):
@@ -24,10 +37,14 @@ class Sentence(db.Model):
     word_tags: Mapped[str] = mapped_column(String, nullable=False)
 
     word: Mapped[Paronym] = relationship(back_populates="sentences")
+    actions: Mapped[list[Action]] = relationship(back_populates="sentence")
 
     def get_answers(self) -> list[str]:
-        """Return the paronym variants inflected for this sentence."""
-        analyzer = MorphAnalyzer()
+        """Формирует склонённые варианты паронимов для предложения.
+
+        :return: Варианты ответов в случайном порядке.
+        """
+        analyzer = get_morph_analyzer()
         tags = set(self.word_tags.split(","))
         answers: list[str] = []
 
@@ -39,6 +56,3 @@ class Sentence(db.Model):
             )
 
         return random.sample(answers, k=len(answers))
-
-    def get_html(self) -> str:
-        return self.sentence

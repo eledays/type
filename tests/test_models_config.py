@@ -6,10 +6,9 @@ from config import AppSettings
 
 
 class TestModel(AppTestCase):
-    def test_word_rendering_and_answer_copy(self) -> None:
+    def test_word_returns_an_independent_answer_copy(self) -> None:
         with self.app.app_context():
             word = self.make_word(word="м_л_ко", answers=["о", "а"])
-            assert word.get_html().count("missing-letter") == 2
             answers = word.get_answers()
             assert sorted(answers) == ["а", "о"]
             assert answers is not word.answers
@@ -33,6 +32,11 @@ class TestConfig(AppTestCase):
             {"SECRET_KEY": "a-secure-test-secret", "STRIKE_LEVELS": "20,10"},
             {"SECRET_KEY": "a-secure-test-secret", "STRIKE_LEVELS": "10,10"},
             {"SECRET_KEY": "a-secure-test-secret", "STRIKE_LEVELS": "0,10"},
+            {
+                "SECRET_KEY": "a-secure-test-secret",
+                "PRACTICE_CARD_BATCH_SIZE": 4,
+                "PRACTICE_CARD_BATCH_MAX": 3,
+            },
         ):
             with pytest.raises(ValidationError):
                 AppSettings(**values)

@@ -17,6 +17,10 @@ depends_on = None
 
 
 def upgrade():
+    """Нормализует старые данные и усиливает ограничения моделей.
+
+    :return: ``None``.
+    """
     # Normalize legacy rows before applying stricter constraints.
     op.execute(
         "UPDATE action SET datetime = CURRENT_TIMESTAMP WHERE datetime IS NULL"
@@ -63,6 +67,10 @@ def upgrade():
 
 
 def downgrade():
+    """Возвращает прежнюю обязательность полей и внешних ключей.
+
+    :return: ``None``.
+    """
     with op.batch_alter_table('word', schema=None) as batch_op:
         batch_op.alter_column('mistake',
                existing_type=sa.BOOLEAN(),

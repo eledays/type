@@ -19,7 +19,11 @@ from app.models import Category, Paronym, ParonymGroup, Sentence, Word
 )
 @with_appcontext
 def csv_to_db(csv_path: Path) -> None:
-    """Import words and categories from CSV_PATH."""
+    """Импортирует слова и категории из CSV-файла.
+
+    :param csv_path: Путь к исходному CSV-файлу.
+    :return: ``None``.
+    """
     imported = 0
     skipped = 0
 
@@ -80,7 +84,11 @@ def csv_to_db(csv_path: Path) -> None:
 )
 @with_appcontext
 def txt_to_db(txt_path: Path) -> None:
-    """Import paronym groups from TXT_PATH."""
+    """Импортирует группы паронимов из текстового файла.
+
+    :param txt_path: Путь к исходному текстовому файлу.
+    :return: ``None``.
+    """
     imported = 0
     skipped = 0
 
@@ -142,10 +150,21 @@ def txt_to_db(txt_path: Path) -> None:
 
 
 def _base_form(analyzer: MorphAnalyzer, word: str) -> str:
+    """Определяет нормальную форму слова.
+
+    :param analyzer: Морфологический анализатор.
+    :param word: Исходная словоформа.
+    :return: Нормальная форма в нижнем регистре.
+    """
     return analyzer.parse(word.strip().lower())[0].normal_form
 
 
 def _group_paronyms(word: str) -> list[str]:
+    """Находит все паронимы из группы указанного слова.
+
+    :param word: Нормальная форма паронима.
+    :return: Слова группы или пустой список.
+    """
     paronym = Paronym.query.filter_by(word=word).first()
     return paronym.get_all_group_paronyms() if paronym is not None else []
 
@@ -156,6 +175,14 @@ def _add_sentence(
     highlighted_word: str,
     correct_word: str,
 ) -> bool:
+    """Добавляет одно предложение с пропуском в сессию базы данных.
+
+    :param analyzer: Морфологический анализатор.
+    :param sentence_text: Исходный текст предложения.
+    :param highlighted_word: Выделенная словоформа в предложении.
+    :param correct_word: Правильная словоформа для задания.
+    :return: ``True``, если предложение подготовлено к сохранению.
+    """
     base_word = _base_form(analyzer, correct_word)
     paronym = Paronym.query.filter_by(word=base_word).first()
     if paronym is None:
@@ -175,6 +202,12 @@ def _add_sentence(
 
 
 def _sentence_blocks(lines: list[str]) -> list[tuple[list[str], str]]:
+    """Разбирает строки файла на блоки предложений и ответов.
+
+    :param lines: Строки исходного файла.
+    :return: Список пар из предложений блока и правильного ответа.
+    :raises click.ClickException: Если структура блока некорректна.
+    """
     blocks: list[tuple[list[str], str]] = []
     sentences: list[str] = []
 
@@ -207,7 +240,11 @@ def _sentence_blocks(lines: list[str]) -> list[tuple[list[str], str]]:
 )
 @with_appcontext
 def sentence_to_db(txt_path: Path) -> None:
-    """Import paronym exercise sentences from TXT_PATH."""
+    """Импортирует предложения для заданий с паронимами.
+
+    :param txt_path: Путь к исходному текстовому файлу.
+    :return: ``None``.
+    """
     analyzer = MorphAnalyzer()
     imported = 0
     skipped = 0
@@ -275,6 +312,11 @@ def sentence_to_db(txt_path: Path) -> None:
 
 
 def register_commands(app: Flask) -> None:
+    """Регистрирует команды импорта в Flask CLI.
+
+    :param app: Flask-приложение, получающее команды.
+    :return: ``None``.
+    """
     app.cli.add_command(csv_to_db)
     app.cli.add_command(txt_to_db)
     app.cli.add_command(sentence_to_db)

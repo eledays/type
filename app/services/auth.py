@@ -21,6 +21,10 @@ class OAuthError(RuntimeError):
 
 
 def oauth_is_configured() -> bool:
+    """Проверяет наличие обязательных параметров Яндекс OAuth.
+
+    :return: ``True``, если идентификатор и секрет клиента настроены.
+    """
     return bool(
         current_app.config.get("YANDEX_CLIENT_ID")
         and current_app.config.get("YANDEX_CLIENT_SECRET")
@@ -28,6 +32,11 @@ def oauth_is_configured() -> bool:
 
 
 def safe_next_url(value: str | None) -> str:
+    """Оставляет только безопасный локальный URL перенаправления.
+
+    :param value: URL, полученный от клиента.
+    :return: Безопасный локальный URL или корневой путь.
+    """
     if not value:
         return "/"
     parsed = urlsplit(value)
@@ -40,10 +49,23 @@ def safe_next_url(value: str | None) -> str:
 
 
 def validate_state(expected: str | None, received: str | None) -> bool:
+    """Сравнивает ожидаемое и полученное состояние OAuth.
+
+    :param expected: Значение из пользовательской сессии.
+    :param received: Значение из callback-запроса.
+    :return: Результат безопасного сравнения значений.
+    """
     return bool(expected and received and hmac.compare_digest(expected, received))
 
 
 def authenticate_yandex(code: str, redirect_uri: str) -> User:
+    """Обменивает OAuth-код на профиль и авторизует пользователя.
+
+    :param code: Одноразовый код авторизации Яндекса.
+    :param redirect_uri: Callback URL текущего приложения.
+    :return: Созданный или найденный пользователь.
+    :raises OAuthError: Если Яндекс вернул ошибочный ответ.
+    """
     try:
         token_response = requests.post(
             YANDEX_TOKEN_URL,
@@ -82,6 +104,12 @@ def authenticate_yandex(code: str, redirect_uri: str) -> User:
 
 
 def _merge_yandex_profile(profile: dict[str, Any], yandex_id: str) -> User:
+    """Объединяет профиль Яндекса с текущим локальным аккаунтом.
+
+    :param profile: Проверенный ответ API профиля Яндекса.
+    :param yandex_id: Нормализованный идентификатор Яндекса.
+    :return: Сохранённый пользователь приложения.
+    """
     current_account = (
         cast(User, current_user._get_current_object())
         if current_user.is_authenticated
@@ -118,6 +146,13 @@ def _merge_yandex_profile(profile: dict[str, Any], yandex_id: str) -> User:
 def _profile_text(
     profile: dict[str, Any], key: str, max_length: int
 ) -> str | None:
+    """Извлекает и ограничивает текстовое поле профиля.
+
+    :param profile: Данные профиля Яндекса.
+    :param key: Имя извлекаемого поля.
+    :param max_length: Максимальная длина результата.
+    :return: Очищенный текст или ``None``.
+    """
     value = profile.get(key)
     if not isinstance(value, str):
         return None
@@ -126,6 +161,11 @@ def _profile_text(
 
 
 def _avatar_url(profile: dict[str, Any]) -> str | None:
+    """Формирует URL аватара из данных профиля.
+
+    :param profile: Данные профиля Яндекса.
+    :return: URL аватара или ``None`` при его отсутствии.
+    """
     if profile.get("is_avatar_empty") is True:
         return None
     avatar_id = _profile_text(profile, "default_avatar_id", 255)
