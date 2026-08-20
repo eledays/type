@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
@@ -13,7 +14,7 @@ from app.models import (
     SpellingExercise,
     User,
 )
-from app.services.practice import PracticeError, select_card
+from app.services.practice import PracticeError, select_card, select_cards
 
 
 class TestPracticeApi(AppTestCase):
@@ -414,6 +415,119 @@ class TestPracticeApi(AppTestCase):
                 == second.id
             )
             assert select_card(user, mistakes=True).item.id == second.id
+
+    def test_adaptive_selection_uses_each_learning_zone(self) -> None:
+        user_id = self.current_user_id()
+        with self.app.app_context():
+            comfortable = self.make_word(word="зн_комое")
+            review = self.make_word(word="тр_дное")
+            learning = self.make_word(word="уч_бное")
+            new = self.make_word(word="н_вое")
+            started = datetime(2025, 1, 1)
+            actions = [
+                Action(
+                    user_id=user_id,
+                    practice_item_id=comfortable.id,
+                    action=Action.RIGHT_ANSWER,
+                    datetime=started + timedelta(minutes=index),
+                )
+                for index in range(5)
+            ]
+            actions.extend([
+                Action(
+                    user_id=user_id,
+                    practice_item_id=review.id,
+                    action=Action.WRONG_ANSWER,
+                    datetime=started + timedelta(minutes=5),
+                ),
+                Action(
+                    user_id=user_id,
+                    practice_item_id=learning.id,
+                    action=Action.RIGHT_ANSWER,
+                    datetime=started + timedelta(minutes=6),
+                ),
+            ])
+            db.session.add_all(actions)
+            db.session.commit()
+            user = db.session.get(User, user_id)
+
+            cards = select_cards(user, 4)
+
+            assert [card.item.id for card in cards] == [
+                comfortable.id,
+                review.id,
+                learning.id,
+                new.id,
+            ]
+            assert [card.info[-1] for card in cards] == [
+                "Знакомое задание для закрепления",
+                "Повторение задания, которое вызвало затруднение",
+                "Задание из вашей зоны обучения",
+                "Новое задание",
+            ]
+
+    def test_two_failures_are_followed_by_a_comfortable_card(self) -> None:
+        user_id = self.current_user_id()
+        with self.app.app_context():
+            comfortable = self.make_word(word="л_гкое")
+            difficult = self.make_word(word="сл_жное")
+            started = datetime(2025, 1, 1)
+            actions = [
+                Action(
+                    user_id=user_id,
+                    practice_item_id=comfortable.id,
+                    action=Action.RIGHT_ANSWER,
+                    datetime=started + timedelta(minutes=index),
+                )
+                for index in range(5)
+            ]
+            actions.extend([
+                Action(
+                    user_id=user_id,
+                    practice_item_id=difficult.id,
+                    action=Action.WRONG_ANSWER,
+                    datetime=started + timedelta(minutes=5),
+                ),
+                Action(
+                    user_id=user_id,
+                    practice_item_id=difficult.id,
+                    action=Action.WRONG_ANSWER,
+                    datetime=started + timedelta(minutes=6),
+                ),
+            ])
+            db.session.add_all(actions)
+            db.session.commit()
+            user = db.session.get(User, user_id)
+
+            card = select_card(user)
+
+            assert card.item.id == comfortable.id
+            assert card.info[-1] == "Знакомое задание после сложной серии"
+
+    def test_recent_card_is_spaced_when_an_alternative_exists(self) -> None:
+        user_id = self.current_user_id()
+        with self.app.app_context():
+            older = self.make_word(word="р_нее")
+            recent = self.make_word(word="н_давнее")
+            started = datetime(2025, 1, 1)
+            db.session.add_all([
+                Action(
+                    user_id=user_id,
+                    practice_item_id=older.id,
+                    action=Action.RIGHT_ANSWER,
+                    datetime=started,
+                ),
+                Action(
+                    user_id=user_id,
+                    practice_item_id=recent.id,
+                    action=Action.RIGHT_ANSWER,
+                    datetime=started + timedelta(minutes=1),
+                ),
+            ])
+            db.session.commit()
+            user = db.session.get(User, user_id)
+
+            assert select_card(user).item.id == older.id
 
     def test_card_selection_returns_clear_not_found_errors(self) -> None:
         user_id = self.current_user_id()

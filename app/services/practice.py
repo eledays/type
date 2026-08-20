@@ -51,6 +51,32 @@ class Card:
         return self.item.type
 
 
+@dataclass
+class ItemProgress:
+    """Краткая оценка знания одной карточки пользователем."""
+
+    success_rate: float
+    right_count: int
+    failure_weight: float
+    latest_action: int | None
+
+
+ADAPTIVE_SEQUENCE = (
+    "learning",
+    "learning",
+    "comfortable",
+    "review",
+    "learning",
+    "new",
+    "learning",
+    "comfortable",
+    "review",
+    "learning",
+)
+RECENT_PROGRESS_LIMIT = 30
+REPEAT_GAP = 3
+
+
 def serialize_card(card: Card, *, admin: bool = False) -> dict[str, Any]:
     """Преобразует карточку в компактное представление для API ленты.
 
@@ -137,7 +163,11 @@ def select_cards(
 
     if mistakes:
         stats = _answer_stats(user.id)
-        difficulty = stats.c.wrong_count - stats.c.right_count
+        difficulty = (
+            stats.c.wrong_count
+            + 0.5 * stats.c.skip_count
+            - stats.c.right_count
+        )
         items = _random_window(
             base_items.join(
                 stats, PracticeItem.id == stats.c.practice_item_id
@@ -154,6 +184,14 @@ def select_cards(
             Card(item, ['Фильтр: "Неверные ответы"']) for item in items
         ]
 
+    user_stats = _user_answer_stats(user.id)
+    seen_query = base_items.join(
+        Action,
+        and_(
+            PracticeItem.id == Action.practice_item_id,
+            Action.user_id == user.id,
+        ),
+    ).distinct()
     unseen_query = base_items.outerjoin(
         Action,
         and_(
@@ -161,52 +199,80 @@ def select_cards(
             Action.user_id == user.id,
         ),
     ).filter(Action.id.is_(None))
-    unseen_count = unseen_query.count()
-    unseen = _random_window(unseen_query, count, total=unseen_count)
-
-    stats = _answer_stats(user.id)
-    difficulty = stats.c.wrong_count - stats.c.right_count
-    difficult = (
-        base_items.join(
-            stats, PracticeItem.id == stats.c.practice_item_id
-        )
-        .filter(difficulty > 0)
-        .order_by(difficulty.desc())
-        .limit(int(current_app.config["PRACTICE_DIFFICULT_CANDIDATE_LIMIT"]))
-        .all()
+    candidate_limit = max(
+        count * 4,
+        int(current_app.config["PRACTICE_DIFFICULT_CANDIDATE_LIMIT"]),
     )
+    candidates = seen_query.all()
+    candidate_ids = {item.id for item in candidates}
+    candidates.extend(
+        item
+        for item in _random_window(unseen_query, candidate_limit)
+        if item.id not in candidate_ids
+    )
+    recent_actions = _recent_progress_actions(user.id)
+    progress = _item_progress(
+        user_stats,
+        recent_actions,
+        _global_answer_stats(),
+    )
+    pools = _adaptive_pools(candidates, progress)
+    recent_ids = {
+        action.practice_item_id
+        for action in recent_actions[:REPEAT_GAP]
+    }
+    action_count = db.session.scalar(
+        select(func.count(Action.id)).where(
+            Action.user_id == user.id,
+            Action.action.in_([
+                Action.RIGHT_ANSWER,
+                Action.WRONG_ANSWER,
+                Action.SKIP,
+            ]),
+        )
+    ) or 0
 
     selected: list[Card] = []
     selected_ids: set[int] = set()
-    while len(selected) < count and (unseen or difficult):
-        choose_unseen = bool(unseen) and (
-            not difficult
-            or random.randrange(unseen_count + len(difficult)) < unseen_count
-        )
-        if choose_unseen:
-            item = unseen.pop()
-            reason = "Это задание встретилось первый раз"
-            unseen_count = max(0, unseen_count - 1)
-        else:
-            item = random.choice(difficult)
-            difficult.remove(item)
-            reason = "Это задание выбрано из-за большого количества ошибок"
-        if item.id in selected_ids:
-            continue
-        selected_ids.add(item.id)
-        selected.append(Card(item, [*base_info, reason]))
 
-    remaining = count - len(selected)
-    if remaining:
-        fallback = base_items
-        if selected_ids:
-            fallback = fallback.filter(~PracticeItem.id.in_(selected_ids))
-        for item in _random_window(fallback, remaining):
-            selected_ids.add(item.id)
+    # После двух неудач начинаем пакет со знакомой лёгкой карточки. Это не
+    # отменяет обучение, но не даёт ленте превращаться в череду поражений.
+    if count and _has_failure_streak(recent_actions, length=2):
+        recovery_choice = _take_candidate(
+            pools,
+            "comfortable",
+            selected_ids,
+            recent_ids,
+            progress,
+        )
+        if recovery_choice is not None:
+            recovery, _ = recovery_choice
             selected.append(Card(
-                item,
-                [*base_info, "Это задание встретилось случайно"],
+                recovery,
+                [*base_info, "Знакомое задание после сложной серии"],
             ))
+            selected_ids.add(recovery.id)
+
+    sequence_offset = int(action_count) % len(ADAPTIVE_SEQUENCE)
+    while len(selected) < count:
+        pool_name = ADAPTIVE_SEQUENCE[
+            (sequence_offset + len(selected)) % len(ADAPTIVE_SEQUENCE)
+        ]
+        choice = _take_candidate(
+            pools,
+            pool_name,
+            selected_ids,
+            recent_ids,
+            progress,
+        )
+        if choice is None:
+            break
+        item, actual_pool = choice
+        selected_ids.add(item.id)
+        selected.append(Card(
+            item,
+            [*base_info, _selection_reason(actual_pool)],
+        ))
 
     if not selected and excluded:
         return select_cards(
@@ -387,11 +453,209 @@ def _answer_stats(user_id: int):
             func.sum(
                 case((Action.action == Action.RIGHT_ANSWER, 1), else_=0)
             ).label("right_count"),
+            func.sum(
+                case((Action.action == Action.SKIP, 1), else_=0)
+            ).label("skip_count"),
         )
         .filter(Action.user_id == user_id)
         .group_by(Action.practice_item_id)
         .subquery()
     )
+
+
+def _recent_progress_actions(user_id: int) -> list[Action]:
+    """Возвращает последние учебные действия для адаптивной оценки."""
+    return list(db.session.scalars(
+        select(Action)
+        .where(
+            Action.user_id == user_id,
+            Action.action.in_([
+                Action.RIGHT_ANSWER,
+                Action.WRONG_ANSWER,
+                Action.SKIP,
+            ]),
+        )
+        .order_by(Action.datetime.desc(), Action.id.desc())
+        .limit(RECENT_PROGRESS_LIMIT)
+    ))
+
+
+def _global_answer_stats() -> dict[int, tuple[int, int, int]]:
+    """Возвращает общую статистику, сглаживающую оценку новых карточек."""
+    rows = db.session.execute(
+        select(
+            Action.practice_item_id,
+            func.sum(case(
+                (Action.action == Action.RIGHT_ANSWER, 1), else_=0
+            )),
+            func.sum(case(
+                (Action.action == Action.WRONG_ANSWER, 1), else_=0
+            )),
+            func.sum(case(
+                (Action.action == Action.SKIP, 1), else_=0
+            )),
+        ).group_by(Action.practice_item_id)
+    )
+    return {
+        item_id: (int(right or 0), int(wrong or 0), int(skipped or 0))
+        for item_id, right, wrong, skipped in rows
+    }
+
+
+def _user_answer_stats(user_id: int) -> dict[int, tuple[int, int, int]]:
+    """Возвращает накопленную статистику пользователя по карточкам."""
+    rows = db.session.execute(
+        select(
+            Action.practice_item_id,
+            func.sum(case(
+                (Action.action == Action.RIGHT_ANSWER, 1), else_=0
+            )),
+            func.sum(case(
+                (Action.action == Action.WRONG_ANSWER, 1), else_=0
+            )),
+            func.sum(case(
+                (Action.action == Action.SKIP, 1), else_=0
+            )),
+        )
+        .where(Action.user_id == user_id)
+        .group_by(Action.practice_item_id)
+    )
+    return {
+        item_id: (int(right or 0), int(wrong or 0), int(skipped or 0))
+        for item_id, right, wrong, skipped in rows
+    }
+
+
+def _item_progress(
+    user_stats: dict[int, tuple[int, int, int]],
+    recent_actions: list[Action],
+    global_stats: dict[int, tuple[int, int, int]],
+) -> dict[int, ItemProgress]:
+    """Оценивает вероятность успеха по свежим и общим ответам."""
+    latest_actions: dict[int, int] = {}
+    recent_stats: dict[int, list[int]] = {}
+    for action in recent_actions:
+        latest_actions.setdefault(action.practice_item_id, action.action)
+        stats = recent_stats.setdefault(action.practice_item_id, [0, 0, 0])
+        if action.action == Action.RIGHT_ANSWER:
+            stats[0] += 1
+        elif action.action == Action.WRONG_ANSWER:
+            stats[1] += 1
+        elif action.action == Action.SKIP:
+            stats[2] += 1
+
+    result: dict[int, ItemProgress] = {}
+    for item_id, (right, wrong, skipped) in user_stats.items():
+        global_right, global_wrong, global_skips = global_stats.get(
+            item_id, (0, 0, 0)
+        )
+        global_failures = global_wrong + 0.5 * global_skips
+        global_rate = (global_right + 3) / (
+            global_right + global_failures + 6
+        )
+        recent_right, recent_wrong, recent_skipped = recent_stats.get(
+            item_id, [0, 0, 0]
+        )
+        # Последние 30 действий учитываются второй раз, поэтому свежий
+        # прогресс влияет на ленту сильнее давних успехов и ошибок.
+        weighted_right = right + recent_right
+        failure_weight = (
+            wrong + recent_wrong + 0.5 * (skipped + recent_skipped)
+        )
+        success_rate = (weighted_right + 3 * global_rate) / (
+            weighted_right + failure_weight + 3
+        )
+        result[item_id] = ItemProgress(
+            success_rate=success_rate,
+            right_count=right,
+            failure_weight=failure_weight,
+            latest_action=latest_actions.get(item_id),
+        )
+    return result
+
+
+def _adaptive_pools(
+    candidates: list[PracticeItem],
+    progress: dict[int, ItemProgress],
+) -> dict[str, list[PracticeItem]]:
+    """Разделяет карточки на новые, обучающие, лёгкие и повторяемые."""
+    pools: dict[str, list[PracticeItem]] = {
+        "new": [],
+        "learning": [],
+        "comfortable": [],
+        "review": [],
+    }
+    for item in candidates:
+        item_progress = progress.get(item.id)
+        if item_progress is None:
+            pools["new"].append(item)
+        elif (
+            item_progress.latest_action in {
+                Action.WRONG_ANSWER,
+                Action.SKIP,
+            }
+            or item_progress.success_rate < 0.65
+        ):
+            pools["review"].append(item)
+        elif (
+            item_progress.right_count >= 2
+            and item_progress.success_rate >= 0.80
+        ):
+            pools["comfortable"].append(item)
+        else:
+            pools["learning"].append(item)
+    return pools
+
+
+def _take_candidate(
+    pools: dict[str, list[PracticeItem]],
+    requested_pool: str,
+    selected_ids: set[int],
+    recent_ids: set[int],
+    progress: dict[int, ItemProgress],
+) -> tuple[PracticeItem, str] | None:
+    """Выбирает карточку из нужной зоны и безопасных запасных зон."""
+    fallback_order = {
+        "learning": ("learning", "new", "comfortable", "review"),
+        "comfortable": ("comfortable", "learning", "new", "review"),
+        "review": ("review", "learning", "comfortable", "new"),
+        "new": ("new", "learning", "comfortable", "review"),
+    }
+    for pool_name in fallback_order[requested_pool]:
+        available = [
+            item for item in pools[pool_name] if item.id not in selected_ids
+        ]
+        if not available:
+            continue
+        spaced = [item for item in available if item.id not in recent_ids]
+        choices = spaced or available
+        if requested_pool == "comfortable" and pool_name != "comfortable":
+            return max(
+                choices,
+                key=lambda item: progress.get(
+                    item.id, ItemProgress(0.5, 0, 0, None)
+                ).success_rate,
+            ), pool_name
+        return random.choice(choices), pool_name
+    return None
+
+
+def _has_failure_streak(actions: list[Action], length: int) -> bool:
+    """Проверяет, закончилась ли история серией ошибок или пропусков."""
+    if len(actions) < length:
+        return False
+    failures = {Action.WRONG_ANSWER, Action.SKIP}
+    return all(action.action in failures for action in actions[:length])
+
+
+def _selection_reason(pool_name: str) -> str:
+    """Возвращает понятное пользователю объяснение выбора карточки."""
+    return {
+        "new": "Новое задание",
+        "learning": "Задание из вашей зоны обучения",
+        "comfortable": "Знакомое задание для закрепления",
+        "review": "Повторение задания, которое вызвало затруднение",
+    }[pool_name]
 
 
 def _recent_item_ids(user_id: int, limit: int = 3) -> list[int]:
