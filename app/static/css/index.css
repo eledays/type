@@ -53,7 +53,7 @@ a {
     transition: transform 300ms cubic-bezier(.22, .7, .2, 1);
     contain: layout paint style;
     background-color: var(--frame-background-color);
-    background-image: var(--back-img);
+    background-image: var(--card-back-img, var(--back-img));
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;

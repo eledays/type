@@ -9,6 +9,9 @@
             this.admin = Boolean(bootstrap.admin);
             this.strikeLevels = bootstrap.strikeLevels || [];
             this.backgroundPools = bootstrap.backgroundPools || {};
+            this.backgroundQueues = new Map();
+            this.lastBackgrounds = new Map();
+            this.backgroundTheme = "dark";
             if (!Number.isInteger(bootstrap.batchSize) || bootstrap.batchSize < 1) {
                 throw new Error("Некорректный размер пакета карточек");
             }
@@ -35,6 +38,7 @@
             this.fire = document.getElementById("fire");
             if (bootstrap.strike !== null && bootstrap.strike !== undefined) {
                 const initialLevel = this.levelForStrike(bootstrap.strike);
+                this.backgroundTheme = initialLevel === 1 ? "yellow" : "dark";
                 this.fire.dataset.level = String(initialLevel);
                 if (initialLevel > 0) this.ensureFire();
             }
@@ -58,6 +62,8 @@
             this.slots.forEach((slot, index) => {
                 if (slot.card && !slot.element.dataset.cardId) {
                     this.renderCard(slot, slot.card);
+                } else if (slot.card) {
+                    this.assignBackground(slot.element, this.backgroundTheme);
                 }
                 this.setPosition(
                     slot,
@@ -107,6 +113,7 @@
             const article = slot.element;
             slot.card = card;
             article.dataset.cardId = String(card.id);
+            this.assignBackground(article, this.backgroundTheme);
             article.replaceChildren();
 
             const wordContainer = document.createElement("div");
@@ -474,7 +481,28 @@
         backgroundFor(theme) {
             const choices = this.backgroundPools[theme] || [];
             if (!choices.length) return null;
-            return choices[Math.floor(Math.random() * choices.length)];
+            let queue = this.backgroundQueues.get(theme) || [];
+            if (!queue.length) {
+                queue = [...choices];
+                for (let index = queue.length - 1; index > 0; index -= 1) {
+                    const target = Math.floor(Math.random() * (index + 1));
+                    [queue[index], queue[target]] = [queue[target], queue[index]];
+                }
+                const previous = this.lastBackgrounds.get(theme);
+                if (queue.length > 1 && queue[0] === previous) {
+                    [queue[0], queue[1]] = [queue[1], queue[0]];
+                }
+                this.backgroundQueues.set(theme, queue);
+            }
+            const url = queue.shift();
+            this.lastBackgrounds.set(theme, url);
+            return url;
+        }
+
+        assignBackground(element, theme, url = this.backgroundFor(theme)) {
+            if (!element || !url) return;
+            element.style.setProperty("--card-back-img", `url("${url}")`);
+            element.dataset.backgroundTheme = theme;
         }
 
         preloadBackground(theme) {
@@ -495,10 +523,14 @@
         }
 
         async switchBackground(theme) {
+            this.backgroundTheme = theme;
             const url = await this.preloadBackground(theme);
-            if (!url) return;
-            document.body.style.setProperty("--back-img", `url("${url}")`);
             this.preloadedBackgrounds.delete(theme);
+            if (!url) return;
+            this.assignBackground(this.current?.element, theme, url);
+            for (const slot of [this.next, this.buffered]) {
+                if (slot?.card) this.assignBackground(slot.element, theme);
+            }
         }
 
         ensureFire() {

@@ -1,3 +1,5 @@
+import re
+
 from tests.base import AppTestCase
 
 from app.extensions import db
@@ -47,6 +49,17 @@ class TestRouteMap(AppTestCase):
         assert b'/api/v1/practice/cards' in response.data
         assert b'<iframe' not in response.data
         assert b'/get_frame' not in response.data
+
+    def test_index_exposes_distinct_background_urls_for_cards(self) -> None:
+        response = self.client.get("/")
+        background_urls = set(re.findall(
+            rb'/static/img/backs/dark/[^"?]+\.webp\?v=\d+',
+            response.data,
+        ))
+
+        assert len(background_urls) > 1
+        assert b'backgroundPools' in response.data
+        assert b'/api/v1/profile/background' not in response.data
 
     def test_settings_are_updated_through_patch_api(self) -> None:
         response = self.client.patch(
