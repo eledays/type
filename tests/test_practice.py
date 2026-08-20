@@ -70,6 +70,92 @@ class TestPracticeApi(AppTestCase):
         assert oversized_pool.status_code == 400
         assert oversized_pool.get_json()["error"] == "invalid_limit"
 
+    def test_unfiltered_feed_mixes_spelling_and_paronym_exercises(self) -> None:
+        with self.app.app_context():
+            spelling = self.make_word()
+            category_id = spelling.category_id
+            group = ParonymGroup()
+            correct = Paronym(word="эффективный", group=group)
+            Paronym(word="эффектный", group=group)
+            paronym = ParonymExercise(
+                sentence="Это _______ метод",
+                paronym=correct,
+                word_tags="nomn,sing,masc",
+                task_number=5,
+            )
+            db.session.add(paronym)
+            db.session.commit()
+            paronym_id = paronym.id
+
+        unfiltered = self.client.get("/api/v1/practice/cards?limit=2")
+        task_filter = self.client.get(
+            "/api/v1/practice/cards?limit=2&task=4"
+        )
+        category_filter = self.client.get(
+            f"/api/v1/practice/cards?limit=2&category={category_id}"
+        )
+        paronym_filter = self.client.get(
+            "/api/v1/practice/cards?limit=2&task=5"
+        )
+        excluded = self.client.get(
+            f"/api/v1/practice/cards?limit=2&exclude={paronym_id}"
+        )
+
+        assert {card["type"] for card in unfiltered.get_json()["cards"]} == {
+            "spelling",
+            "paronym",
+        }
+        assert {card["type"] for card in task_filter.get_json()["cards"]} == {
+            "spelling"
+        }
+        assert {
+            card["type"] for card in category_filter.get_json()["cards"]
+        } == {"spelling"}
+        assert {
+            card["type"] for card in paronym_filter.get_json()["cards"]
+        } == {"paronym"}
+        assert {card["type"] for card in excluded.get_json()["cards"]} == {
+            "spelling"
+        }
+
+    def test_mistakes_filter_treats_all_exercise_types_equally(self) -> None:
+        user_id = self.current_user_id()
+        with self.app.app_context():
+            spelling = self.make_word()
+            group = ParonymGroup()
+            correct = Paronym(word="адресат", group=group)
+            Paronym(word="адресант", group=group)
+            paronym = ParonymExercise(
+                sentence="Письмо получил _______",
+                paronym=correct,
+                word_tags="nomn,sing,masc",
+                task_number=5,
+            )
+            db.session.add(paronym)
+            db.session.flush()
+            db.session.add_all([
+                Action(
+                    user_id=user_id,
+                    practice_item_id=spelling.id,
+                    action=Action.WRONG_ANSWER,
+                ),
+                Action(
+                    user_id=user_id,
+                    practice_item_id=paronym.id,
+                    action=Action.WRONG_ANSWER,
+                ),
+            ])
+            db.session.commit()
+        response = self.client.get(
+            "/api/v1/practice/cards?limit=2&mode=mistakes"
+        )
+
+        assert response.status_code == 200
+        assert {card["type"] for card in response.get_json()["cards"]} == {
+            "spelling",
+            "paronym",
+        }
+
     def test_explicit_word_type_does_not_depend_on_answer_shape(self) -> None:
         with self.app.app_context():
             word_id = self.make_word(
@@ -335,7 +421,9 @@ class TestPracticeApi(AppTestCase):
             user = db.session.get(User, user_id)
             with pytest.raises(PracticeError, match="Category not found"):
                 select_card(user, category_id="999")
-            with pytest.raises(PracticeError, match="No words available"):
+            with pytest.raises(
+                PracticeError, match="No practice items available"
+            ):
                 select_card(user)
 
     def test_word_report_is_recorded_without_mutating_the_item(self) -> None:

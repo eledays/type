@@ -6,7 +6,7 @@ from typing import Any
 
 from flask import current_app, session
 from sqlalchemy import and_, case, func, select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectin_polymorphic, selectinload
 
 from app.extensions import db
 from app.models import (
@@ -106,62 +106,50 @@ def select_cards(
         )
     excluded = set(exclude_ids or ())
 
-    if task_id == "5":
-        query = ParonymExercise.query.options(
-            selectinload(ParonymExercise.paronym)
-            .selectinload(Paronym.group)
-            .selectinload(ParonymGroup.paronyms)
-        )
-        if excluded:
-            query = query.filter(~ParonymExercise.id.in_(excluded))
-        items = _random_window(query, count)
-        if not items and excluded:
-            return select_cards(user, count, task_id=task_id)
-        if not items:
-            raise PracticeError(
-                "paronym_not_found",
-                "No paronym exercises available",
-                404,
-            )
-        info = [f'Фильтр: "Задание №{task_id}"']
-        return [Card(item, info.copy()) for item in items]
-
     category = (
         db.session.get(Category, int(category_id))
         if category_id.isdigit()
         else None
     )
+    base_items = PracticeItem.query.options(
+        selectin_polymorphic(
+            PracticeItem,
+            [SpellingExercise, ParonymExercise],
+        ),
+        selectinload(ParonymExercise.paronym)
+        .selectinload(Paronym.group)
+        .selectinload(ParonymGroup.paronyms),
+    )
     if task_id:
-        base_items = SpellingExercise.query.filter(
-            SpellingExercise.task_number == task_id
+        base_items = base_items.filter(
+            PracticeItem.task_number == task_id
         )
         base_info = [f'Фильтр: "Задание №{task_id}"']
     elif category_id:
         if category is None:
             raise PracticeError("category_not_found", "Category not found", 404)
-        base_items = SpellingExercise.query.filter(
-            SpellingExercise.category_id == category.id
-        )
+        base_items = base_items.filter(PracticeItem.category_id == category.id)
         base_info = [f'Фильтр: "Категория {category.name}"']
     else:
-        base_items = SpellingExercise.query
         base_info = []
     if excluded:
-        base_items = base_items.filter(~SpellingExercise.id.in_(excluded))
+        base_items = base_items.filter(~PracticeItem.id.in_(excluded))
 
     if mistakes:
         stats = _answer_stats(user.id)
         difficulty = stats.c.wrong_count - stats.c.right_count
         items = _random_window(
             base_items.join(
-                stats, SpellingExercise.id == stats.c.practice_item_id
+                stats, PracticeItem.id == stats.c.practice_item_id
             ).filter(difficulty > 0),
             count,
         )
         if not items and excluded:
             return select_cards(user, count, mistakes=True)
         if not items:
-            raise PracticeError("word_not_found", "No words available", 404)
+            raise PracticeError(
+                "item_not_found", "No practice items available", 404
+            )
         return [
             Card(item, ['Фильтр: "Неверные ответы"']) for item in items
         ]
@@ -169,7 +157,7 @@ def select_cards(
     unseen_query = base_items.outerjoin(
         Action,
         and_(
-            SpellingExercise.id == Action.practice_item_id,
+            PracticeItem.id == Action.practice_item_id,
             Action.user_id == user.id,
         ),
     ).filter(Action.id.is_(None))
@@ -180,7 +168,7 @@ def select_cards(
     difficulty = stats.c.wrong_count - stats.c.right_count
     difficult = (
         base_items.join(
-            stats, SpellingExercise.id == stats.c.practice_item_id
+            stats, PracticeItem.id == stats.c.practice_item_id
         )
         .filter(difficulty > 0)
         .order_by(difficulty.desc())
@@ -197,12 +185,12 @@ def select_cards(
         )
         if choose_unseen:
             item = unseen.pop()
-            reason = "Это слово встретилось первый раз"
+            reason = "Это задание встретилось первый раз"
             unseen_count = max(0, unseen_count - 1)
         else:
             item = random.choice(difficult)
             difficult.remove(item)
-            reason = "Это слово встретилось из-за большого количества ошибок"
+            reason = "Это задание выбрано из-за большого количества ошибок"
         if item.id in selected_ids:
             continue
         selected_ids.add(item.id)
@@ -212,12 +200,12 @@ def select_cards(
     if remaining:
         fallback = base_items
         if selected_ids:
-            fallback = fallback.filter(~SpellingExercise.id.in_(selected_ids))
+            fallback = fallback.filter(~PracticeItem.id.in_(selected_ids))
         for item in _random_window(fallback, remaining):
             selected_ids.add(item.id)
             selected.append(Card(
                 item,
-                [*base_info, "Это слово встретилось случайно"],
+                [*base_info, "Это задание встретилось случайно"],
             ))
 
     if not selected and excluded:
@@ -229,7 +217,9 @@ def select_cards(
             mistakes=mistakes,
         )
     if not selected:
-        raise PracticeError("word_not_found", "No words available", 404)
+        raise PracticeError(
+            "item_not_found", "No practice items available", 404
+        )
     return selected
 
 
