@@ -2,7 +2,8 @@ from datetime import datetime
 from typing import Any
 
 from app.extensions import db
-from app.models import User
+from app.models import SpellingExercise, User
+from app.utils import get_user_stats
 
 
 BOOLEAN_SETTINGS = {"strike", "notification", "day_results"}
@@ -11,6 +12,18 @@ TIME_SETTINGS = {"notification_time", "day_results_time"}
 
 class InvalidSettings(ValueError):
     pass
+
+
+def get_profile_stats(user: User) -> dict[str, int | float]:
+    """Возвращает статистику для профиля, включая показатели администратора."""
+    stats = get_user_stats(user.id)
+    stats["user_id"] = user.id
+    if user.is_admin:
+        stats["explanations"] = SpellingExercise.query.filter(
+            SpellingExercise.explanation.isnot(None)
+        ).count()
+        stats["users"] = User.query.count()
+    return stats
 
 
 def update_settings(user: User, payload: dict[str, Any]) -> None:

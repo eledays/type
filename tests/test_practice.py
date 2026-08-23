@@ -36,9 +36,47 @@ class TestPracticeApi(AppTestCase):
         assert excluded_id not in {card["id"] for card in cards}
         assert {card["type"] for card in cards} == {"spelling"}
         assert all(
-            {"id", "type", "prompt", "blank", "answers", "info"} <= card.keys()
+            {
+                "id", "type", "prompt", "blank", "answers", "info",
+                "task", "stats",
+            } <= card.keys()
             for card in cards
         )
+
+    def test_cards_include_task_and_personal_word_stats(self) -> None:
+        user_id = self.current_user_id()
+        with self.app.app_context():
+            word = self.make_word(task_number=4)
+            db.session.add_all([
+                Action(
+                    user_id=user_id,
+                    practice_item_id=word.id,
+                    action=Action.RIGHT_ANSWER,
+                ),
+                Action(
+                    user_id=user_id,
+                    practice_item_id=word.id,
+                    action=Action.WRONG_ANSWER,
+                ),
+                Action(
+                    user_id=user_id,
+                    practice_item_id=word.id,
+                    action=Action.SKIP,
+                ),
+            ])
+            db.session.commit()
+
+        card = self.client.get(
+            "/api/v1/practice/cards?limit=1&task=4"
+        ).get_json()["cards"][0]
+
+        assert card["task"] == {"number": 4, "title": "Ударения"}
+        assert card["stats"] == {
+            "correct": 1,
+            "mistakes": 1,
+            "skips": 1,
+            "correct_percent": 50.0,
+        }
 
     def test_card_pool_validates_limit_and_exclusions(self) -> None:
         invalid_limit = self.client.get("/api/v1/practice/cards?limit=20")

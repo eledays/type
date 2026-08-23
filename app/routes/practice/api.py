@@ -10,7 +10,7 @@ from app.services.practice import (
     check_answer,
     report_word,
     select_cards,
-    serialize_card,
+    serialize_cards,
     skip_card,
 )
 from app.utils import get_anonymous_actions_remaining
@@ -81,7 +81,7 @@ def get_cards():
     except PracticeError as error:
         return error_response(error)
     response = jsonify({
-        "cards": [serialize_card(card, admin=admin) for card in cards]
+        "cards": serialize_cards(cards, user.id, admin=admin)
     })
     response.headers["Cache-Control"] = "private, no-store"
     return response

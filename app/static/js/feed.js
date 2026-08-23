@@ -30,8 +30,12 @@
 
             this.feed = document.getElementById("feed");
             this.status = document.getElementById("feed-status");
-            this.menu = document.getElementById("menu");
-            this.menuOverlay = document.getElementById("menu-overlay");
+            this.panels = [...document.querySelectorAll("[data-panel]")];
+            this.panelOverlay = document.getElementById("panel-overlay");
+            this.activePanel = null;
+            this.panelTrigger = null;
+            this.header = document.querySelector(".header");
+            this.headerInfo = document.querySelector(".info-block");
             this.info = document.getElementById("card-info");
             this.canvas = document.getElementById("effect-canvas");
             this.ctx = this.canvas.getContext("2d", {alpha: true});
@@ -455,6 +459,9 @@
             if (!strike || strike.n === null || strike.n === undefined) return false;
             const value = document.getElementById("strike-value");
             if (value) value.textContent = strike.n;
+            const showHeaderInfo = strike.n > 10;
+            this.headerInfo.hidden = !showHeaderInfo;
+            this.header.classList.toggle("has-info", showHeaderInfo);
             const levels = strike.levels || this.strikeLevels;
             const oldLevel = Number(this.fire.dataset.level || 0);
             const normalizedLevel = this.levelForStrike(strike.n, levels);
@@ -559,16 +566,27 @@
 
         updateCurrentMetadata() {
             if (!this.current?.card) return;
-            this.info.replaceChildren(...this.current.card.info.map((line) => {
+            const card = this.current.card;
+            this.info.replaceChildren(...card.info.map((line) => {
                 const item = document.createElement("p");
                 item.textContent = line;
                 return item;
             }));
+            document.getElementById("current-word").textContent = card.prompt;
+            const task = card.task || {};
+            document.getElementById("card-task").textContent = task.number
+                ? `${task.number}. ${task.title || "Задание ЕГЭ"}`
+                : "Не указано";
+            const stats = card.stats || {};
+            document.getElementById("word-correct").textContent = stats.correct || 0;
+            document.getElementById("word-mistakes").textContent = stats.mistakes || 0;
+            document.getElementById("word-skips").textContent = stats.skips || 0;
+            document.getElementById("word-percent").textContent = `${stats.correct_percent || 0}%`;
             const report = document.getElementById("report-button");
-            report.disabled = this.current.card.type !== "spelling";
-            report.textContent = report.disabled
-                ? "Сообщение об ошибке недоступно для этого задания"
-                : "Сообщить об ошибке в задании";
+            report.disabled = card.type !== "spelling";
+            report.lastChild.textContent = report.disabled
+                ? " Недоступно для этого задания"
+                : " Сообщить об ошибке";
         }
 
         endpointFor(template, id) {
@@ -605,17 +623,29 @@
             if (response.ok) button.remove();
         }
 
-        openMenu() {
-            if (!this.current?.card) return;
-            this.menu.classList.add("is-open");
-            this.menu.setAttribute("aria-hidden", "false");
-            this.menuOverlay.hidden = false;
+        openPanel(name, trigger = null) {
+            if (name === "word" && !this.current?.card) return;
+            this.closePanel(false);
+            const panel = this.panels.find((item) => item.dataset.panel === name);
+            if (!panel) return;
+            this.activePanel = panel;
+            this.panelTrigger = trigger;
+            panel.classList.add("is-open");
+            panel.setAttribute("aria-hidden", "false");
+            this.panelOverlay.hidden = false;
+            document.body.classList.add("has-open-panel");
+            panel.querySelector("button, a, input")?.focus({preventScroll: true});
         }
 
-        closeMenu() {
-            this.menu.classList.remove("is-open");
-            this.menu.setAttribute("aria-hidden", "true");
-            this.menuOverlay.hidden = true;
+        closePanel(restoreFocus = true) {
+            if (!this.activePanel) return;
+            this.activePanel.classList.remove("is-open");
+            this.activePanel.setAttribute("aria-hidden", "true");
+            this.panelOverlay.hidden = true;
+            document.body.classList.remove("has-open-panel");
+            this.activePanel = null;
+            if (restoreFocus) this.panelTrigger?.focus();
+            this.panelTrigger = null;
         }
 
         showStatus(message) {
@@ -651,7 +681,7 @@
                 this.longPressOpened = false;
                 this.longPressTimer = setTimeout(() => {
                     this.longPressOpened = true;
-                    this.openMenu();
+                    this.openPanel("word");
                 }, 500);
             });
 
@@ -675,7 +705,7 @@
 
             let wheelReady = true;
             document.addEventListener("wheel", (event) => {
-                if (!wheelReady || this.menu.classList.contains("is-open")) return;
+                if (!wheelReady || this.activePanel) return;
                 wheelReady = false;
                 if (event.deltaY > 0) void this.moveNext();
                 else void this.movePrevious();
@@ -683,30 +713,54 @@
             }, {passive: true});
 
             document.addEventListener("keydown", (event) => {
-                if (event.target.matches("textarea, input") || this.menu.classList.contains("is-open")) return;
+                if (event.key === "Escape" && this.activePanel) {
+                    this.closePanel();
+                    return;
+                }
+                if (event.target.matches("textarea, input") || this.activePanel) return;
                 if (["ArrowDown", "s", " "].includes(event.key)) {
                     event.preventDefault();
                     void this.moveNext();
                 } else if (["ArrowUp", "w"].includes(event.key)) {
                     event.preventDefault();
                     void this.movePrevious();
-                } else if (event.key === "Escape") {
-                    this.closeMenu();
                 }
             });
 
-            document.getElementById("menu-trigger").addEventListener("click", () => this.openMenu());
-            this.menuOverlay.addEventListener("click", () => this.closeMenu());
+            document.querySelectorAll("[data-open-panel]").forEach((trigger) => {
+                trigger.addEventListener("click", () => {
+                    this.openPanel(trigger.dataset.openPanel, trigger);
+                });
+            });
+            document.querySelectorAll("[data-close-panel]").forEach((trigger) => {
+                trigger.addEventListener("click", () => this.closePanel());
+            });
+            this.panelOverlay.addEventListener("click", () => this.closePanel());
             document.getElementById("report-button").addEventListener("click", async (event) => {
                 const response = await fetch(
                     this.endpointFor(this.routes.reportWord, this.current.card.id),
                     {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"},
                 );
-                if (response.ok) event.currentTarget.textContent = "Запрос отправлен";
+                if (response.ok) {
+                    event.currentTarget.lastChild.textContent = " Запрос отправлен";
+                    event.currentTarget.disabled = true;
+                }
             });
             document.getElementById("search-button").addEventListener("click", () => {
-                const query = encodeURIComponent(this.current.card.prompt.replace(this.current.card.blank, ""));
+                const query = encodeURIComponent(this.current.card.prompt);
                 window.open(`https://yandex.ru/search/?text=${query}`, "_blank", "noopener");
+            });
+            document.querySelectorAll("[data-setting]").forEach((button) => {
+                button.addEventListener("click", () => void this.toggleSetting(button));
+            });
+            document.querySelectorAll("[data-time-setting]").forEach((input) => {
+                input.addEventListener("change", async () => {
+                    try {
+                        await this.saveSetting(input.dataset.timeSetting, input.value);
+                    } catch (error) {
+                        this.showStatus(error.message);
+                    }
+                });
             });
             window.addEventListener("resize", () => this.resizeCanvas(), {passive: true});
             document.addEventListener("visibilitychange", () => {
@@ -715,6 +769,31 @@
                     particle.style.animationPlayState = document.hidden ? "paused" : "running";
                 });
             });
+        }
+
+        async saveSetting(name, value) {
+            const response = await fetch(this.routes.updateSettings, {
+                method: "PATCH",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({[name]: value}),
+            });
+            if (!response.ok) throw new Error("Не удалось сохранить настройку");
+        }
+
+        async toggleSetting(button) {
+            const enabled = button.getAttribute("aria-pressed") !== "true";
+            button.disabled = true;
+            try {
+                await this.saveSetting(button.dataset.setting, enabled);
+                button.setAttribute("aria-pressed", String(enabled));
+                button.querySelector("strong").textContent = enabled
+                    ? (button.dataset.setting === "strike" ? "Включён" : "Включены")
+                    : (button.dataset.setting === "strike" ? "Выключен" : "Выключены");
+            } catch (error) {
+                this.showStatus(error.message);
+            } finally {
+                button.disabled = false;
+            }
         }
     }
 

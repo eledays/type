@@ -3,10 +3,10 @@ from typing import cast
 from flask import current_app, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
 
-from app.models import SpellingExercise, User
+from app.models import User
 from app.routes.profile import bp
 from app.services.auth import oauth_is_configured
-from app.utils import get_user_stats
+from app.services.profile import get_profile_stats
 
 
 @bp.get("/profile")
@@ -22,13 +22,7 @@ def index():
         if user.is_admin and session.get("admin", False)
         else int(user.is_admin)
     )
-    stats = get_user_stats(user.id)
-    stats["user_id"] = user.id
-    if user.is_admin:
-        stats["explanations"] = SpellingExercise.query.filter(
-            SpellingExercise.explanation.isnot(None)
-        ).count()
-        stats["users"] = User.query.count()
+    stats = get_profile_stats(user)
     return render_template(
         "settings.html",
         user=user,

@@ -6,13 +6,18 @@ from flask_login import current_user, login_required
 
 from app.models import Category, User
 from app.routes.practice import bp
+from app.services.auth import oauth_is_configured
 from app.services.backgrounds import choose_background
 from app.services.practice import (
     PracticeError,
     select_cards,
-    serialize_card,
+    serialize_cards,
 )
-from app.utils import get_anonymous_actions_remaining, get_cached_strike
+from app.services.profile import get_profile_stats
+from app.utils import (
+    get_anonymous_actions_remaining,
+    get_cached_strike,
+)
 
 
 @bp.get("/")
@@ -29,21 +34,22 @@ def index():
     admin = user.is_admin and session.get("admin", False)
     initial_error = None
     try:
-        initial_cards = [
-            serialize_card(card, admin=admin)
-            for card in select_cards(
-                user,
-                int(current_app.config["PRACTICE_CARD_BATCH_SIZE"]),
-                task_id=task,
-                category_id=category,
-                mistakes=mode == "mistakes",
-            )
-        ]
+        selected_cards = select_cards(
+            user,
+            int(current_app.config["PRACTICE_CARD_BATCH_SIZE"]),
+            task_id=task,
+            category_id=category,
+            mistakes=mode == "mistakes",
+        )
+        initial_cards = serialize_cards(
+            selected_cards, user.id, admin=admin
+        )
     except PracticeError as error:
         initial_cards = []
         initial_error = error.message
 
     background = choose_background(user)
+    stats = get_profile_stats(user)
     static_root = current_app.static_folder
 
     def static_url(filename: str) -> str:
@@ -92,9 +98,15 @@ def index():
         strike_levels=current_app.config["STRIKE_LEVELS"],
         background_pools=background_pools,
         card_batch_size=current_app.config["PRACTICE_CARD_BATCH_SIZE"],
+        categories=Category.query.all(),
+        tasks=current_app.config["TASKS"],
+        user=user,
+        settings=user.settings,
+        stats=stats,
+        oauth_configured=oauth_is_configured(),
         style_url=static_url("css/style.css"),
         index_style_url=static_url("css/index.css"),
-        feed_script_url=static_url("js/feed.min.js"),
+        feed_script_url=static_url("js/feed.js"),
         favicon_url=static_url("img/fav.ico"),
     )
 

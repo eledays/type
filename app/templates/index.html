@@ -5,34 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#161616">
     <title>type — Лента слов</title>
-
-    <script>
-        document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';
-    </script>
+    <script>document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';</script>
     <link rel="stylesheet" href="{{ style_url }}">
     <link rel="stylesheet" href="{{ index_style_url }}">
     <link rel="icon" href="{{ favicon_url }}" type="image/x-icon">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0">
 </head>
 <body style="--back-img: url('{{ background_url }}')">
     {% if anonymous_remaining is not none %}
     <a class="anonymous-notice" href="{{ url_for('auth.login', next=request.full_path) }}">
-        Анонимный режим · осталось действий:
-        <span id="anonymous-remaining">{{ anonymous_remaining }}</span> · Войти
+        Анонимный режим · осталось <span id="anonymous-remaining">{{ anonymous_remaining }}</span>
     </a>
     {% endif %}
 
+    <header class="header{% if strike is not none and strike > 10 %} has-info{% endif %}" aria-label="Навигация практики">
+        <button class="avatar-button" type="button" data-open-panel="profile" aria-label="Открыть профиль">
+            <img src="{{ url_for('profile_api.avatar') }}" class="avatar" alt="">
+        </button>
+        <div class="info-block" aria-live="polite"{% if strike is none or strike <= 10 %} hidden{% endif %}>
+            <span class="material-symbols-rounded" aria-hidden="true">local_fire_department</span>
+            <span>Серия <strong id="strike-value">{{ strike or 0 }}</strong></span>
+        </div>
+        <div class="header-actions">
+            <button class="header-button" type="button" data-open-panel="filters">
+                <span class="material-symbols-rounded" aria-hidden="true">filter_alt</span><span>Фильтры</span>
+            </button>
+            <button class="header-button" type="button" data-open-panel="word">
+                <span class="material-symbols-rounded" aria-hidden="true">info</span><span>О слове</span>
+            </button>
+        </div>
+    </header>
+
     <main id="feed" class="feed" aria-live="polite">
         {% for card in initial_cards[:3] %}
-        <article
-            class="card {% if loop.index0 == 0 %}is-current{% elif loop.index0 == 1 %}is-next{% else %}is-buffered{% endif %}"
-            data-card-index="{{ loop.index0 }}"
-            data-card-id="{{ card.id }}"
-        >
+        <article class="card {% if loop.index0 == 0 %}is-current{% elif loop.index0 == 1 %}is-next{% else %}is-buffered{% endif %}"
+            data-card-index="{{ loop.index0 }}" data-card-id="{{ card.id }}">
             <div class="word-cont {% if card.type == 'paronym' %}sentence-cont{% endif %}">
                 <p class="word">
                     {% for part in card.prompt.split(card.blank) %}
-                        {% if not loop.first %}<span class="missing-letter" aria-hidden="true"> </span>{% endif %}
-                        <span>{{ part }}</span>
+                    {% if not loop.first %}<span class="missing-letter" aria-hidden="true"> </span>{% endif %}
+                    <span>{{ part }}</span>
                     {% endfor %}
                 </p>
             </div>
@@ -41,59 +53,157 @@
             {% endif %}
             <div class="answers">
                 {% for answer in card.answers %}
-                <button class="{% if answer|length < 3 %}answer{% else %}sentence-answer{% endif %}" data-answer="{{ answer }}">
-                    {{ answer }}
-                </button>
+                <button class="{% if answer|length < 3 %}answer{% else %}sentence-answer{% endif %}"
+                    data-answer="{{ answer }}">{{ answer }}</button>
                 {% endfor %}
             </div>
         </article>
         {% endfor %}
-
         <div class="feed-status {% if initial_cards %}is-hidden{% endif %}" id="feed-status" role="status">
             {{ initial_error or 'Загружаем задания…' }}
         </div>
     </main>
-
     <canvas id="effect-canvas" aria-hidden="true"></canvas>
     <div class="fire" id="fire" aria-hidden="true"></div>
+    <div class="panel-overlay" id="panel-overlay" hidden></div>
 
-    <button class="menu-trigger" id="menu-trigger" type="button" aria-label="Открыть меню">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7h.01"></path></svg>
-    </button>
+    <section class="panel" id="filters-panel" data-panel="filters" role="dialog" aria-modal="true"
+        aria-labelledby="filters-title" aria-hidden="true">
+        <div class="panel-heading">
+            <div><p class="eyebrow">Режим практики</p><h2 id="filters-title">Фильтры</h2></div>
+            <button class="icon-button" type="button" data-close-panel aria-label="Закрыть">
+                <span class="material-symbols-rounded" aria-hidden="true">close</span>
+            </button>
+        </div>
+        <div class="panel-section">
+            <h3>Режим</h3>
+            <div class="chip-list">
+                <a class="chip {% if not feed_query.task and not feed_query.category and not feed_query.mode %}is-selected{% endif %}"
+                    href="{{ url_for('practice.index') }}">Все слова</a>
+                <a class="chip {% if feed_query.mode == 'mistakes' %}is-selected{% endif %}"
+                    href="{{ url_for('practice.index', mode='mistakes') }}">Неверно решённые</a>
+            </div>
+        </div>
+        <div class="panel-section">
+            <h3>Задание ЕГЭ</h3>
+            <div class="chip-list">
+                {% for task, title in tasks.items() %}
+                <a class="chip {% if feed_query.task|string == task|string %}is-selected{% endif %}"
+                    href="{{ url_for('practice.index', task=task) }}">{{ task }}. {{ title }}</a>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="panel-section">
+            <h3>Категория ФИПИ</h3>
+            <div class="chip-list">
+                {% for category in categories %}
+                <a class="chip {% if feed_query.category|string == category.id|string %}is-selected{% endif %}"
+                    href="{{ url_for('practice.index', category=category.id) }}">{{ category.name }}</a>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
 
-    {% if strike is not none %}
-    <div class="strike-block"><p id="strike-value">{{ strike }}</p></div>
-    {% endif %}
+    <section class="panel" id="word-panel" data-panel="word" role="dialog" aria-modal="true"
+        aria-labelledby="word-panel-title" aria-hidden="true">
+        <div class="panel-heading">
+            <div><p class="eyebrow">Текущая карточка</p><h2 id="word-panel-title">О слове</h2></div>
+            <button class="icon-button" type="button" data-close-panel aria-label="Закрыть">
+                <span class="material-symbols-rounded" aria-hidden="true">close</span>
+            </button>
+        </div>
+        <h3 class="current-word" id="current-word">—</h3>
+        <div class="action-row">
+            <button class="secondary-action" id="search-button" type="button">
+                <span class="material-symbols-rounded" aria-hidden="true">search</span>Искать в интернете
+            </button>
+            <button class="secondary-action" id="report-button" type="button">
+                <span class="material-symbols-rounded" aria-hidden="true">flag</span>Сообщить об ошибке
+            </button>
+        </div>
+        <div class="detail-list">
+            <div class="detail-row"><span class="detail-label">Причина показа</span><div id="card-info">—</div></div>
+            <div class="detail-row"><span class="detail-label">Задание ЕГЭ</span><strong id="card-task">—</strong></div>
+        </div>
+        <div class="panel-section word-stats">
+            <h3>Ваша статистика по слову</h3>
+            <div class="stats-grid compact-stats">
+                <div class="stat-card"><span>Верно</span><strong id="word-correct">0</strong></div>
+                <div class="stat-card"><span>Ошибок</span><strong id="word-mistakes">0</strong></div>
+                <div class="stat-card"><span>Пропусков</span><strong id="word-skips">0</strong></div>
+                <div class="stat-card"><span>Точность</span><strong id="word-percent">0%</strong></div>
+            </div>
+        </div>
+    </section>
 
-    <div class="menu-overlay" id="menu-overlay" hidden></div>
-    <aside class="menu" id="menu" aria-hidden="true">
-        <nav class="menu-buttons">
-            <a href="{{ url_for('profile.index', referrer=request.full_path) }}">Профиль</a>
-            <a href="{{ url_for('practice.filters', referrer=request.full_path) }}">Фильтры</a>
-            <button id="report-button" type="button">Сообщить об ошибке в задании</button>
-            <button id="search-button" type="button">Найти слово в интернете</button>
-            <a href="https://music.yandex.ru" target="_blank" rel="noopener">Включить музыку</a>
-        </nav>
-        <div class="info" id="card-info"></div>
-    </aside>
+    <section class="panel profile-panel" id="profile-panel" data-panel="profile" role="dialog" aria-modal="true"
+        aria-labelledby="profile-title" aria-hidden="true">
+        <div class="profile-heading">
+            <img src="{{ url_for('profile_api.avatar') }}" class="profile-avatar" alt="">
+            <div class="profile-identity">
+                <h2 id="profile-title">{{ user.display_name }}</h2>
+                <p>{% if user.yandex_login %}@{{ user.yandex_login }}{% else %}Анонимный профиль{% endif %}</p>
+            </div>
+            <button class="icon-button close-profile" type="button" data-close-panel aria-label="Закрыть">
+                <span class="material-symbols-rounded" aria-hidden="true">close</span>
+            </button>
+            {% if user.is_anonymous_account and oauth_configured %}
+            <a class="logout-link login-link" href="{{ url_for('auth.yandex_login', next=request.full_path) }}">
+                <span class="material-symbols-rounded" aria-hidden="true">login</span>Войти
+            </a>
+            {% elif not user.is_anonymous_account %}
+            <form method="post" action="{{ url_for('auth.logout') }}">
+                <button class="logout-link" type="submit">
+                    <span class="material-symbols-rounded" aria-hidden="true">logout</span>Выйти
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        <div class="panel-section">
+            <h3>Статистика</h3>
+            <div class="stats-grid profile-stats">
+                <div class="stat-card"><span>Верных</span><strong>{{ stats.correct }}</strong></div>
+                <div class="stat-card"><span>Ошибок</span><strong>{{ stats.mistakes }}</strong></div>
+                <div class="stat-card"><span>Пропусков</span><strong>{{ stats.skips }}</strong></div>
+                <div class="stat-card"><span>Точность</span><strong>{{ stats.correct_percent }}%</strong></div>
+                <div class="stat-card"><span>Среднее время</span><strong>{{ stats.avg_time_per_word }} сек</strong></div>
+                <div class="stat-card"><span>Лучшая серия</span><strong>{{ stats.best_streak }}</strong></div>
+            </div>
+        </div>
+        <div class="panel-section">
+            <h3>Настройки</h3>
+            <div class="settings-list">
+                <button class="setting-row" type="button" data-setting="strike" aria-pressed="{{ settings.strike|lower }}">
+                    <span>Страйк</span><strong>{% if settings.strike %}Включён{% else %}Выключен{% endif %}</strong>
+                </button>
+                <button class="setting-row" type="button" data-setting="notification" aria-pressed="{{ settings.notification|lower }}">
+                    <span>Уведомления</span><strong>{% if settings.notification %}Включены{% else %}Выключены{% endif %}</strong>
+                </button>
+                <label class="time-row">Время уведомления
+                    <input type="time" data-time-setting="notification_time" value="{{ settings.notification_time.strftime('%H:%M') }}">
+                </label>
+                <button class="setting-row" type="button" data-setting="day_results" aria-pressed="{{ settings.day_results|lower }}">
+                    <span>Итоги дня</span><strong>{% if settings.day_results %}Включены{% else %}Выключены{% endif %}</strong>
+                </button>
+                <label class="time-row">Время итогов
+                    <input type="time" data-time-setting="day_results_time" value="{{ settings.day_results_time.strftime('%H:%M') }}">
+                </label>
+            </div>
+        </div>
+    </section>
 
     <script>
         window.feedBootstrap = {{ {
-            'cards': initial_cards,
-            'query': feed_query,
-            'admin': admin,
-            'strike': strike,
-            'strikeLevels': strike_levels,
-            'batchSize': card_batch_size,
-            'backgroundPools': background_pools
+            'cards': initial_cards, 'query': feed_query, 'admin': admin, 'strike': strike,
+            'strikeLevels': strike_levels, 'batchSize': card_batch_size, 'backgroundPools': background_pools
         }|tojson }};
         window.routeConfig = {{ {
-            'cards': url_for('practice_api.get_cards'),
-            'skipAttempt': url_for('practice_api.skip_attempt'),
+            'cards': url_for('practice_api.get_cards'), 'skipAttempt': url_for('practice_api.skip_attempt'),
             'createAttempt': url_for('practice_api.create_attempt'),
             'reportWord': url_for('practice_api.create_word_report', word_id=0),
             'updateExplanation': url_for('admin_api.patch_explanation', word_id=0),
-            'deleteAnswer': url_for('admin_api.remove_answer', word_id=0)
+            'deleteAnswer': url_for('admin_api.remove_answer', word_id=0),
+            'updateSettings': url_for('profile_api.patch_settings')
         }|tojson }};
     </script>
     <script defer src="{{ feed_script_url }}"></script>

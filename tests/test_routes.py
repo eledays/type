@@ -50,6 +50,29 @@ class TestRouteMap(AppTestCase):
         assert b'<iframe' not in response.data
         assert b'/get_frame' not in response.data
 
+    def test_index_contains_inline_profile_filters_and_word_panels(self) -> None:
+        response = self.client.get("/")
+
+        assert response.status_code == 200
+        assert b'id="profile-panel"' in response.data
+        assert b'id="filters-panel"' in response.data
+        assert b'id="word-panel"' in response.data
+        assert b'data-open-panel="profile"' in response.data
+        assert b'data-open-panel="filters"' in response.data
+        assert b'data-open-panel="word"' in response.data
+        assert b'class="info-block" aria-live="polite" hidden' in response.data
+
+    def test_header_compacts_actions_only_for_strikes_above_ten(self) -> None:
+        self.client.get("/")
+        with self.client.session_transaction() as browser_session:
+            browser_session["strike"] = 11
+
+        response = self.client.get("/")
+
+        assert b'class="header has-info"' in response.data
+        assert b'class="info-block" aria-live="polite" hidden' not in response.data
+        assert b'id="strike-value">11<' in response.data
+
     def test_index_exposes_distinct_background_urls_for_cards(self) -> None:
         response = self.client.get("/")
         background_urls = set(re.findall(

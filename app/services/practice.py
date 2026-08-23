@@ -77,15 +77,23 @@ RECENT_PROGRESS_LIMIT = 30
 REPEAT_GAP = 3
 
 
-def serialize_card(card: Card, *, admin: bool = False) -> dict[str, Any]:
+def serialize_card(
+    card: Card,
+    *,
+    admin: bool = False,
+    stats: dict[str, int | float] | None = None,
+) -> dict[str, Any]:
     """Преобразует карточку в компактное представление для API ленты.
 
     :param card: Доменная карточка с моделью и поясняющей информацией.
     :param admin: Нужно ли включить административное объяснение.
+    :param stats: Личная статистика пользователя по карточке.
     :return: Словарь с данными карточки, не содержащий HTML.
     """
     item = card.item
     is_paronym = isinstance(item, ParonymExercise)
+    task_number = item.task_number
+    task_title = current_app.config["TASKS"].get(task_number)
     return {
         "id": item.id,
         "type": card.kind,
@@ -93,8 +101,69 @@ def serialize_card(card: Card, *, admin: bool = False) -> dict[str, Any]:
         "blank": "_______" if is_paronym else "_",
         "answers": item.get_answers(),
         "info": card.info,
+        "task": {
+            "number": task_number,
+            "title": task_title,
+        },
+        "stats": stats or {
+            "correct": 0,
+            "mistakes": 0,
+            "skips": 0,
+            "correct_percent": 0,
+        },
         "explanation": None if is_paronym or not admin else item.explanation,
     }
+
+
+def serialize_cards(
+    cards: list[Card],
+    user_id: int,
+    *,
+    admin: bool = False,
+) -> list[dict[str, Any]]:
+    """Сериализует пакет карточек с личной статистикой одним запросом."""
+    item_ids = [card.item.id for card in cards]
+    stats_by_item: dict[int, dict[str, int | float]] = {}
+    if item_ids:
+        rows = db.session.execute(
+            select(
+                Action.practice_item_id,
+                func.sum(case(
+                    (Action.action == Action.RIGHT_ANSWER, 1), else_=0
+                )),
+                func.sum(case(
+                    (Action.action == Action.WRONG_ANSWER, 1), else_=0
+                )),
+                func.sum(case(
+                    (Action.action == Action.SKIP, 1), else_=0
+                )),
+            )
+            .where(
+                Action.user_id == user_id,
+                Action.practice_item_id.in_(item_ids),
+            )
+            .group_by(Action.practice_item_id)
+        )
+        for item_id, correct, mistakes, skips in rows:
+            correct_count = int(correct or 0)
+            mistake_count = int(mistakes or 0)
+            answered = correct_count + mistake_count
+            stats_by_item[item_id] = {
+                "correct": correct_count,
+                "mistakes": mistake_count,
+                "skips": int(skips or 0),
+                "correct_percent": round(
+                    correct_count / answered * 100, 1
+                ) if answered else 0,
+            }
+    return [
+        serialize_card(
+            card,
+            admin=admin,
+            stats=stats_by_item.get(card.item.id),
+        )
+        for card in cards
+    ]
 
 
 def select_cards(

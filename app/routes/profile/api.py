@@ -1,6 +1,6 @@
 from typing import cast
 
-from flask import jsonify, request, send_file, session
+from flask import jsonify, redirect, request, send_file, session, url_for
 from flask_login import current_user, login_required
 
 from app.models import User
@@ -44,3 +44,17 @@ def patch_settings():
     if "admin" in payload:
         session["admin"] = payload["admin"]
     return jsonify({"status": "success"})
+
+
+@api_bp.get("/avatar")
+def avatar():
+    """Возвращает аватар текущего пользователя.
+
+    :return: Изображение профиля пользователя.
+    """
+    if not current_user.is_authenticated or current_user.is_anonymous_account:
+        return redirect(url_for("static", filename="img/default_avatar.png"))
+    user = cast(User, current_user._get_current_object())
+    if user.avatar_url is None:
+        return redirect(url_for("static", filename="img/default_avatar.png"))
+    return redirect(user.avatar_url)
