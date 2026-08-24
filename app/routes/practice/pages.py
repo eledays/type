@@ -101,7 +101,6 @@ def index():
         categories=Category.query.all(),
         tasks=current_app.config["TASKS"],
         user=user,
-        settings=user.settings,
         stats=stats,
         oauth_configured=oauth_is_configured(),
         style_url=static_url("css/style.css"),

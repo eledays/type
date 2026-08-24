@@ -34,6 +34,7 @@
             this.panelOverlay = document.getElementById("panel-overlay");
             this.activePanel = null;
             this.panelTrigger = null;
+            this.panelCloseTimer = null;
             this.header = document.querySelector(".header");
             this.headerInfo = document.querySelector(".info-block");
             this.info = document.getElementById("card-info");
@@ -567,11 +568,7 @@
         updateCurrentMetadata() {
             if (!this.current?.card) return;
             const card = this.current.card;
-            this.info.replaceChildren(...card.info.map((line) => {
-                const item = document.createElement("p");
-                item.textContent = line;
-                return item;
-            }));
+            this.info.textContent = card.info.join(" · ");
             document.getElementById("current-word").textContent = card.prompt;
             const task = card.task || {};
             document.getElementById("card-task").textContent = task.number
@@ -625,14 +622,23 @@
 
         openPanel(name, trigger = null) {
             if (name === "word" && !this.current?.card) return;
+            if (this.activePanel?.dataset.panel === name) {
+                this.closePanel();
+                return;
+            }
             this.closePanel(false);
             const panel = this.panels.find((item) => item.dataset.panel === name);
             if (!panel) return;
             this.activePanel = panel;
             this.panelTrigger = trigger;
+            this.header.classList.add("has-open-panel");
+            this.header.classList.toggle("has-profile-panel", name === "profile");
+            trigger?.classList.add("is-panel-trigger-active");
             panel.classList.add("is-open");
             panel.setAttribute("aria-hidden", "false");
+            clearTimeout(this.panelCloseTimer);
             this.panelOverlay.hidden = false;
+            requestAnimationFrame(() => this.panelOverlay.classList.add("is-open"));
             document.body.classList.add("has-open-panel");
             panel.querySelector("button, a, input")?.focus({preventScroll: true});
         }
@@ -641,9 +647,16 @@
             if (!this.activePanel) return;
             this.activePanel.classList.remove("is-open");
             this.activePanel.setAttribute("aria-hidden", "true");
-            this.panelOverlay.hidden = true;
+            this.panelOverlay.classList.remove("is-open");
             document.body.classList.remove("has-open-panel");
+            this.header.classList.remove("has-open-panel");
+            this.header.classList.remove("has-profile-panel");
+            this.panelTrigger?.classList.remove("is-panel-trigger-active");
             this.activePanel = null;
+            clearTimeout(this.panelCloseTimer);
+            this.panelCloseTimer = setTimeout(() => {
+                if (!this.activePanel) this.panelOverlay.hidden = true;
+            }, 360);
             if (restoreFocus) this.panelTrigger?.focus();
             this.panelTrigger = null;
         }
@@ -681,7 +694,10 @@
                 this.longPressOpened = false;
                 this.longPressTimer = setTimeout(() => {
                     this.longPressOpened = true;
-                    this.openPanel("word");
+                    this.openPanel(
+                        "word",
+                        document.querySelector('[data-open-panel="word"]'),
+                    );
                 }, 500);
             });
 
@@ -750,18 +766,6 @@
                 const query = encodeURIComponent(this.current.card.prompt);
                 window.open(`https://yandex.ru/search/?text=${query}`, "_blank", "noopener");
             });
-            document.querySelectorAll("[data-setting]").forEach((button) => {
-                button.addEventListener("click", () => void this.toggleSetting(button));
-            });
-            document.querySelectorAll("[data-time-setting]").forEach((input) => {
-                input.addEventListener("change", async () => {
-                    try {
-                        await this.saveSetting(input.dataset.timeSetting, input.value);
-                    } catch (error) {
-                        this.showStatus(error.message);
-                    }
-                });
-            });
             window.addEventListener("resize", () => this.resizeCanvas(), {passive: true});
             document.addEventListener("visibilitychange", () => {
                 this.fire.style.animationPlayState = document.hidden ? "paused" : "running";
@@ -771,30 +775,6 @@
             });
         }
 
-        async saveSetting(name, value) {
-            const response = await fetch(this.routes.updateSettings, {
-                method: "PATCH",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({[name]: value}),
-            });
-            if (!response.ok) throw new Error("Не удалось сохранить настройку");
-        }
-
-        async toggleSetting(button) {
-            const enabled = button.getAttribute("aria-pressed") !== "true";
-            button.disabled = true;
-            try {
-                await this.saveSetting(button.dataset.setting, enabled);
-                button.setAttribute("aria-pressed", String(enabled));
-                button.querySelector("strong").textContent = enabled
-                    ? (button.dataset.setting === "strike" ? "Включён" : "Включены")
-                    : (button.dataset.setting === "strike" ? "Выключен" : "Выключены");
-            } catch (error) {
-                this.showStatus(error.message);
-            } finally {
-                button.disabled = false;
-            }
-        }
     }
 
     document.addEventListener("DOMContentLoaded", () => {
