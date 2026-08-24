@@ -60,18 +60,47 @@ class TestRouteMap(AppTestCase):
         assert b'data-open-panel="profile"' in response.data
         assert b'data-open-panel="filters"' in response.data
         assert b'data-open-panel="word"' in response.data
-        assert b'class="info-block" aria-live="polite" hidden' in response.data
+        assert b'data-state="accent"' in response.data
 
     def test_header_compacts_actions_only_for_strikes_above_five(self) -> None:
-        self.client.get("/")
+        user_id = self.current_user_id()
+        with self.app.app_context():
+            user = db.session.get(User, user_id)
+            user.yandex_id = "registered-user"
+            db.session.commit()
         with self.client.session_transaction() as browser_session:
             browser_session["strike"] = 6
 
         response = self.client.get("/")
 
         assert b'class="header has-info"' in response.data
-        assert b'class="info-block" aria-live="polite" hidden' not in response.data
+        assert b'aria-live="polite" hidden' not in response.data
         assert b'id="strike-value">6<' in response.data
+
+    def test_anonymous_header_shows_login_then_progress_prompt(self) -> None:
+        initial = self.client.get("/")
+
+        assert b'class="header-login"' in initial.data
+        assert re.search(
+            rb'<a class="info-block"[^>]*data-state="accent"[^>]* hidden>',
+            initial.data,
+        )
+        assert "Серия".encode() not in initial.data
+
+        user_id = self.current_user_id()
+        with self.app.app_context():
+            word = self.make_word()
+            db.session.add(Action(
+                user_id=user_id,
+                practice_item_id=word.id,
+                action=Action.RIGHT_ANSWER,
+            ))
+            db.session.commit()
+
+        resumed = self.client.get("/")
+
+        assert b"has-anonymous-info" in resumed.data
+        assert "Войдите, чтобы сохранить прогресс".encode() in resumed.data
 
     def test_index_exposes_distinct_background_urls_for_cards(self) -> None:
         response = self.client.get("/")

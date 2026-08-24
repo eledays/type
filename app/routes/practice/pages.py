@@ -32,6 +32,11 @@ def index():
     category = request.args.get("category", "")
     mode = request.args.get("mode", "")
     admin = user.is_admin and session.get("admin", False)
+    anonymous_remaining = get_anonymous_actions_remaining(user)
+    anonymous_started = (
+        anonymous_remaining is not None
+        and anonymous_remaining < current_app.config["ANONYMOUS_ACTION_LIMIT"]
+    )
     initial_error = None
     try:
         selected_cards = select_cards(
@@ -85,7 +90,8 @@ def index():
     return render_template(
         "index.html",
         strike=get_cached_strike(user.id) if user.settings.strike else None,
-        anonymous_remaining=get_anonymous_actions_remaining(user),
+        anonymous_remaining=anonymous_remaining,
+        anonymous_started=anonymous_started,
         initial_cards=initial_cards,
         initial_error=initial_error,
         admin=admin,

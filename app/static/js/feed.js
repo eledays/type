@@ -7,6 +7,8 @@
             this.routes = routes;
             this.query = bootstrap.query || {};
             this.admin = Boolean(bootstrap.admin);
+            this.isAnonymous = Boolean(bootstrap.anonymous);
+            this.anonymousStarted = Boolean(bootstrap.anonymousStarted);
             this.strikeLevels = bootstrap.strikeLevels || [];
             this.backgroundPools = bootstrap.backgroundPools || {};
             this.backgroundQueues = new Map();
@@ -461,22 +463,25 @@
             if (!strike || strike.n === null || strike.n === undefined) return false;
             const value = document.getElementById("strike-value");
             if (value) value.textContent = strike.n;
-            const showHeaderInfo = strike.n > 5;
-            clearTimeout(this.headerInfoTimer);
-            if (showHeaderInfo) {
-                this.headerInfo.hidden = false;
-                requestAnimationFrame(() => {
-                    this.headerInfo.classList.add("is-visible");
-                });
-            } else {
-                this.headerInfo.classList.remove("is-visible");
-                this.headerInfoTimer = setTimeout(() => {
-                    if (!this.headerInfo.classList.contains("is-visible")) {
-                        this.headerInfo.hidden = true;
-                    }
-                }, 240);
+            if (!this.isAnonymous) {
+                const showHeaderInfo = strike.n > 5;
+                clearTimeout(this.headerInfoTimer);
+                if (showHeaderInfo) {
+                    this.headerInfo.dataset.state = "neutral";
+                    this.headerInfo.hidden = false;
+                    requestAnimationFrame(() => {
+                        this.headerInfo.classList.add("is-visible");
+                    });
+                } else {
+                    this.headerInfo.classList.remove("is-visible");
+                    this.headerInfoTimer = setTimeout(() => {
+                        if (!this.headerInfo.classList.contains("is-visible")) {
+                            this.headerInfo.hidden = true;
+                        }
+                    }, 240);
+                }
+                this.header.classList.toggle("has-info", showHeaderInfo);
             }
-            this.header.classList.toggle("has-info", showHeaderInfo);
             const levels = strike.levels || this.strikeLevels;
             const oldLevel = Number(this.fire.dataset.level || 0);
             const normalizedLevel = this.levelForStrike(strike.n, levels);
@@ -575,8 +580,15 @@
 
         updateAnonymousRemaining(remaining) {
             if (remaining === null || remaining === undefined) return;
-            const counter = document.getElementById("anonymous-remaining");
-            if (counter) counter.textContent = remaining;
+            if (!this.isAnonymous || this.anonymousStarted) return;
+            this.anonymousStarted = true;
+            clearTimeout(this.headerInfoTimer);
+            this.headerInfo.dataset.state = "accent";
+            this.headerInfo.hidden = false;
+            requestAnimationFrame(() => {
+                this.headerInfo.classList.add("is-visible");
+            });
+            this.header.classList.add("has-info", "has-anonymous-info");
         }
 
         updateCurrentMetadata() {

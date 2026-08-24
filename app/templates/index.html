@@ -12,16 +12,15 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0">
 </head>
 <body style="--back-img: url('{{ background_url }}')">
-    {% if anonymous_remaining is not none %}
-    <a class="anonymous-notice" href="{{ url_for('auth.login', next=request.full_path) }}">
-        Анонимный режим · осталось <span id="anonymous-remaining">{{ anonymous_remaining }}</span>
-    </a>
-    {% endif %}
-
-    <header class="header{% if strike is not none and strike > 5 %} has-info{% endif %}" aria-label="Навигация практики">
+    <header class="header{% if anonymous_started or (not user.is_anonymous_account and strike is not none and strike > 5) %} has-info{% endif %}{% if anonymous_started %} has-anonymous-info{% endif %}" aria-label="Навигация практики">
         <button class="avatar-button" type="button" data-open-panel="profile" aria-label="Открыть профиль">
             <img src="{{ url_for('profile_api.avatar') }}" class="avatar" alt="">
         </button>
+        {% if user.is_anonymous_account %}
+        <a class="header-login" href="{{ url_for('auth.login', next=request.full_path) }}">
+            <span class="material-symbols-rounded" aria-hidden="true">login</span>Войти
+        </a>
+        {% endif %}
         <div class="profile-summary" aria-live="polite">
             <div class="profile-identity">
                 <strong>{{ user.display_name }}</strong>
@@ -39,10 +38,19 @@
             </form>
             {% endif %}
         </div>
-        <div class="info-block{% if strike is not none and strike > 5 %} is-visible{% endif %}" aria-live="polite"{% if strike is none or strike <= 5 %} hidden{% endif %}>
+        {% if user.is_anonymous_account %}
+        <a class="info-block{% if anonymous_started %} is-visible{% endif %}" data-state="accent"
+            href="{{ url_for('auth.login', next=request.full_path) }}"{% if not anonymous_started %} hidden{% endif %}>
+            <span class="material-symbols-rounded" aria-hidden="true">login</span>
+            <span>Войдите, чтобы сохранить прогресс</span>
+        </a>
+        {% else %}
+        <div class="info-block{% if strike is not none and strike > 5 %} is-visible{% endif %}" data-state="neutral"
+            aria-live="polite"{% if strike is none or strike <= 5 %} hidden{% endif %}>
             <span class="material-symbols-rounded" aria-hidden="true">local_fire_department</span>
             <span>Серия <strong id="strike-value">{{ strike or 0 }}</strong></span>
         </div>
+        {% endif %}
         <div class="header-actions">
             <button class="header-button" type="button" data-open-panel="filters">
                 <span class="material-symbols-rounded" aria-hidden="true">filter_alt</span><span>Фильтры</span>
@@ -159,7 +167,8 @@
     <script>
         window.feedBootstrap = {{ {
             'cards': initial_cards, 'query': feed_query, 'admin': admin, 'strike': strike,
-            'strikeLevels': strike_levels, 'batchSize': card_batch_size, 'backgroundPools': background_pools
+            'strikeLevels': strike_levels, 'batchSize': card_batch_size, 'backgroundPools': background_pools,
+            'anonymous': user.is_anonymous_account, 'anonymousStarted': anonymous_started
         }|tojson }};
         window.routeConfig = {{ {
             'cards': url_for('practice_api.get_cards'), 'skipAttempt': url_for('practice_api.skip_attempt'),
