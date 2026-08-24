@@ -37,6 +37,7 @@
             this.panelCloseTimer = null;
             this.header = document.querySelector(".header");
             this.headerInfo = document.querySelector(".info-block");
+            this.headerInfoTimer = null;
             this.info = document.getElementById("card-info");
             this.canvas = document.getElementById("effect-canvas");
             this.ctx = this.canvas.getContext("2d", {alpha: true});
@@ -460,8 +461,21 @@
             if (!strike || strike.n === null || strike.n === undefined) return false;
             const value = document.getElementById("strike-value");
             if (value) value.textContent = strike.n;
-            const showHeaderInfo = strike.n > 10;
-            this.headerInfo.hidden = !showHeaderInfo;
+            const showHeaderInfo = strike.n > 5;
+            clearTimeout(this.headerInfoTimer);
+            if (showHeaderInfo) {
+                this.headerInfo.hidden = false;
+                requestAnimationFrame(() => {
+                    this.headerInfo.classList.add("is-visible");
+                });
+            } else {
+                this.headerInfo.classList.remove("is-visible");
+                this.headerInfoTimer = setTimeout(() => {
+                    if (!this.headerInfo.classList.contains("is-visible")) {
+                        this.headerInfo.hidden = true;
+                    }
+                }, 240);
+            }
             this.header.classList.toggle("has-info", showHeaderInfo);
             const levels = strike.levels || this.strikeLevels;
             const oldLevel = Number(this.fire.dataset.level || 0);

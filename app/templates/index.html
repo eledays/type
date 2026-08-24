@@ -18,7 +18,7 @@
     </a>
     {% endif %}
 
-    <header class="header{% if strike is not none and strike > 10 %} has-info{% endif %}" aria-label="Навигация практики">
+    <header class="header{% if strike is not none and strike > 5 %} has-info{% endif %}" aria-label="Навигация практики">
         <button class="avatar-button" type="button" data-open-panel="profile" aria-label="Открыть профиль">
             <img src="{{ url_for('profile_api.avatar') }}" class="avatar" alt="">
         </button>
@@ -39,7 +39,7 @@
             </form>
             {% endif %}
         </div>
-        <div class="info-block" aria-live="polite"{% if strike is none or strike <= 10 %} hidden{% endif %}>
+        <div class="info-block{% if strike is not none and strike > 5 %} is-visible{% endif %}" aria-live="polite"{% if strike is none or strike <= 5 %} hidden{% endif %}>
             <span class="material-symbols-rounded" aria-hidden="true">local_fire_department</span>
             <span>Серия <strong id="strike-value">{{ strike or 0 }}</strong></span>
         </div>

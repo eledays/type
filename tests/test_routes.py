@@ -62,16 +62,16 @@ class TestRouteMap(AppTestCase):
         assert b'data-open-panel="word"' in response.data
         assert b'class="info-block" aria-live="polite" hidden' in response.data
 
-    def test_header_compacts_actions_only_for_strikes_above_ten(self) -> None:
+    def test_header_compacts_actions_only_for_strikes_above_five(self) -> None:
         self.client.get("/")
         with self.client.session_transaction() as browser_session:
-            browser_session["strike"] = 11
+            browser_session["strike"] = 6
 
         response = self.client.get("/")
 
         assert b'class="header has-info"' in response.data
         assert b'class="info-block" aria-live="polite" hidden' not in response.data
-        assert b'id="strike-value">11<' in response.data
+        assert b'id="strike-value">6<' in response.data
 
     def test_index_exposes_distinct_background_urls_for_cards(self) -> None:
         response = self.client.get("/")
