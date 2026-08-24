@@ -31,7 +31,7 @@
             {% if user.is_anonymous_account %}
                 {% if oauth_configured %}
                     <a class="yandex-login compact" href="{{ url_for('auth.yandex_login', next=request.path) }}">
-                        <span class="yandex-mark">Я</span> Войти и сохранить прогресс
+                        <img class="yandex-mark" src="{{ url_for('static', filename='img/yandex-id.svg') }}" alt=""> Войти и сохранить прогресс
                     </a>
                 {% endif %}
             {% else %}

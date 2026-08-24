@@ -324,13 +324,9 @@ p {
 }
 
 .yandex-mark {
-    display: grid;
-    place-items: center;
     width: 26px;
     height: 26px;
-    border-radius: 50%;
-    background: #fc3f1d;
-    color: #fff;
+    object-fit: contain;
 }
 
 .continue-anonymous {
@@ -340,35 +336,4 @@ p {
 .logout-button {
     text-align: center;
     color: #d33;
-}
-
-.auth-page {
-    min-height: 100vh;
-    display: grid;
-    place-items: center;
-}
-
-.auth-card {
-    width: 100%;
-    text-align: center;
-}
-
-.auth-card p {
-    margin: 12px 0 24px;
-}
-
-.auth-logo {
-    font-size: 2.5rem;
-    font-weight: 700;
-}
-
-.flash {
-    margin: 12px 0;
-    padding: 10px;
-    border-radius: 8px;
-    background: var(--tg-theme-secondary-bg-color);
-}
-
-.flash.error {
-    color: #c33;
 }

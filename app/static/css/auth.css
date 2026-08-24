@@ -1,0 +1,86 @@
+:root {
+    color-scheme: dark;
+}
+
+.auth-body {
+    min-height: 100dvh;
+    background: #000;
+    color: #fff;
+}
+
+.auth-page {
+    display: grid;
+    min-height: 100dvh;
+    padding: max(1.5rem, env(safe-area-inset-top)) 1.5rem;
+    place-items: center;
+}
+
+.auth-content {
+    display: grid;
+    width: min(100%, 20rem);
+    justify-items: center;
+    gap: 1.5rem;
+    text-align: center;
+}
+
+.auth-type-logo {
+    width: 12rem;
+    object-fit: contain;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 50%;
+}
+
+.auth-copy {
+    margin: 0;
+    color: rgba(255, 255, 255, .68);
+    font-size: .875rem;
+    line-height: 1.45;
+}
+
+.yandex-auth-button {
+    display: flex;
+    width: 100%;
+    min-height: 3.5rem;
+    align-items: center;
+    justify-content: center;
+    gap: .625rem;
+    border-radius: 1rem;
+    background: #fff;
+    color: #1d1d1f;
+    font-size: 1rem;
+    font-weight: 650;
+    text-decoration: none;
+    transition: transform .16s ease, background .16s ease;
+}
+
+.yandex-auth-button:hover {
+    background: #f2f2f2;
+}
+
+.yandex-auth-button:active {
+    transform: scale(.98);
+}
+
+.yandex-auth-logo {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 50%;
+}
+
+.auth-continue {
+    color: rgba(255, 255, 255, .52);
+    font-size: .8125rem;
+    text-decoration: none;
+}
+
+.auth-continue:hover {
+    color: #fff;
+}
+
+.auth-flash {
+    width: 100%;
+    margin: 0;
+    color: #ff8d8d;
+    font-size: .8125rem;
+    line-height: 1.4;
+}

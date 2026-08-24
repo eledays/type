@@ -2,36 +2,35 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
     <title>type — Вход</title>
-
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
-
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='img/fav.ico') }}" type="image/x-icon">
 </head>
-<body>
-    <main class="cont auth-page">
-        <section class="settings-block auth-card">
-            <div class="auth-logo">type</div>
-            <h1>Сохраните прогресс</h1>
-            <p>Войдите через Яндекс — ответы из анонимного режима автоматически перенесутся в профиль.</p>
+<body class="auth-body">
+    <main class="auth-page">
+        <section class="auth-content" aria-labelledby="auth-copy">
+            <img class="auth-type-logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="type">
+            <p class="auth-copy" id="auth-copy">Войдите, чтобы сохранить прогресс</p>
 
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% for category, message in messages %}
-                    <div class="flash {{ category }}">{{ message }}</div>
+                    <p class="auth-flash {{ category }}" role="alert">{{ message }}</p>
                 {% endfor %}
             {% endwith %}
 
             {% if oauth_configured %}
-                <a class="yandex-login" href="{{ url_for('auth.yandex_login', next=next_url) }}">
-                    <span class="yandex-mark">Я</span>
-                    Войти через Яндекс
-                </a>
+            <a class="yandex-auth-button" href="{{ url_for('auth.yandex_login', next=next_url) }}">
+                <img class="yandex-auth-logo" src="{{ url_for('static', filename='img/yandex-id.svg') }}" alt="">
+                Войти через Яндекс
+            </a>
             {% else %}
-                <div class="flash error">Вход временно недоступен: OAuth не настроен.</div>
+            <p class="auth-flash error" role="alert">Вход временно недоступен.</p>
             {% endif %}
-            <a class="continue-anonymous" href="{{ next_url }}">Продолжить без входа</a>
+
+            <a class="auth-continue" href="{{ next_url }}">Продолжить без входа</a>
         </section>
     </main>
 </body>
