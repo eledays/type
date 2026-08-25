@@ -77,6 +77,18 @@ class TestRouteMap(AppTestCase):
         assert b'aria-live="polite" hidden' not in response.data
         assert b'id="strike-value">6<' in response.data
 
+    def test_profile_panel_has_strike_setting_for_registered_user(self) -> None:
+        user_id = self.current_user_id()
+        with self.app.app_context():
+            user = db.session.get(User, user_id)
+            user.yandex_id = "registered-user"
+            db.session.commit()
+
+        response = self.client.get("/")
+
+        assert b'data-strike-toggle' in response.data
+        assert b'"updateSettings"' in response.data
+
     def test_anonymous_header_shows_login_then_progress_prompt(self) -> None:
         initial = self.client.get("/")
 

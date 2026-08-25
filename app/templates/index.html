@@ -161,6 +161,19 @@
                 <div class="stat-card"><span>Лучшая серия</span><strong>{{ stats.best_streak }}</strong></div>
             </div>
         </div>
+        {% if not user.is_anonymous_account %}
+        <div class="panel-section">
+            <h3>Настройки</h3>
+            <button class="setting-toggle" type="button" data-strike-toggle
+                aria-pressed="{{ 'true' if user.settings.strike else 'false' }}">
+                <span>
+                    <strong>Страйк</strong>
+                    <small>Показывать серию правильных ответов</small>
+                </span>
+                <span class="toggle-control" aria-hidden="true"><span></span></span>
+            </button>
+        </div>
+        {% endif %}
     </section>
 
     <script>
@@ -174,7 +187,8 @@
             'createAttempt': url_for('practice_api.create_attempt'),
             'reportWord': url_for('practice_api.create_word_report', word_id=0),
             'updateExplanation': url_for('admin_api.patch_explanation', word_id=0),
-            'deleteAnswer': url_for('admin_api.remove_answer', word_id=0)
+            'deleteAnswer': url_for('admin_api.remove_answer', word_id=0),
+            'updateSettings': url_for('profile_api.patch_settings')
         }|tojson }};
     </script>
     <script defer src="{{ feed_script_url }}"></script>

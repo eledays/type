@@ -717,6 +717,29 @@
             document.querySelectorAll("[data-close-panel]").forEach((trigger) => {
                 trigger.addEventListener("click", () => this.closePanel());
             });
+            const strikeToggle = document.querySelector("[data-strike-toggle]");
+            strikeToggle?.addEventListener("click", async () => {
+                const enabled = strikeToggle.getAttribute("aria-pressed") !== "true";
+                strikeToggle.disabled = true;
+                try {
+                    const response = await fetch(this.routes.updateSettings, {
+                        method: "PATCH",
+                        headers: {"Content-Type": "application/json"},
+                        body: JSON.stringify({strike: enabled}),
+                    });
+                    if (!response.ok) throw new Error();
+                    strikeToggle.setAttribute("aria-pressed", String(enabled));
+                    if (!enabled) {
+                        this.headerInfo.classList.remove("is-visible");
+                        this.headerInfo.hidden = true;
+                        this.header.classList.remove("has-info");
+                    }
+                } catch {
+                    this.showStatus("Не удалось изменить настройку");
+                } finally {
+                    strikeToggle.disabled = false;
+                }
+            });
             this.panelOverlay.addEventListener("click", () => this.closePanel());
             document.getElementById("report-button").addEventListener("click", async (event) => {
                 const response = await fetch(
