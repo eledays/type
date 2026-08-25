@@ -1,5 +1,6 @@
+import json
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from pydantic import (
     AliasChoices,
@@ -8,7 +9,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -42,7 +43,7 @@ class AppSettings(BaseSettings):
     flask_port: int = Field(
         default=5000, validation_alias="FLASK_PORT", ge=1, le=65_535
     )
-    strike_levels: tuple[int, ...] = Field(
+    strike_levels: Annotated[tuple[int, ...], NoDecode] = Field(
         default=(50, 100, 500, 1000), validation_alias="STRIKE_LEVELS"
     )
 
@@ -106,6 +107,19 @@ class AppSettings(BaseSettings):
         if len(value.get_secret_value()) < 16:
             raise ValueError("SECRET_KEY must contain at least 16 characters")
         return value
+
+    @field_validator("strike_levels", mode="before")
+    @classmethod
+    def parse_strike_levels(
+        cls, value: Any
+    ) -> tuple[Any, ...] | Any:
+        """Принимает уровни серии из .env через запятую или JSON-массив."""
+        if not isinstance(value, str):
+            return value
+        normalized = value.strip()
+        if normalized.startswith("["):
+            return json.loads(normalized)
+        return tuple(level.strip() for level in normalized.split(","))
 
     @field_validator("strike_levels")
     @classmethod

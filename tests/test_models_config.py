@@ -41,6 +41,19 @@ class TestConfig(AppTestCase):
         assert exported["STRIKE_LEVELS"] == (10, 20, 30)
         assert exported["SECRET_KEY"] == "a-secure-test-secret"
 
+    @pytest.mark.parametrize(
+        "levels",
+        ("10,20,30", "[10, 20, 30]"),
+    )
+    def test_settings_accept_strike_levels_from_env_formats(
+        self, levels: str
+    ) -> None:
+        settings = AppSettings(
+            SECRET_KEY="a-secure-test-secret",
+            STRIKE_LEVELS=levels,
+        )
+        assert settings.strike_levels == (10, 20, 30)
+
     def test_settings_reject_weak_secrets_and_invalid_strike_levels(self) -> None:
         for values in (
             {"SECRET_KEY": "short"},

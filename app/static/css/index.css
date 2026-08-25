@@ -4,8 +4,8 @@
     --secondary-color: rgba(0, 0, 0, .22);
     --back-color: #000;
     --frame-background-color: #161616;
+    --answer-background: rgba(14, 25, 30, .46);
     --word-back: rgba(0, 0, 0, .18);
-    --particle-color: radial-gradient(#ff8d00 20%, rgba(255, 80, 0, 0) 70%);
 }
 
 :root[data-theme="light"] {
@@ -13,6 +13,7 @@
     --secondary-color: rgba(255, 255, 255, .7);
     --back-color: #e2e2e2;
     --frame-background-color: #fff;
+    --answer-background: rgba(255, 255, 255, .62);
     --word-back: rgba(255, 255, 255, .68);
 }
 
@@ -47,10 +48,12 @@ a {
 
 .card {
     position: absolute;
-    inset: 0;
+    top: var(--card-y, 200%);
+    right: 0;
+    left: 0;
+    height: 100%;
     overflow: hidden;
-    transform: translate3d(0, var(--card-y, 200%), 0);
-    transition: transform 300ms cubic-bezier(.22, .7, .2, 1);
+    transition: top 300ms cubic-bezier(.22, .7, .2, 1);
     contain: layout paint style;
     background-color: var(--frame-background-color);
     background-image: var(--card-back-img, var(--back-img));
@@ -148,12 +151,14 @@ a {
     margin: 5px;
     border: 0;
     border-radius: 10px;
-    background: var(--secondary-color);
-    backdrop-filter: blur(10px);
+    background: var(--answer-background);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     color: var(--main-color);
     cursor: pointer;
     font-size: 1.25rem;
     font-weight: 800;
+    opacity: 1;
     transition: filter .1s ease, transform .1s ease;
 }
 
@@ -163,7 +168,11 @@ a {
 
 .answers button:disabled {
     cursor: default;
-    opacity: .65;
+    opacity: 1;
+    filter: none;
+    background: var(--answer-background);
+    color: var(--main-color);
+    -webkit-text-fill-color: var(--main-color);
 }
 
 .answers .answer {
@@ -293,36 +302,6 @@ body.has-open-panel {
     pointer-events: none;
 }
 
-.fire {
-    position: fixed;
-    z-index: 21;
-    top: -110px;
-    left: 50%;
-    width: 120px;
-    height: 10em;
-    transform: translateX(-50%);
-    pointer-events: none;
-    transition: opacity .5s ease;
-}
-
-.particle {
-    position: absolute;
-    bottom: 0;
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    animation: rise 1s ease-in infinite;
-    background-image: var(--particle-color);
-    mix-blend-mode: screen;
-    opacity: 0;
-}
-
-@keyframes rise {
-    from { opacity: 0; transform: translateY(0) scale(1); }
-    25% { opacity: 1; }
-    to { opacity: 0; transform: translateY(-10em) scale(0); }
-}
-
 @media (orientation: landscape) {
     .feed {
         inset: 5vh auto auto 50%;
@@ -331,10 +310,6 @@ body.has-open-panel {
         border-radius: 20px;
         transform: translateX(-50%);
         overflow: visible;
-    }
-
-    .fire {
-        top: -50px;
     }
 
     .card {
@@ -363,13 +338,10 @@ body.has-open-panel {
         transition-duration: 120ms;
     }
 
-    .particle {
-        display: none;
-    }
-
     .info-block[data-state="accent"] {
         animation: none;
     }
+
 }
 
 .header {
@@ -547,6 +519,33 @@ body.has-open-panel {
     visibility: visible;
     transform: translate(-50%, -50%) scale(1);
     transition: opacity .2s ease, transform .24s ease;
+}
+
+.info-block[data-state="neutral"] {
+    --strike-color: #fff1ae;
+    border-color: color-mix(in srgb, var(--strike-color) 72%, transparent);
+    transition: opacity .2s ease, transform .24s ease, border-color .25s ease;
+}
+
+.info-block[data-state="neutral"] .material-symbols-rounded {
+    color: var(--strike-color);
+    transition: color .25s ease;
+}
+
+.info-block[data-state="neutral"][data-strike-level="1"] {
+    --strike-color: #ffc154;
+}
+
+.info-block[data-state="neutral"][data-strike-level="2"] {
+    --strike-color: #ff993e;
+}
+
+.info-block[data-state="neutral"][data-strike-level="3"] {
+    --strike-color: #ff7043;
+}
+
+.info-block[data-state="neutral"][data-strike-level="4"] {
+    --strike-color: #ff4c42;
 }
 
 .header.has-anonymous-info .info-block {
@@ -922,7 +921,12 @@ body.has-open-panel {
     }
 
     .header .info-block {
-        top: 5vh;
+        top: 8vh;
+    }
+
+    .profile-summary {
+        right: auto;
+        justify-content: flex-start;
     }
 
     .panel {

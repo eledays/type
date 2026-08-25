@@ -19,7 +19,6 @@
             }
             this.batchSize = bootstrap.batchSize;
             this.refillAt = Math.max(1, this.batchSize - 1);
-            this.preloadedBackgrounds = new Map();
             this.queue = bootstrap.cards.slice(3);
             this.loading = null;
             this.locked = false;
@@ -43,14 +42,11 @@
             this.info = document.getElementById("card-info");
             this.canvas = document.getElementById("effect-canvas");
             this.ctx = this.canvas.getContext("2d", {alpha: true});
-            this.fire = document.getElementById("fire");
-            if (bootstrap.strike !== null && bootstrap.strike !== undefined) {
-                const initialLevel = this.levelForStrike(bootstrap.strike);
-                this.backgroundTheme = initialLevel === 1 ? "yellow" : "dark";
-                this.fire.dataset.level = String(initialLevel);
-                if (initialLevel > 0) this.ensureFire();
+            if (!this.isAnonymous && bootstrap.strike !== null && bootstrap.strike !== undefined) {
+                this.headerInfo.dataset.strikeLevel = String(
+                    Math.min(this.levelForStrike(bootstrap.strike), 4),
+                );
             }
-
             const elements = [...this.feed.querySelectorAll(".card")];
             while (elements.length < 3) {
                 const element = this.createCardElement();
@@ -482,22 +478,12 @@
                 }
                 this.header.classList.toggle("has-info", showHeaderInfo);
             }
-            const levels = strike.levels || this.strikeLevels;
-            const oldLevel = Number(this.fire.dataset.level || 0);
-            const normalizedLevel = this.levelForStrike(strike.n, levels);
-            this.fire.dataset.level = String(normalizedLevel);
-            document.documentElement.style.setProperty(
-                "--particle-color",
-                `radial-gradient(rgb(255 ${Math.max(0, 141 - normalizedLevel * 30)} 0) 20%, rgba(255,80,0,0) 70%)`,
+            const level = this.levelForStrike(
+                strike.n,
+                strike.levels || this.strikeLevels,
             );
-            if (strike.n === 0) this.clearFire();
-            else if (normalizedLevel > 0) this.ensureFire();
-            if (normalizedLevel !== oldLevel) {
-                void this.switchBackground(normalizedLevel === 1 ? "yellow" : "dark");
-            } else if (levels.length && strike.n === levels[0] - 2) {
-                void this.preloadBackground("yellow");
-            }
-            return normalizedLevel > oldLevel;
+            this.headerInfo.dataset.strikeLevel = String(Math.min(level, 4));
+            return false;
         }
 
         levelForStrike(strike, levels = this.strikeLevels) {
@@ -530,52 +516,6 @@
             if (!element || !url) return;
             element.style.setProperty("--card-back-img", `url("${url}")`);
             element.dataset.backgroundTheme = theme;
-        }
-
-        preloadBackground(theme) {
-            if (this.preloadedBackgrounds.has(theme)) {
-                return this.preloadedBackgrounds.get(theme);
-            }
-            const url = this.backgroundFor(theme);
-            if (!url) return Promise.resolve(null);
-            const image = new Image();
-            const promise = new Promise((resolve) => {
-                image.onload = () => resolve(url);
-                image.onerror = () => resolve(null);
-            });
-            image.src = url;
-            if (image.decode) image.decode().catch(() => {});
-            this.preloadedBackgrounds.set(theme, promise);
-            return promise;
-        }
-
-        async switchBackground(theme) {
-            this.backgroundTheme = theme;
-            const url = await this.preloadBackground(theme);
-            this.preloadedBackgrounds.delete(theme);
-            if (!url) return;
-            this.assignBackground(this.current?.element, theme, url);
-            for (const slot of [this.next, this.buffered]) {
-                if (slot?.card) this.assignBackground(slot.element, theme);
-            }
-        }
-
-        ensureFire() {
-            if (this.fire.children.length || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-            const fragment = document.createDocumentFragment();
-            for (let index = 0; index < 30; index += 1) {
-                const particle = document.createElement("i");
-                particle.className = "particle";
-                particle.style.left = `${index / 30 * 70}px`;
-                particle.style.animationDelay = `${Math.random()}s`;
-                fragment.appendChild(particle);
-            }
-            this.fire.appendChild(fragment);
-        }
-
-        clearFire() {
-            this.fire.replaceChildren();
-            this.fire.dataset.level = "0";
         }
 
         updateAnonymousRemaining(remaining) {
@@ -793,12 +733,6 @@
                 window.open(`https://yandex.ru/search/?text=${query}`, "_blank", "noopener");
             });
             window.addEventListener("resize", () => this.resizeCanvas(), {passive: true});
-            document.addEventListener("visibilitychange", () => {
-                this.fire.style.animationPlayState = document.hidden ? "paused" : "running";
-                this.fire.querySelectorAll(".particle").forEach((particle) => {
-                    particle.style.animationPlayState = document.hidden ? "paused" : "running";
-                });
-            });
         }
 
     }
