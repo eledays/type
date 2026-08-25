@@ -253,6 +253,13 @@ a {
     transition: opacity .2s ease;
 }
 
+.panel-overlay.is-closing {
+    opacity: 0;
+    visibility: visible;
+    pointer-events: none;
+    transition: opacity .2s ease;
+}
+
 .panel {
     position: fixed;
     z-index: 101;
@@ -284,6 +291,14 @@ a {
     visibility: visible;
     transform: translate(-50%, 0) scale(1);
     pointer-events: auto;
+    transition: opacity .2s ease, transform .24s ease;
+}
+
+.panel.is-closing {
+    opacity: 0;
+    visibility: visible;
+    pointer-events: none;
+    transform: translate(-50%, -8px) scale(.985);
     transition: opacity .2s ease, transform .24s ease;
 }
 
@@ -376,7 +391,16 @@ body.has-open-panel {
 
 .header.has-profile-panel .info-block,
 .header.has-profile-panel .header-actions {
+    opacity: 0;
     visibility: hidden;
+    pointer-events: none;
+    transition: opacity .18s ease, visibility 0s linear .18s;
+}
+
+.header.is-closing-profile .info-block {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 .avatar-button {
@@ -441,10 +465,10 @@ body.has-open-panel {
     gap: 12px;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(calc(-50% - 4px));
+    transform: translateY(calc(-50% - 6px));
     pointer-events: none;
-    transition: opacity .18s ease, transform .22s ease,
-        visibility 0s linear .22s;
+    transition: opacity .22s ease, transform .28s cubic-bezier(.22, .7, .2, 1),
+        visibility 0s linear .28s;
 }
 
 .header.has-profile-panel .profile-summary {
@@ -452,7 +476,14 @@ body.has-open-panel {
     visibility: visible;
     transform: translateY(-50%);
     pointer-events: auto;
-    transition: opacity .18s ease, transform .22s ease;
+    transition: opacity .22s ease, transform .28s cubic-bezier(.22, .7, .2, 1);
+}
+
+.header.is-closing-profile .profile-summary {
+    opacity: 0;
+    visibility: visible;
+    transform: translateY(calc(-50% - 6px));
+    pointer-events: none;
 }
 
 .profile-summary .profile-identity {
@@ -475,6 +506,45 @@ body.has-open-panel {
 .profile-summary .profile-identity span {
     color: rgba(255, 255, 255, .68);
     font-size: .6875rem;
+}
+
+.profile-summary .profile-identity strong,
+.profile-summary .profile-identity span,
+.profile-summary > form,
+.profile-summary > .login-link {
+    opacity: 0;
+    transition: opacity .18s ease, transform .24s cubic-bezier(.22, .7, .2, 1);
+}
+
+.profile-summary .profile-identity strong,
+.profile-summary .profile-identity span {
+    transform: translateX(-.5rem);
+}
+
+.profile-summary > form,
+.profile-summary > .login-link {
+    transform: translateX(.5rem);
+}
+
+.header.has-profile-panel .profile-summary .profile-identity strong,
+.header.has-profile-panel .profile-summary .profile-identity span,
+.header.has-profile-panel .profile-summary > form,
+.header.has-profile-panel .profile-summary > .login-link {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.header.has-profile-panel .profile-summary .profile-identity strong {
+    transition-delay: .05s;
+}
+
+.header.has-profile-panel .profile-summary .profile-identity span {
+    transition-delay: .1s;
+}
+
+.header.has-profile-panel .profile-summary > form,
+.header.has-profile-panel .profile-summary > .login-link {
+    transition-delay: .12s;
 }
 
 .info-block,
@@ -583,6 +653,7 @@ body.has-open-panel {
     display: flex;
     gap: 7px;
     transform: translateY(-50%);
+    transition: opacity .2s ease, visibility 0s;
 }
 
 .header-button {
@@ -593,7 +664,8 @@ body.has-open-panel {
     font-size: .8125rem;
     font-weight: 400;
     white-space: nowrap;
-    transition: width .24s ease, padding .24s ease, gap .2s ease;
+    transition: width .24s ease, padding .24s ease, gap .2s ease,
+        opacity .2s ease, filter .2s ease;
 }
 
 .header-button[data-open-panel="filters"] {

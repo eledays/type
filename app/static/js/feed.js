@@ -36,6 +36,8 @@
             this.activePanel = null;
             this.panelTrigger = null;
             this.panelCloseTimer = null;
+            this.closingPanel = null;
+            this.closingTrigger = null;
             this.header = document.querySelector(".header");
             this.headerInfo = document.querySelector(".info-block");
             this.headerInfoTimer = null;
@@ -593,6 +595,13 @@
                 return;
             }
             this.closePanel(false);
+            clearTimeout(this.panelCloseTimer);
+            this.closingPanel?.classList.remove("is-closing");
+            this.closingTrigger?.classList.remove("is-panel-trigger-active");
+            this.closingPanel = null;
+            this.closingTrigger = null;
+            this.panelOverlay.classList.remove("is-closing");
+            this.header.classList.remove("is-closing-profile");
             const panel = this.panels.find((item) => item.dataset.panel === name);
             if (!panel) return;
             this.activePanel = panel;
@@ -611,20 +620,35 @@
 
         closePanel(restoreFocus = true) {
             if (!this.activePanel) return;
-            this.activePanel.classList.remove("is-open");
-            this.activePanel.setAttribute("aria-hidden", "true");
+            const panel = this.activePanel;
+            const trigger = this.panelTrigger;
+            const closesProfile = panel.dataset.panel === "profile";
+            panel.classList.remove("is-open");
+            panel.classList.add("is-closing");
+            panel.setAttribute("aria-hidden", "true");
             this.panelOverlay.classList.remove("is-open");
+            this.panelOverlay.classList.add("is-closing");
             document.body.classList.remove("has-open-panel");
-            this.header.classList.remove("has-open-panel");
-            this.header.classList.remove("has-profile-panel");
-            this.panelTrigger?.classList.remove("is-panel-trigger-active");
+            this.header.classList.remove("has-open-panel", "has-profile-panel");
+            if (closesProfile) {
+                this.header.classList.add("is-closing-profile");
+            }
+            trigger?.classList.remove("is-panel-trigger-active");
             this.activePanel = null;
+            this.panelTrigger = null;
+            this.closingPanel = panel;
+            this.closingTrigger = trigger;
             clearTimeout(this.panelCloseTimer);
             this.panelCloseTimer = setTimeout(() => {
-                if (!this.activePanel) this.panelOverlay.hidden = true;
-            }, 360);
-            if (restoreFocus) this.panelTrigger?.focus();
-            this.panelTrigger = null;
+                if (this.activePanel || this.closingPanel !== panel) return;
+                panel.classList.remove("is-closing");
+                this.panelOverlay.classList.remove("is-closing");
+                this.panelOverlay.hidden = true;
+                this.header.classList.remove("is-closing-profile");
+                this.closingPanel = null;
+                this.closingTrigger = null;
+            }, 280);
+            if (restoreFocus) trigger?.focus();
         }
 
         showStatus(message) {
