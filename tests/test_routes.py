@@ -55,7 +55,12 @@ class TestRouteMap(AppTestCase):
         assert b'/get_frame' not in response.data
         assert b'js/feed.min.js' in response.data
         assert b'fonts.googleapis.com' not in response.data
-        assert b'<symbol id="icon-search"' in response.data
+        assert b'class="material-symbols-rounded"' in response.data
+        assert b'>search</span>' in response.data
+        assert (
+            b'rel="preload" href="/static/fonts/'
+            b'material-symbols-rounded-subset.woff2?v=v369"' in response.data
+        )
         assert b'"swipeGraceStrike": 3' in response.data
         assert b'/api/v1/profile/avatar' not in response.data
         assert b'/static/img/default_avatar.png?v=' in response.data

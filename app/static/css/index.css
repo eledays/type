@@ -1163,17 +1163,26 @@ body.has-open-panel {
         transform: translateY(0) scale(1);
     }
 }
-.icon-sprite {
-    position: absolute;
-    overflow: hidden;
+@font-face {
+    font-family: "Material Symbols Rounded";
+    font-style: normal;
+    font-weight: 400;
+    font-display: block;
+    src: url("../fonts/material-symbols-rounded-subset.woff2?v=v369") format("woff2");
 }
 
 .material-symbols-rounded {
-    width: 1em;
-    height: 1em;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
+    font-family: "Material Symbols Rounded";
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    font-feature-settings: "liga";
+    -webkit-font-feature-settings: "liga";
+    -webkit-font-smoothing: antialiased;
 }

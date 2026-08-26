@@ -8,25 +8,17 @@
     <script nonce="{{ csp_nonce }}">document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';</script>
     <link rel="stylesheet" href="{{ style_url }}">
     <link rel="stylesheet" href="{{ index_style_url }}">
+    <link rel="preload" href="{{ icon_font_url }}" as="font" type="font/woff2" crossorigin>
     <link rel="icon" href="{{ favicon_url }}" type="image/x-icon">
 </head>
 <body style="--back-img: url('{{ background_url }}')">
-    <svg width="0" height="0" class="icon-sprite" aria-hidden="true">
-        <symbol id="icon-login" viewBox="0 0 24 24"><path d="M14 8l4 4-4 4M18 12H7M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5"/></symbol>
-        <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M10 8l-4 4 4 4M6 12h11M14 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5"/></symbol>
-        <symbol id="icon-fire" viewBox="0 0 24 24"><path d="M12 22c4 0 7-3 7-7 0-3-2-6-5-9 0 3-1 4-2 5 0-4-2-7-4-9 0 5-3 7-3 12 0 5 3 8 7 8zM9 17c0 2 1 3 3 3s3-1 3-3c0-1-1-3-2-4 0 2-1 2-1 3-1-2-2-3-2-4 0 3-1 3-1 5z"/></symbol>
-        <symbol id="icon-filter" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h10M18 18h2"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="16" cy="18" r="2"/></symbol>
-        <symbol id="icon-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></symbol>
-        <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></symbol>
-        <symbol id="icon-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 5h11l-2 4 2 4H5"/></symbol>
-    </svg>
     <header class="header{% if anonymous_started %} has-info has-anonymous-info{% endif %}" aria-label="Навигация практики">
         <button class="avatar-button" type="button" data-open-panel="profile" aria-label="Открыть профиль">
             <img src="{{ avatar_url }}" class="avatar" alt="">
         </button>
         {% if user.is_anonymous_account %}
         <a class="header-login" href="{{ url_for('auth.login', next=request.full_path) }}">
-            <svg class="material-symbols-rounded" aria-hidden="true"><use href="#icon-login"/></svg>Войти
+            <span class="material-symbols-rounded" aria-hidden="true">login</span>Войти
         </a>
         {% endif %}
         <div class="profile-summary" aria-live="polite">
@@ -36,13 +28,13 @@
             </div>
             {% if user.is_anonymous_account and oauth_configured %}
             <a class="logout-link login-link" href="{{ url_for('auth.yandex_login', next=request.full_path) }}">
-                <svg class="material-symbols-rounded" aria-hidden="true"><use href="#icon-login"/></svg>Войти
+                <span class="material-symbols-rounded" aria-hidden="true">login</span>Войти
             </a>
             {% elif not user.is_anonymous_account %}
             <form method="post" action="{{ url_for('auth.logout') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="logout-link" type="submit">
-                    <svg class="material-symbols-rounded" aria-hidden="true"><use href="#icon-logout"/></svg>Выйти
+                    <span class="material-symbols-rounded" aria-hidden="true">logout</span>Выйти
                 </button>
             </form>
             {% endif %}
@@ -50,21 +42,21 @@
         {% if user.is_anonymous_account %}
         <a class="info-block{% if anonymous_started %} is-visible{% endif %}" data-state="accent"
             href="{{ url_for('auth.login', next=request.full_path) }}"{% if not anonymous_started %} hidden{% endif %}>
-            <svg class="material-symbols-rounded" aria-hidden="true"><use href="#icon-login"/></svg>
+            <span class="material-symbols-rounded" aria-hidden="true">login</span>
             <span>Войдите, чтобы сохранить прогресс</span>
         </a>
         {% else %}
         <div class="info-block" data-state="neutral" aria-live="polite" hidden>
-            <svg class="material-symbols-rounded" aria-hidden="true"><use href="#icon-fire"/></svg>
+            <span class="material-symbols-rounded" aria-hidden="true">local_fire_department</span>
             <span>Серия <strong id="strike-value">{{ strike or 0 }}</strong></span>
         </div>
         {% endif %}
         <div class="header-actions">
             <button class="header-button" type="button" data-open-panel="filters">
-                <svg class="material-symbols-rounded" aria-hidden="true"><use href="#icon-filter"/></svg><span>Фильтры</span>
+                <span class="material-symbols-rounded" aria-hidden="true">filter_alt</span><span>Фильтры</span>
             </button>
             <button class="header-button" type="button" data-open-panel="word">
-                <svg class="material-symbols-rounded" aria-hidden="true"><use href="#icon-info"/></svg><span>О слове</span>
+                <span class="material-symbols-rounded" aria-hidden="true">info</span><span>О слове</span>
             </button>
         </div>
     </header>
@@ -135,10 +127,10 @@
         <h3 class="current-word" id="current-word">—</h3>
         <div class="action-row">
             <button class="secondary-action" id="search-button" type="button">
-                <svg class="material-symbols-rounded" aria-hidden="true"><use href="#icon-search"/></svg>Искать в интернете
+                <span class="material-symbols-rounded" aria-hidden="true">search</span>Искать в интернете
             </button>
             <button class="secondary-action" id="report-button" type="button" data-open-report="exercise">
-                <svg class="material-symbols-rounded" aria-hidden="true"><use href="#icon-flag"/></svg>Сообщить об ошибке
+                <span class="material-symbols-rounded" aria-hidden="true">flag</span>Сообщить об ошибке
             </button>
         </div>
         <div class="word-details">
@@ -189,7 +181,7 @@
                     <strong>Сообщить об ошибке</strong>
                     <small>Проблема или предложение</small>
                 </span>
-                <svg class="material-symbols-rounded" aria-hidden="true"><use href="#icon-flag"/></svg>
+                <span class="material-symbols-rounded" aria-hidden="true">flag</span>
             </button>
         </div>
     </section>

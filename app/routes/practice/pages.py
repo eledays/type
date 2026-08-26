@@ -126,5 +126,10 @@ def index():
         style_url=static_url("css/style.css"),
         index_style_url=static_url("css/index.css"),
         feed_script_url=static_url("js/feed.min.js"),
+        icon_font_url=url_for(
+            "static",
+            filename="fonts/material-symbols-rounded-subset.woff2",
+            v="v369",
+        ),
         favicon_url=static_url("img/fav.ico"),
     )

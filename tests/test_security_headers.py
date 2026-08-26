@@ -47,6 +47,15 @@ class TestSecurityHeaders(AppTestCase):
             "public, max-age=31536000, immutable"
         )
 
+        font = self.client.get(
+            "/static/fonts/material-symbols-rounded-subset.woff2?v=v369"
+        )
+        assert font.status_code == 200
+        assert font.mimetype == "font/woff2"
+        assert font.headers["Cache-Control"] == (
+            "public, max-age=31536000, immutable"
+        )
+
     def test_untrusted_host_is_rejected(self) -> None:
         response = self.client.get("/", headers={"Host": "attacker.example"})
 
