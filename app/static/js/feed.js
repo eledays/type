@@ -28,6 +28,7 @@
             this.longPressOpened = false;
             this.answerLongPressTimer = null;
             this.suppressAnswerClick = false;
+            this.answerFlashTimer = null;
 
             this.feed = document.getElementById("feed");
             this.status = document.getElementById("feed-status");
@@ -42,8 +43,7 @@
             this.headerInfo = document.querySelector(".info-block");
             this.headerInfoTimer = null;
             this.info = document.getElementById("card-info");
-            this.canvas = document.getElementById("effect-canvas");
-            this.ctx = this.canvas.getContext("2d", {alpha: true});
+            this.answerFlash = document.getElementById("answer-flash");
             if (!this.isAnonymous && bootstrap.strike !== null && bootstrap.strike !== undefined) {
                 this.headerInfo.dataset.strikeLevel = String(
                     Math.min(this.levelForStrike(bootstrap.strike), 4),
@@ -79,7 +79,6 @@
             });
             if (!this.next.card) this.setPosition(this.next, "buffered", true);
             this.updateCurrentMetadata();
-            this.resizeCanvas();
             this.bindEvents();
         }
 
@@ -373,9 +372,9 @@
                 }
                 if (!response.ok) throw new Error(payload.message);
                 this.updateAnonymousRemaining(payload.anonymous_remaining);
-                const nextLevel = this.updateStrike(payload.strike);
+                this.updateStrike(payload.strike);
                 this.revealAnswer(payload.full_word);
-                this.flashAnswer(payload.correct, nextLevel);
+                this.flashAnswer(payload.correct);
                 setTimeout(() => void this.moveNext({recordSkip: false}), payload.correct ? 700 : 1500);
             } catch (error) {
                 this.answerPending = false;
@@ -392,69 +391,14 @@
             }, 200);
         }
 
-        flashAnswer(correct, nextLevel) {
-            const rect = this.current.element.querySelector(".word").getBoundingClientRect();
-            const feedRect = this.feed.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            const start = performance.now();
-            const duration = correct ? 720 : 480;
-            const color = nextLevel ? [255, 210, 30] : correct ? [55, 225, 95] : [255, 65, 35];
-            const maxRadius = Math.max(
-                Math.hypot(centerX - feedRect.left, centerY - feedRect.top),
-                Math.hypot(centerX - feedRect.right, centerY - feedRect.top),
-                Math.hypot(centerX - feedRect.left, centerY - feedRect.bottom),
-                Math.hypot(centerX - feedRect.right, centerY - feedRect.bottom),
-            );
-            const draw = (now) => {
-                const progress = Math.min(1, (now - start) / duration);
-                const fade = 1 - progress;
-                const eased = 1 - Math.pow(1 - progress, 3);
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                this.ctx.save();
-                this.ctx.scale(this.canvasScale, this.canvasScale);
-                this.ctx.beginPath();
-                this.ctx.rect(feedRect.left, feedRect.top, feedRect.width, feedRect.height);
-                this.ctx.clip();
-
-                if (correct) {
-                    const radius = 16 + maxRadius * eased;
-                    const glow = this.ctx.createRadialGradient(
-                        centerX, centerY, Math.max(0, radius * .12),
-                        centerX, centerY, radius,
-                    );
-                    glow.addColorStop(0, `rgba(${color.join(",")},${.025 * fade})`);
-                    glow.addColorStop(.7, `rgba(${color.join(",")},${.07 * fade})`);
-                    glow.addColorStop(.88, `rgba(${color.join(",")},${.16 * fade})`);
-                    glow.addColorStop(1, `rgba(${color.join(",")},0)`);
-                    this.ctx.fillStyle = glow;
-                    this.ctx.beginPath();
-                    this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                    this.ctx.fill();
-
-                    this.ctx.strokeStyle = `rgba(${color.join(",")},${.38 * fade})`;
-                    this.ctx.lineWidth = 7 + 9 * fade;
-                    this.ctx.shadowColor = `rgba(${color.join(",")},${.55 * fade})`;
-                    this.ctx.shadowBlur = 24;
-                    this.ctx.beginPath();
-                    this.ctx.arc(centerX, centerY, radius * .9, 0, Math.PI * 2);
-                    this.ctx.stroke();
-                } else {
-                    const intensity = Math.sin(Math.PI * progress) * .16;
-                    const vignette = this.ctx.createRadialGradient(
-                        centerX, centerY, 0,
-                        centerX, centerY, maxRadius,
-                    );
-                    vignette.addColorStop(0, `rgba(${color.join(",")},${intensity * .15})`);
-                    vignette.addColorStop(1, `rgba(${color.join(",")},${intensity})`);
-                    this.ctx.fillStyle = vignette;
-                    this.ctx.fillRect(feedRect.left, feedRect.top, feedRect.width, feedRect.height);
-                }
-                this.ctx.restore();
-                if (progress < 1) requestAnimationFrame(draw);
-                else this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            };
-            requestAnimationFrame(draw);
+        flashAnswer(correct) {
+            clearTimeout(this.answerFlashTimer);
+            this.answerFlash.className = "answer-flash";
+            void this.answerFlash.offsetWidth;
+            this.answerFlash.classList.add(correct ? "is-correct" : "is-wrong");
+            this.answerFlashTimer = setTimeout(() => {
+                this.answerFlash.className = "answer-flash";
+            }, 1000);
         }
 
         updateStrike(strike) {
@@ -657,12 +601,6 @@
             if (this.current?.card) setTimeout(() => this.status.classList.add("is-hidden"), 2500);
         }
 
-        resizeCanvas() {
-            this.canvasScale = Math.min(window.devicePixelRatio || 1, 2);
-            this.canvas.width = Math.round(window.innerWidth * this.canvasScale);
-            this.canvas.height = Math.round(window.innerHeight * this.canvasScale);
-        }
-
         bindEvents() {
             this.feed.addEventListener("click", (event) => {
                 const answer = event.target.closest("[data-answer]");
@@ -779,7 +717,6 @@
                 const query = encodeURIComponent(this.current.card.prompt);
                 window.open(`https://yandex.ru/search/?text=${query}`, "_blank", "noopener");
             });
-            window.addEventListener("resize", () => this.resizeCanvas(), {passive: true});
         }
 
     }
