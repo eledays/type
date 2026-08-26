@@ -66,7 +66,10 @@ class SpellingExercise(PracticeItem):
 
         :return: Новый перемешанный список вариантов.
         """
-        return random.sample(self.answers, k=len(self.answers))
+        # This randomness only controls presentation order.
+        return random.sample(  # nosec B311
+            self.answers, k=len(self.answers)
+        )
 
     def get_correct_answer(self) -> str:
         """Возвращает явно сохранённый правильный ответ.

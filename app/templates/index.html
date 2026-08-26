@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#161616">
     <title>type — Лента слов</title>
-    <script>document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';</script>
+    <script nonce="{{ csp_nonce }}">document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';</script>
     <link rel="stylesheet" href="{{ style_url }}">
     <link rel="stylesheet" href="{{ index_style_url }}">
     <link rel="icon" href="{{ favicon_url }}" type="image/x-icon">
@@ -200,7 +200,7 @@
         </form>
     </section>
 
-    <script>
+    <script nonce="{{ csp_nonce }}">
         window.feedBootstrap = {{ {
             'cards': initial_cards, 'query': feed_query, 'admin': admin, 'strike': strike,
             'strikeLevels': strike_levels, 'batchSize': card_batch_size, 'backgroundPools': background_pools,

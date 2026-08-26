@@ -2,6 +2,7 @@ import json
 from datetime import timedelta
 from pathlib import Path
 from typing import Annotated, Any, Literal
+from urllib.parse import urlsplit
 
 from limits import parse_many
 from pydantic import (
@@ -44,6 +45,14 @@ class AppSettings(BaseSettings):
     )
     flask_port: int = Field(
         default=5000, validation_alias="FLASK_PORT", ge=1, le=65_535
+    )
+    max_content_length: int = Field(
+        default=65_536,
+        validation_alias="MAX_CONTENT_LENGTH",
+        ge=1_024,
+    )
+    trusted_hosts: Annotated[tuple[str, ...], NoDecode] = Field(
+        default=(), validation_alias="TRUSTED_HOSTS"
     )
     strike_levels: Annotated[tuple[int, ...], NoDecode] = Field(
         default=(50, 100, 500, 1000), validation_alias="STRIKE_LEVELS"
@@ -161,10 +170,35 @@ class AppSettings(BaseSettings):
 
         :param value: Секретный ключ приложения.
         :return: Проверенный секретный ключ.
-        :raises ValueError: Если ключ короче шестнадцати символов.
+        :raises ValueError: Если ключ короче 32 символов или похож на шаблон.
         """
-        if len(value.get_secret_value()) < 16:
-            raise ValueError("SECRET_KEY must contain at least 16 characters")
+        secret = value.get_secret_value()
+        normalized = secret.casefold()
+        if len(secret) < 32:
+            raise ValueError("SECRET_KEY must contain at least 32 characters")
+        if any(marker in normalized for marker in ("replace-with", "changeme")):
+            raise ValueError("SECRET_KEY must not be a placeholder")
+        return value
+
+    @field_validator("trusted_hosts", mode="before")
+    @classmethod
+    def parse_trusted_hosts(cls, value: Any) -> tuple[str, ...] | Any:
+        """Принимает разрешённые Host-значения через запятую."""
+        if isinstance(value, str):
+            return tuple(
+                host.strip() for host in value.split(",") if host.strip()
+            )
+        return value
+
+    @field_validator("trusted_hosts")
+    @classmethod
+    def validate_trusted_hosts(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        """Запрещает неоднозначные и содержащие схему Host-значения."""
+        if any(
+            "/" in host or "://" in host or not host.strip()
+            for host in value
+        ):
+            raise ValueError("TRUSTED_HOSTS must contain host names only")
         return value
 
     @field_validator("strike_levels", mode="before")
@@ -213,6 +247,33 @@ class AppSettings(BaseSettings):
                 "PRACTICE_CARD_BATCH_SIZE must not exceed "
                 "PRACTICE_CARD_BATCH_MAX"
             )
+        public_url = urlsplit(self.url)
+        if (
+            not public_url.hostname
+            or public_url.scheme not in {"http", "https"}
+        ):
+            raise ValueError("URL must be an absolute HTTP(S) URL")
+        if not self.debug and public_url.scheme != "https":
+            raise ValueError("URL must use HTTPS outside DEBUG mode")
+        if self.debug and self.flask_host not in {
+            "localhost", "127.0.0.1", "::1"
+        }:
+            raise ValueError("DEBUG may only bind to a loopback host")
+        if not self.debug and self.rate_limit_storage_uri == "memory://":
+            raise ValueError(
+                "RATE_LIMIT_STORAGE_URI must use shared storage outside DEBUG mode"
+            )
+        if self.yandex_redirect_uri:
+            redirect = urlsplit(self.yandex_redirect_uri)
+            local_redirect = redirect.hostname in {
+                "localhost", "127.0.0.1", "::1"
+            }
+            if not redirect.hostname or (
+                redirect.scheme != "https" and not local_redirect
+            ):
+                raise ValueError(
+                    "YANDEX_REDIRECT_URI must use HTTPS except on localhost"
+                )
         return self
 
     @field_validator(
@@ -242,10 +303,18 @@ class AppSettings(BaseSettings):
         hsts_enabled = (
             not self.debug if self.hsts_enabled is None else self.hsts_enabled
         )
+        public_host = urlsplit(self.url).hostname
+        trusted_hosts = self.trusted_hosts or (
+            ("localhost", "127.0.0.1", "[::1]")
+            if self.debug
+            else (public_host,)
+        )
         return {
             "DEBUG": self.debug,
             "FLASK_PORT": self.flask_port,
             "FLASK_HOST": self.flask_host,
+            "MAX_CONTENT_LENGTH": self.max_content_length,
+            "TRUSTED_HOSTS": list(trusted_hosts),
             "SQLALCHEMY_DATABASE_URI": self.database_url,
             "SECRET_KEY": self.secret_key.get_secret_value(),
             "STRIKE_LEVELS": self.strike_levels,

@@ -1,3 +1,5 @@
+import re
+
 from tests.base import AppTestCase
 
 
@@ -16,6 +18,12 @@ class TestSecurityHeaders(AppTestCase):
         assert "frame-ancestors 'none'" in response.headers[
             "Content-Security-Policy"
         ]
+        policy = response.headers["Content-Security-Policy"]
+        assert "script-src 'self' 'nonce-" in policy
+        assert "script-src 'self' 'unsafe-inline'" not in policy
+        nonce = re.search(r"script-src 'self' 'nonce-([^']+)'", policy)
+        assert nonce is not None
+        assert f'nonce="{nonce.group(1)}"'.encode() in response.data
         assert response.headers["Cache-Control"] == "private, no-store"
         assert response.headers["Pragma"] == "no-cache"
         assert "max-age=31536000" in response.headers[
@@ -38,3 +46,22 @@ class TestSecurityHeaders(AppTestCase):
         assert response.headers["Cache-Control"] == (
             "public, max-age=31536000, immutable"
         )
+
+    def test_untrusted_host_is_rejected(self) -> None:
+        response = self.client.get("/", headers={"Host": "attacker.example"})
+
+        assert response.status_code == 400
+
+    def test_oversized_request_is_rejected(self) -> None:
+        response = self.client.post(
+            "/api/v1/reports",
+            json={"message": "x" * 70_000},
+        )
+
+        assert response.status_code == 413
+
+    def test_templates_do_not_require_inline_event_handlers(self) -> None:
+        response = self.client.get("/profile")
+
+        assert response.status_code == 200
+        assert not re.search(rb"\son[a-z]+=", response.data)

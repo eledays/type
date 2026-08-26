@@ -4,7 +4,8 @@ import pytest
 
 
 os.environ["DEBUG"] = "false"
-os.environ.setdefault("SECRET_KEY", "test-secret-key-for-test-suite")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-test-suite-32chars")
+os.environ.setdefault("RATE_LIMIT_STORAGE_URI", "redis://localhost:6379/15")
 
 from app import create_app  # noqa: E402
 from app.extensions import db  # noqa: E402
@@ -21,6 +22,8 @@ class AppTestCase:
             "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
             "ANONYMOUS_ACTION_LIMIT": 3,
             "SERVER_NAME": "localhost",
+            "TRUSTED_HOSTS": ["localhost"],
+            "RATELIMIT_STORAGE_URI": "memory://",
             "WTF_CSRF_ENABLED": False,
         })
         with self.app.app_context():

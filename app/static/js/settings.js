@@ -36,7 +36,7 @@ function handleClick(id) {
 }
 
 function handleTimeInput(id) {
-    let item = document.querySelector(`.time-control#${id} #time-input`);
+    let item = document.querySelector(`[data-setting-time="${id}"]`);
     fetch(window.routeConfig.updateSettings, {
         method: 'PATCH',
         headers: {
@@ -48,6 +48,12 @@ function handleTimeInput(id) {
 }
 
 addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-setting-toggle]').forEach((item) => {
+        item.addEventListener('click', () => handleClick(item.dataset.settingToggle));
+    });
+    document.querySelectorAll('[data-setting-time]').forEach((input) => {
+        input.addEventListener('change', () => handleTimeInput(input.dataset.settingTime));
+    });
     const reportForm = document.getElementById('general-report-form');
     reportForm?.addEventListener('submit', async (event) => {
         event.preventDefault();

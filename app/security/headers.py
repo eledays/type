@@ -1,26 +1,43 @@
-from flask import Flask, request
+from secrets import token_urlsafe
+
+from flask import Flask, g, request
 
 
-CONTENT_SECURITY_POLICY = "; ".join((
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: https://avatars.yandex.net",
-    "connect-src 'self'",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "frame-ancestors 'none'",
-))
+def _content_security_policy(nonce: str | None) -> str:
+    script_sources = "script-src 'self'"
+    if nonce is not None:
+        script_sources += f" 'nonce-{nonce}'"
+    return "; ".join((
+        "default-src 'self'",
+        script_sources,
+        "style-src 'self' https://fonts.googleapis.com",
+        "style-src-attr 'unsafe-inline'",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data: https://avatars.yandex.net",
+        "connect-src 'self'",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+    ))
 
 
 def register_security_headers(app: Flask) -> None:
     """Добавляет браузерные политики и запрещает кэш приватных ответов."""
 
+    @app.before_request
+    def create_csp_nonce() -> None:
+        g.csp_nonce = token_urlsafe(24)
+
+    @app.context_processor
+    def inject_csp_nonce() -> dict[str, str]:
+        return {"csp_nonce": g.csp_nonce}
+
     @app.after_request
     def apply_security_headers(response):
-        response.headers["Content-Security-Policy"] = CONTENT_SECURITY_POLICY
+        response.headers["Content-Security-Policy"] = _content_security_policy(
+            getattr(g, "csp_nonce", None)
+        )
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"

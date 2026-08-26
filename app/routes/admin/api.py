@@ -1,4 +1,5 @@
 from flask import current_app, jsonify, request
+from flask_login import current_user
 
 from app.extensions import limiter
 from app.routes.admin import bp
@@ -30,6 +31,11 @@ def patch_explanation(word_id: int):
             "error": "word_not_found",
             "message": "Word not found",
         }), 404
+    current_app.logger.info(
+        "admin_action=update_explanation user_id=%s word_id=%s",
+        current_user.get_id(),
+        word_id,
+    )
     return jsonify({"status": "success"})
 
 
@@ -57,4 +63,9 @@ def remove_answer(word_id: int):
             "error": "word_or_answer_not_found",
             "message": "Word or answer not found",
         }), 404
+    current_app.logger.info(
+        "admin_action=delete_answer user_id=%s word_id=%s",
+        current_user.get_id(),
+        word_id,
+    )
     return jsonify({"status": "success"})

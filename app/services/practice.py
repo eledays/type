@@ -682,7 +682,8 @@ def _take_candidate(
                     item.id, ItemProgress(0.5, 0, 0, None)
                 ).success_rate,
             ), pool_name
-        return random.choice(choices), pool_name
+        # This randomness only selects a practice card.
+        return random.choice(choices), pool_name  # nosec B311
     return None
 
 
@@ -730,7 +731,10 @@ def _random_window(query, count: int, total: int | None = None) -> list[Any]:
     row_count = query.count() if total is None else total
     if row_count <= 0:
         return []
-    offset = random.randrange(row_count - count + 1) if row_count > count else 0
+    # This randomness only selects a practice card.
+    offset = 0
+    if row_count > count:
+        offset = random.randrange(row_count - count + 1)  # nosec B311
     return query.offset(offset).limit(count).all()
 
 

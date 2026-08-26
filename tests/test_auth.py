@@ -14,7 +14,13 @@ class TestAuth(AppTestCase):
     def test_next_url_allows_local_paths_only(self) -> None:
         with self.app.test_request_context():
             assert safe_next_url("/profile?tab=stats") == "/profile?tab=stats"
-            for unsafe in (None, "profile", "https://evil.test", "//evil.test/path"):
+            for unsafe in (
+                None,
+                "profile",
+                "https://evil.test",
+                "//evil.test/path",
+                "/\\evil.test/path",
+            ):
                 assert safe_next_url(unsafe) == "/"
 
     def test_oauth_state_requires_equal_non_empty_values(self) -> None:

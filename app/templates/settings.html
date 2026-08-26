@@ -42,7 +42,7 @@
         <div class="settings-block">
             <h2>Настройки</h2>
             <div class="settings-list">
-                <div class="setting-item" id="strike" onclick="handleClick('strike')">
+                <div class="setting-item" id="strike" data-setting-toggle="strike">
                     <span class="setting-name">Страйк</span>
                     {% if settings.strike %}
                         <span class="setting-value on">Включен</span>
@@ -50,7 +50,7 @@
                         <span class="setting-value off">Выключен</span>
                     {% endif %}
                 </div>
-                <div class="setting-item" id="notification" onclick="handleClick('notification')">
+                <div class="setting-item" id="notification" data-setting-toggle="notification">
                     <span class="setting-name">Уведомления</span>
                     {% if settings.notification %}
                         <span class="setting-value on">Включены</span>
@@ -59,10 +59,10 @@
                     {% endif %}
                 </div>
                 <div class="time-control" id="notification" style="margin-top: {% if settings.notification %}-4px{% else %}-52px{% endif %}">
-                    <label for="time-input" class="time-label">Время:</label>
-                    <input type="time" id="time-input" class="time-input" value="{{ settings.notification_time.strftime('%H:%M') }}" onchange="handleTimeInput('notification')">
+                    <label for="notification-time" class="time-label">Время:</label>
+                    <input type="time" id="notification-time" class="time-input" data-setting-time="notification" value="{{ settings.notification_time.strftime('%H:%M') }}">
                 </div>
-                <div class="setting-item" id="day_results" onclick="handleClick('day_results')">
+                <div class="setting-item" id="day_results" data-setting-toggle="day_results">
                     <span class="setting-name">Итоги дня</span>
                     {% if settings.day_results %}
                         <span class="setting-value on">Включены</span>
@@ -71,11 +71,11 @@
                     {% endif %}
                 </div>
                 <div class="time-control" id="day_results" style="margin-top: {% if settings.day_results %}-4px{% else %}-52px{% endif %}">
-                    <label for="time-input" class="reminder-label">Время:</label>
-                    <input type="time" id="time-input" class="time-input" value="{{ settings.day_results_time.strftime('%H:%M') }}" onchange="handleTimeInput('day_results')">
+                    <label for="day-results-time" class="reminder-label">Время:</label>
+                    <input type="time" id="day-results-time" class="time-input" data-setting-time="day_results" value="{{ settings.day_results_time.strftime('%H:%M') }}">
                 </div>
                 {% if admin %}
-                <div class="setting-item" id="admin" onclick="handleClick('admin')">
+                <div class="setting-item" id="admin" data-setting-toggle="admin">
                     <span class="setting-name">Админка</span>
                     {% if admin == 1 %}
                         <span class="setting-value off">Выключена</span>
@@ -148,7 +148,7 @@
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ csp_nonce }}">
         window.routeConfig = {{ {
             'updateSettings': url_for('profile_api.patch_settings'),
             'createReport': url_for('practice_api.create_report'),

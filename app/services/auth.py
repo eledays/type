@@ -11,7 +11,8 @@ from app.models import Settings, User
 from app.models.action import Action
 
 
-YANDEX_TOKEN_URL = "https://oauth.yandex.ru/token"
+# Public provider endpoint, not a credential.
+YANDEX_TOKEN_URL = "https://oauth.yandex.ru/token"  # nosec B105
 YANDEX_USER_INFO_URL = "https://login.yandex.ru/info"
 OAUTH_TIMEOUT_SECONDS = 10
 
@@ -44,6 +45,8 @@ def safe_next_url(value: str | None) -> str:
         not parsed.scheme
         and not parsed.netloc
         and value.startswith("/")
+        and not value.startswith("//")
+        and "\\" not in value
     )
     return value if is_local else "/"
 

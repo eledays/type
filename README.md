@@ -26,9 +26,10 @@
     ```
 4. Настройте `.env`
     ```
-    SECRET_KEY=replace-with-a-random-secret-key
+    SECRET_KEY=replace-with-at-least-32-random-characters
     DATABASE_URL=sqlite:///app.db
     FLASK_PORT=5000
+    MAX_CONTENT_LENGTH=65536
     COOKIE_SAMESITE=Lax
     REMEMBER_COOKIE_DAYS=30
     YANDEX_CLIENT_ID=your-client-id
@@ -41,6 +42,8 @@
     PRACTICE_SWIPE_GRACE_STRIKE=3
     RATE_LIMIT_STORAGE_URI=memory://
     ```
+    В production (`DEBUG=false`) задайте общий backend rate limiter, например
+    `RATE_LIMIT_STORAGE_URI=redis://localhost:6379/0`.
 5. Примените миграции базы данных:
    ```bash
    flask --app app db upgrade

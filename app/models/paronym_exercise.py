@@ -61,7 +61,8 @@ class ParonymExercise(PracticeItem):
             self._inflect(paronym.word)
             for paronym in self.paronym.group.paronyms
         ]
-        return random.sample(answers, k=len(answers))
+        # This randomness only controls presentation order.
+        return random.sample(answers, k=len(answers))  # nosec B311
 
     def get_correct_answer(self) -> str:
         """Возвращает правильный пароним в форме предложения.

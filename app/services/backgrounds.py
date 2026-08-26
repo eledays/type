@@ -19,4 +19,5 @@ def choose_background(user: User) -> Path:
     )
     webp_files = [path for path in directory.glob("*.webp") if path.is_file()]
     files = webp_files or [path for path in directory.iterdir() if path.is_file()]
-    return random.choice(files)
+    # This randomness only selects a visual background.
+    return random.choice(files)  # nosec B311
