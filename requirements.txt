@@ -23,6 +23,7 @@ ordered-set==4.1.0
 packaging==25.0
 pydantic==2.13.4
 pydantic-settings==2.15.0
+psycopg[binary]==3.2.10
 requests==2.33.0
 redis==7.4.1
 selenium==4.47.0

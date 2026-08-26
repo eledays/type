@@ -31,9 +31,27 @@ def upgrade():
         "AND NOT EXISTS (SELECT 1 FROM word WHERE word.id = action.word_id)"
     )
     op.execute("UPDATE sentence SET word_tags = '' WHERE word_tags IS NULL")
-    op.execute("UPDATE settings SET strike = 1 WHERE strike IS NULL")
-    op.execute("UPDATE settings SET notification = 0 WHERE notification IS NULL")
-    op.execute("UPDATE word SET mistake = 0 WHERE mistake IS NULL")
+    settings = sa.table(
+        "settings",
+        sa.column("strike", sa.Boolean()),
+        sa.column("notification", sa.Boolean()),
+    )
+    word = sa.table("word", sa.column("mistake", sa.Boolean()))
+    op.execute(
+        settings.update()
+        .where(settings.c.strike.is_(None))
+        .values(strike=True)
+    )
+    op.execute(
+        settings.update()
+        .where(settings.c.notification.is_(None))
+        .values(notification=False)
+    )
+    op.execute(
+        word.update()
+        .where(word.c.mistake.is_(None))
+        .values(mistake=False)
+    )
 
     with op.batch_alter_table('action', schema=None) as batch_op:
         batch_op.alter_column('datetime',

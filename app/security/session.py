@@ -23,7 +23,15 @@ def ensure_authenticated_user() -> None:
 
     :return: ``None``.
     """
-    if request.endpoint == "static" or current_user.is_authenticated:
+    sessionless_endpoints = {
+        "static",
+        "system.liveness",
+        "system.readiness",
+    }
+    if (
+        request.endpoint in sessionless_endpoints
+        or current_user.is_authenticated
+    ):
         return
 
     legacy_user_id = session.pop("user_id", None)

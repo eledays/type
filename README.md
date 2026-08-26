@@ -9,7 +9,72 @@
 - [@MamaKupiSnikers](https://t.me/MamaKupiSnikers) — помощь с доработкой фронта в разделе паронимов
 
 
-## Установка
+## Запуск через Docker Compose
+
+Для локального запуска нужны Docker Engine и Docker Compose. Стек включает
+Gunicorn-приложение, PostgreSQL и Redis:
+
+```bash
+docker compose up --build -d
+docker compose ps
+```
+
+Приложение будет доступно по адресу `http://localhost:8000`. При старте
+контейнер приложения дожидается healthcheck PostgreSQL и Redis, автоматически
+применяет Alembic-миграции и только затем запускает Gunicorn. Состояние сервисов
+можно проверить отдельно:
+
+```bash
+curl --fail http://localhost:8000/health/live
+curl --fail http://localhost:8000/health/ready
+```
+
+Первичное наполнение тестовыми заданиями выполняется один раз:
+
+```bash
+docker compose exec app flask --app app csv_to_db fixtures/test_words.csv
+```
+
+Логи и остановка стека:
+
+```bash
+docker compose logs -f app
+docker compose down
+```
+
+PostgreSQL и Redis используют именованные volumes, поэтому обычный
+`docker compose down` не удаляет данные. Команда `docker compose down -v`
+удалит оба volume без возможности восстановления.
+
+Параметры локального Docker-стека можно переопределить в `.env`:
+
+```dotenv
+APP_PORT=8000
+POSTGRES_DB=type
+POSTGRES_USER=type
+POSTGRES_PASSWORD=type-local
+DOCKER_SECRET_KEY=replace-with-at-least-32-random-characters
+DOCKER_PUBLIC_URL=http://localhost:8000
+DOCKER_TRUSTED_HOSTS=localhost,127.0.0.1
+DOCKER_YANDEX_REDIRECT_URI=http://localhost:8000/auth/yandex/callback
+```
+
+Значения по умолчанию предназначены только для локальной машины. Перед
+публичным развёртыванием задайте уникальные секреты, HTTPS URL и параметры
+доверенного reverse proxy. Существующая `instance/app.db` автоматически в
+PostgreSQL не импортируется.
+
+### Резервная копия PostgreSQL
+
+```bash
+docker compose exec -T postgres pg_dump -U type -d type > type-backup.sql
+docker compose exec -T postgres psql -U type -d type < type-backup.sql
+```
+
+При изменённых `POSTGRES_USER` и `POSTGRES_DB` подставьте соответствующие
+значения в команды.
+
+## Нативная установка
 1. Клонируйте репозиторий:
     ```bash
     git clone https://github.com/eledays/type.git
@@ -53,7 +118,7 @@
    flask --app app csv_to_db fixtures/test_words.csv
    ```
 
-## Использование
+## Нативный запуск
 1. Запустите проект:
     ```bash
     python run_dev.py

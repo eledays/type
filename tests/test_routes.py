@@ -1,4 +1,5 @@
 import re
+from unittest.mock import patch
 
 from tests.base import AppTestCase
 
@@ -7,6 +8,41 @@ from app.models import Action, Category, SpellingExercise, User
 
 
 class TestRouteMap(AppTestCase):
+
+    def test_liveness_does_not_create_anonymous_user(self) -> None:
+        response = self.client.get("/health/live")
+
+        assert response.status_code == 200
+        assert response.get_json() == {"status": "ok"}
+        with self.app.app_context():
+            assert User.query.count() == 0
+
+    def test_readiness_checks_database_and_redis(self) -> None:
+        self.app.config["RATELIMIT_STORAGE_URI"] = "redis://redis:6379/0"
+        with patch("app.routes.system.Redis.from_url") as from_url:
+            response = self.client.get("/health/ready")
+
+        assert response.status_code == 200
+        assert response.get_json() == {"status": "ok"}
+        from_url.assert_called_once_with(
+            "redis://redis:6379/0",
+            socket_connect_timeout=1,
+            socket_timeout=1,
+        )
+        from_url.return_value.ping.assert_called_once_with()
+        with self.app.app_context():
+            assert User.query.count() == 0
+
+    def test_readiness_reports_dependency_failure(self) -> None:
+        self.app.config["RATELIMIT_STORAGE_URI"] = "redis://redis:6379/0"
+        with patch(
+            "app.routes.system.Redis.from_url",
+            side_effect=ValueError("invalid Redis configuration"),
+        ):
+            response = self.client.get("/health/ready")
+
+        assert response.status_code == 503
+        assert response.get_json() == {"status": "unavailable"}
 
     def test_canonical_routes_and_methods_are_registered(self) -> None:
         routes = {

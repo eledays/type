@@ -1,0 +1,67 @@
+services:
+  app:
+    build:
+      context: .
+    environment:
+      DEBUG: "true"
+      SECRET_KEY: ${DOCKER_SECRET_KEY:-local-docker-secret-key-not-for-production-123}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-type}:${POSTGRES_PASSWORD:-type-local}@postgres:5432/${POSTGRES_DB:-type}
+      URL: ${DOCKER_PUBLIC_URL:-http://localhost:8000}
+      YANDEX_CLIENT_ID: ${YANDEX_CLIENT_ID:-}
+      YANDEX_CLIENT_SECRET: ${YANDEX_CLIENT_SECRET:-}
+      YANDEX_REDIRECT_URI: ${DOCKER_YANDEX_REDIRECT_URI:-http://localhost:8000/auth/yandex/callback}
+      RATE_LIMIT_STORAGE_URI: redis://redis:6379/0
+      TRUSTED_HOSTS: ${DOCKER_TRUSTED_HOSTS:-localhost,127.0.0.1}
+      TRUSTED_PROXY_COUNT: "0"
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://localhost:8000/health/ready', timeout=2)
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    init: true
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-type}
+      POSTGRES_USER: ${POSTGRES_USER:-type}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-type-local}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

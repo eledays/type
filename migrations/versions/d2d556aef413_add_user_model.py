@@ -56,7 +56,7 @@ def upgrade():
         "user_id, strike, notification, notification_time, "
         "day_results, day_results_time"
         ") "
-        "SELECT id, 1, 0, '12:00:00', 1, '20:00:00' "
+        "SELECT id, TRUE, FALSE, '12:00:00', TRUE, '20:00:00' "
         'FROM "user" '
         "WHERE NOT EXISTS ("
         "SELECT 1 FROM settings WHERE settings.user_id = \"user\".id"
