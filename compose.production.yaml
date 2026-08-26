@@ -1,0 +1,69 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  app:
+    environment:
+      DEBUG: "false"
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in the production env file}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-type}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the production env file}@postgres:5432/${POSTGRES_DB:-type}
+      URL: https://${DOMAIN:?Set DOMAIN in the production env file}
+      YANDEX_CLIENT_ID: ${YANDEX_CLIENT_ID:?Set YANDEX_CLIENT_ID in the production env file}
+      YANDEX_CLIENT_SECRET: ${YANDEX_CLIENT_SECRET:?Set YANDEX_CLIENT_SECRET in the production env file}
+      YANDEX_REDIRECT_URI: https://${DOMAIN:?Set DOMAIN in the production env file}/auth/yandex/callback
+      RATE_LIMIT_STORAGE_URI: redis://redis:6379/0
+      TRUSTED_HOSTS: ${DOMAIN:?Set DOMAIN in the production env file},localhost
+      TRUSTED_PROXY_COUNT: "1"
+      COOKIE_SECURE: "true"
+      HSTS_ENABLED: "true"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: always
+
+  postgres:
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-type}
+      POSTGRES_USER: ${POSTGRES_USER:-type}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the production env file}
+    logging: *default-logging
+    restart: always
+
+  redis:
+    logging: *default-logging
+    restart: always
+
+  caddy:
+    build:
+      context: .
+      dockerfile: deploy/caddy/Dockerfile
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in the production env file}
+      CADDY_EMAIL: ${CADDY_EMAIL:?Set CADDY_EMAIL in the production env file}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - frontend
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    restart: always
+
+volumes:
+  caddy_data:
+  caddy_config:

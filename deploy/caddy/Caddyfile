@@ -1,0 +1,18 @@
+{
+	email {$CADDY_EMAIL}
+	admin off
+	servers {
+		protocols h1 h2
+	}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:8000
+	header -Server
+
+	log {
+		output stdout
+		format json
+	}
+}

@@ -13,8 +13,8 @@ services:
       RATE_LIMIT_STORAGE_URI: redis://redis:6379/0
       TRUSTED_HOSTS: ${DOCKER_TRUSTED_HOSTS:-localhost,127.0.0.1}
       TRUSTED_PROXY_COUNT: "0"
-    ports:
-      - "${APP_PORT:-8000}:8000"
+    expose:
+      - "8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -34,6 +34,9 @@ services:
       start_period: 20s
     init: true
     restart: unless-stopped
+    networks:
+      - frontend
+      - backend
 
   postgres:
     image: postgres:17-alpine
@@ -49,6 +52,8 @@ services:
       timeout: 3s
       retries: 10
     restart: unless-stopped
+    networks:
+      - backend
 
   redis:
     image: redis:7.4-alpine
@@ -61,7 +66,14 @@ services:
       timeout: 3s
       retries: 10
     restart: unless-stopped
+    networks:
+      - backend
 
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  frontend:
+  backend:
+    internal: true

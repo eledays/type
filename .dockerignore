@@ -1,4 +1,6 @@
-.env
+.env*
+!.env.example
+!.env.production.example
 .git
 .github
 .pytest_cache
@@ -8,6 +10,8 @@ __pycache__
 *.db
 *.sqlite*
 certs
+backups
 errors.csv
+instance
 words.csv
 tests

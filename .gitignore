@@ -1,5 +1,6 @@
 # Environments
 .env
+.env.production
 .venv
 env/
 venv/
@@ -24,5 +25,6 @@ certs
 app/static/img/backs/secure/*
 app/secure_static/*
 errors.csv
+backups/
 words.csv
 !fixtures/test_words.csv
