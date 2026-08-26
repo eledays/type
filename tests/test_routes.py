@@ -57,6 +57,8 @@ class TestRouteMap(AppTestCase):
         assert b'fonts.googleapis.com' not in response.data
         assert b'<symbol id="icon-search"' in response.data
         assert b'"swipeGraceStrike": 3' in response.data
+        assert b'/api/v1/profile/avatar' not in response.data
+        assert b'/static/img/default_avatar.png?v=' in response.data
 
     def test_index_contains_inline_profile_filters_and_word_panels(self) -> None:
         response = self.client.get("/")

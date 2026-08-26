@@ -22,7 +22,7 @@
     </svg>
     <header class="header{% if anonymous_started %} has-info has-anonymous-info{% endif %}" aria-label="Навигация практики">
         <button class="avatar-button" type="button" data-open-panel="profile" aria-label="Открыть профиль">
-            <img src="{{ url_for('profile_api.avatar') }}" class="avatar" alt="">
+            <img src="{{ avatar_url }}" class="avatar" alt="">
         </button>
         {% if user.is_anonymous_account %}
         <a class="header-login" href="{{ url_for('auth.login', next=request.full_path) }}">

@@ -117,6 +117,11 @@ def index():
         categories=Category.query.all(),
         tasks=current_app.config["TASKS"],
         user=user,
+        avatar_url=(
+            user.avatar_url
+            if not user.is_anonymous_account and user.avatar_url
+            else static_url("img/default_avatar.png")
+        ),
         oauth_configured=oauth_is_configured(),
         style_url=static_url("css/style.css"),
         index_style_url=static_url("css/index.css"),
