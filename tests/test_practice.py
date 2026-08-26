@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from unittest.mock import Mock, patch
 import pytest
 from sqlalchemy import event
 
@@ -16,6 +17,7 @@ from app.models import (
     SpellingExercise,
     User,
 )
+from app.models.paronym_exercise import inflect_word
 from app.services.practice import PracticeError, select_card, select_cards
 
 
@@ -567,6 +569,24 @@ class TestPracticeApi(AppTestCase):
                 )
 
             assert not any("GROUP BY action" in sql for sql in statements)
+            assert not any("FROM spelling_exercise" in sql for sql in statements)
+
+    def test_paronym_inflection_is_cached(self) -> None:
+        parsed = Mock()
+        parsed.inflect.return_value.word = "эффективным"
+        analyzer = Mock()
+        analyzer.parse.return_value = [parsed]
+        inflect_word.cache_clear()
+
+        with patch(
+            "app.models.paronym_exercise.get_morph_analyzer",
+            return_value=analyzer,
+        ):
+            first = inflect_word("эффективный", "ablt,sing,masc")
+            second = inflect_word("эффективный", "ablt,sing,masc")
+
+        assert first == second == "эффективным"
+        analyzer.parse.assert_called_once_with("эффективный")
 
     def test_two_failures_are_followed_by_a_comfortable_card(self) -> None:
         user_id = self.current_user_id()

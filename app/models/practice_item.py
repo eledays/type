@@ -49,6 +49,7 @@ class PracticeItem(db.Model):
     __mapper_args__ = {
         "polymorphic_on": type,
         "polymorphic_identity": "practice_item",
+        "with_polymorphic": "*",
     }
 
     def get_answers(self) -> list[str]:

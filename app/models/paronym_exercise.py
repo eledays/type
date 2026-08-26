@@ -24,6 +24,14 @@ def get_morph_analyzer() -> MorphAnalyzer:
     return MorphAnalyzer()
 
 
+@lru_cache(maxsize=8192)
+def inflect_word(word: str, word_tags: str) -> str:
+    """Кэширует неизменяемый результат склонения слова для карточек."""
+    parsed_word = get_morph_analyzer().parse(word)[0]
+    inflected_word = parsed_word.inflect(set(word_tags.split(",")))
+    return inflected_word.word if inflected_word else parsed_word.word
+
+
 class ParonymExercise(PracticeItem):
     """Упражнение на выбор паронима для предложения."""
 
@@ -48,9 +56,7 @@ class ParonymExercise(PracticeItem):
         :param word: Пароним в нормальной форме.
         :return: Склонённое слово или исходная разобранная форма.
         """
-        parsed_word = get_morph_analyzer().parse(word)[0]
-        inflected_word = parsed_word.inflect(set(self.word_tags.split(",")))
-        return inflected_word.word if inflected_word else parsed_word.word
+        return inflect_word(word, self.word_tags)
 
     def get_answers(self) -> list[str]:
         """Формирует склонённые варианты из группы паронимов.

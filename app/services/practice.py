@@ -4,7 +4,7 @@ from typing import Any
 
 from flask import current_app, session
 from sqlalchemy import and_, select
-from sqlalchemy.orm import selectin_polymorphic, selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.extensions import db
 from app.models import (
@@ -16,7 +16,6 @@ from app.models import (
     ParonymGroup,
     PracticeItem,
     PracticeProgress,
-    SpellingExercise,
     User,
     UserPracticeStats,
 )
@@ -201,12 +200,8 @@ def select_cards(
         else None
     )
     base_items = PracticeItem.query.options(
-        selectin_polymorphic(
-            PracticeItem,
-            [SpellingExercise, ParonymExercise],
-        ),
-        selectinload(ParonymExercise.paronym)
-        .selectinload(Paronym.group)
+        joinedload(ParonymExercise.paronym)
+        .joinedload(Paronym.group)
         .selectinload(ParonymGroup.paronyms),
     )
     if task_id:
