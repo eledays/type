@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
+from sqlalchemy import event
 
 from tests.base import AppTestCase
 
@@ -94,6 +95,35 @@ class TestProfile(AppTestCase):
                 "avg_time_per_word": 25.0,
                 "best_streak": 2,
             }
+
+    def test_profile_stats_do_not_scan_action_history(self) -> None:
+        user_id = self.current_user_id()
+        with self.app.app_context():
+            word = self.make_word()
+            db.session.add(Action(
+                user_id=user_id,
+                practice_item_id=word.id,
+                action=Action.RIGHT_ANSWER,
+            ))
+            db.session.commit()
+            db.session.expunge_all()
+            statements: list[str] = []
+
+            def capture_statement(
+                _connection, _cursor, statement, _parameters, _context, _many
+            ) -> None:
+                statements.append(statement)
+
+            event.listen(db.engine, "before_cursor_execute", capture_statement)
+            try:
+                get_user_stats(user_id)
+            finally:
+                event.remove(
+                    db.engine, "before_cursor_execute", capture_statement
+                )
+
+            assert any("user_practice_stats" in sql for sql in statements)
+            assert not any("FROM action" in sql for sql in statements)
 
 
 class TestAdminApi(AppTestCase):

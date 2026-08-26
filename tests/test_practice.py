@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import pytest
+from sqlalchemy import event
 
 from tests.base import AppTestCase
 
@@ -537,6 +538,35 @@ class TestPracticeApi(AppTestCase):
                 "Задание из вашей зоны обучения",
                 "Новое задание",
             ]
+
+    def test_adaptive_selection_does_not_aggregate_action_history(self) -> None:
+        user_id = self.current_user_id()
+        with self.app.app_context():
+            word = self.make_word()
+            db.session.add(Action(
+                user_id=user_id,
+                practice_item_id=word.id,
+                action=Action.RIGHT_ANSWER,
+            ))
+            db.session.commit()
+            db.session.expunge_all()
+            user = db.session.get(User, user_id)
+            statements: list[str] = []
+
+            def capture_statement(
+                _connection, _cursor, statement, _parameters, _context, _many
+            ) -> None:
+                statements.append(statement)
+
+            event.listen(db.engine, "before_cursor_execute", capture_statement)
+            try:
+                select_card(user)
+            finally:
+                event.remove(
+                    db.engine, "before_cursor_execute", capture_statement
+                )
+
+            assert not any("GROUP BY action" in sql for sql in statements)
 
     def test_two_failures_are_followed_by_a_comfortable_card(self) -> None:
         user_id = self.current_user_id()

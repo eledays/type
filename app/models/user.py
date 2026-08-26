@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flask_login import UserMixin
-from sqlalchemy import BigInteger, Boolean, Integer, String, false
+from sqlalchemy import BigInteger, Boolean, Integer, String, event, false
+from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
@@ -67,3 +68,17 @@ class User(UserMixin, db.Model):
             part for part in (self.first_name, self.last_name) if part
         )
         return full_name or self.yandex_login or "Анонимный пользователь"
+
+
+@event.listens_for(User, "after_insert")
+def create_user_practice_stats(
+    _mapper: object,
+    connection: Connection,
+    user: User,
+) -> None:
+    """Создаёт строку агрегатов вместе с новым пользователем."""
+    from app.models.practice_progress import UserPracticeStats
+
+    connection.execute(
+        UserPracticeStats.__table__.insert().values(user_id=user.id)
+    )

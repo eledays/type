@@ -3,21 +3,22 @@ import random
 from typing import Any
 
 from flask import current_app, session
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, select
 from sqlalchemy.orm import selectin_polymorphic, selectinload
 
 from app.extensions import db
 from app.models import (
     Action,
     Category,
+    GlobalPracticeStats,
     Paronym,
     ParonymExercise,
     ParonymGroup,
     PracticeItem,
     PracticeProgress,
-    GlobalPracticeStats,
     SpellingExercise,
     User,
+    UserPracticeStats,
 )
 from app.utils import add_action, get_anonymous_actions_remaining, get_cached_strike
 
@@ -407,6 +408,7 @@ def check_answer(
     blank = "_______" if item_type == "paronym" else "_"
     full_item = item.get_prompt().replace(blank, right_answer)
     correct = answer == right_answer
+    explanation = item.explanation if item_type == "spelling" else None
     session["strike"] = get_cached_strike(user.id) + 1 if correct else 0
     add_action(
         user_id=user.id,
@@ -416,7 +418,7 @@ def check_answer(
     return {
         "correct": correct,
         "full_word": full_item,
-        "explanation": item.explanation if item_type == "spelling" else None,
+        "explanation": explanation,
         "strike": {
             "n": session.get("strike"),
             "levels": current_app.config["STRIKE_LEVELS"],
@@ -551,14 +553,11 @@ def _user_answer_stats(
 
 
 def _user_action_count(user_id: int) -> int:
-    """Считает учебные действия по компактным строкам прогресса."""
-    return int(db.session.scalar(
-        select(func.sum(
-            PracticeProgress.right_count
-            + PracticeProgress.wrong_count
-            + PracticeProgress.skip_count
-        )).where(PracticeProgress.user_id == user_id)
-    ) or 0)
+    """Считает учебные действия по сводной строке пользователя."""
+    stats = db.session.get(UserPracticeStats, user_id)
+    if stats is None:
+        return 0
+    return stats.right_count + stats.wrong_count + stats.skip_count
 
 
 def _item_progress(

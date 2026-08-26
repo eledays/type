@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer
-from sqlalchemy import event
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, case, event
+from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from app.extensions import db
@@ -61,54 +61,198 @@ def update_practice_progress(session: Session, *_args: object) -> None:
     if not new_actions:
         return
 
+    from app.models.practice_progress import UserPracticeStats
+
+    user_cache: dict[int, UserPracticeStats] = {}
+    for action in sorted(
+        new_actions,
+        key=lambda item: (item.user_id, item.datetime or datetime.now()),
+    ):
+        if action.datetime is None:
+            action.datetime = datetime.now()
+        user_stats = user_cache.get(action.user_id)
+        if user_stats is None:
+            user_stats = session.get(
+                UserPracticeStats,
+                action.user_id,
+                with_for_update=True,
+            )
+            if user_stats is None:
+                user_stats = UserPracticeStats(user_id=action.user_id)
+                session.add(user_stats)
+            user_cache[action.user_id] = user_stats
+
+        if action.action == Action.RIGHT_ANSWER:
+            user_stats.right_count = (user_stats.right_count or 0) + 1
+            user_stats.current_streak = (user_stats.current_streak or 0) + 1
+            user_stats.best_streak = max(
+                user_stats.best_streak or 0,
+                user_stats.current_streak,
+            )
+        elif action.action == Action.WRONG_ANSWER:
+            user_stats.wrong_count = (user_stats.wrong_count or 0) + 1
+            user_stats.current_streak = 0
+        elif action.action == Action.SKIP:
+            user_stats.skip_count = (user_stats.skip_count or 0) + 1
+            user_stats.current_streak = 0
+        else:
+            continue
+
+        if (
+            user_stats.latest_action_at is None
+            or action.datetime >= user_stats.latest_action_at
+        ):
+            if user_stats.latest_action_at is not None:
+                pause = (action.datetime - user_stats.latest_action_at).total_seconds()
+                if 0 <= pause <= 600:
+                    user_stats.active_seconds = (
+                        user_stats.active_seconds or 0.0
+                    ) + pause
+                    user_stats.timed_intervals = (
+                        user_stats.timed_intervals or 0
+                    ) + 1
+            user_stats.latest_action_at = action.datetime
+
+
+def _dialect_insert(connection: Connection, table):
+    """Возвращает INSERT с поддержкой ON CONFLICT для рабочей СУБД."""
+    if connection.dialect.name == "sqlite":
+        from sqlalchemy.dialects.sqlite import insert
+    elif connection.dialect.name == "postgresql":
+        from sqlalchemy.dialects.postgresql import insert
+    else:
+        return None
+    return insert(table)
+
+
+@event.listens_for(Action, "after_insert")
+def upsert_item_progress(
+    _mapper: object,
+    connection: Connection,
+    action: Action,
+) -> None:
+    """Атомарно обновляет агрегаты карточки после вставки действия."""
+    if action.action not in {
+        Action.RIGHT_ANSWER,
+        Action.WRONG_ANSWER,
+        Action.SKIP,
+    }:
+        return
+
     from app.models.practice_progress import (
         GlobalPracticeStats,
         PracticeProgress,
     )
 
-    progress_cache: dict[tuple[int, int], PracticeProgress] = {}
-    global_cache: dict[int, GlobalPracticeStats] = {}
-    for action in new_actions:
-        if action.datetime is None:
-            action.datetime = datetime.now()
-        key = (action.user_id, action.practice_item_id)
-        progress = progress_cache.get(key)
-        if progress is None:
-            progress = session.get(PracticeProgress, key)
-            if progress is None:
-                progress = PracticeProgress(
-                    user_id=action.user_id,
-                    practice_item_id=action.practice_item_id,
-                    latest_action=action.action,
-                    latest_action_at=action.datetime,
-                )
-                session.add(progress)
-            progress_cache[key] = progress
+    increments = {
+        "right_count": int(action.action == Action.RIGHT_ANSWER),
+        "wrong_count": int(action.action == Action.WRONG_ANSWER),
+        "skip_count": int(action.action == Action.SKIP),
+    }
+    progress_table = PracticeProgress.__table__
+    global_table = GlobalPracticeStats.__table__
+    progress_insert = _dialect_insert(connection, progress_table)
+    global_insert = _dialect_insert(connection, global_table)
 
-        global_stats = global_cache.get(action.practice_item_id)
-        if global_stats is None:
-            global_stats = session.get(
-                GlobalPracticeStats, action.practice_item_id
-            )
-            if global_stats is None:
-                global_stats = GlobalPracticeStats(
-                    practice_item_id=action.practice_item_id
-                )
-                session.add(global_stats)
-            global_cache[action.practice_item_id] = global_stats
+    if progress_insert is None or global_insert is None:
+        _fallback_update_item_progress(
+            connection, action, progress_table, global_table, increments
+        )
+        return
 
-        if action.action == Action.RIGHT_ANSWER:
-            progress.right_count = (progress.right_count or 0) + 1
-            global_stats.right_count = (global_stats.right_count or 0) + 1
-        elif action.action == Action.WRONG_ANSWER:
-            progress.wrong_count = (progress.wrong_count or 0) + 1
-            global_stats.wrong_count = (global_stats.wrong_count or 0) + 1
-        elif action.action == Action.SKIP:
-            progress.skip_count = (progress.skip_count or 0) + 1
-            global_stats.skip_count = (global_stats.skip_count or 0) + 1
-        else:
-            continue
+    progress_values = {
+        "user_id": action.user_id,
+        "practice_item_id": action.practice_item_id,
+        "latest_action": action.action,
+        "latest_action_at": action.datetime,
+        **increments,
+    }
+    progress_statement = progress_insert.values(**progress_values)
+    excluded = progress_statement.excluded
+    newer_action = excluded.latest_action_at >= progress_table.c.latest_action_at
+    connection.execute(progress_statement.on_conflict_do_update(
+        index_elements=["user_id", "practice_item_id"],
+        set_={
+            name: progress_table.c[name] + increment
+            for name, increment in increments.items()
+        } | {
+            "latest_action": case(
+                (newer_action, excluded.latest_action),
+                else_=progress_table.c.latest_action,
+            ),
+            "latest_action_at": case(
+                (newer_action, excluded.latest_action_at),
+                else_=progress_table.c.latest_action_at,
+            ),
+        },
+    ))
 
-        if action.datetime >= progress.latest_action_at:
-            progress.latest_action = action.action
-            progress.latest_action_at = action.datetime
+    global_statement = global_insert.values(
+        practice_item_id=action.practice_item_id,
+        **increments,
+    )
+    connection.execute(global_statement.on_conflict_do_update(
+        index_elements=["practice_item_id"],
+        set_={
+            name: global_table.c[name] + increment
+            for name, increment in increments.items()
+        },
+    ))
+
+
+def _fallback_update_item_progress(
+    connection: Connection,
+    action: Action,
+    progress_table,
+    global_table,
+    increments: dict[str, int],
+) -> None:
+    """Обновляет агрегаты для СУБД без диалектного UPSERT."""
+    progress_result = connection.execute(
+        progress_table.update()
+        .where(
+            progress_table.c.user_id == action.user_id,
+            progress_table.c.practice_item_id == action.practice_item_id,
+        )
+        .values(**({
+            name: progress_table.c[name] + increment
+            for name, increment in increments.items()
+        } | {
+            "latest_action": case(
+                (
+                    progress_table.c.latest_action_at <= action.datetime,
+                    action.action,
+                ),
+                else_=progress_table.c.latest_action,
+            ),
+            "latest_action_at": case(
+                (
+                    progress_table.c.latest_action_at <= action.datetime,
+                    action.datetime,
+                ),
+                else_=progress_table.c.latest_action_at,
+            ),
+        }))
+    )
+    if not progress_result.rowcount:
+        connection.execute(progress_table.insert().values(
+            user_id=action.user_id,
+            practice_item_id=action.practice_item_id,
+            latest_action=action.action,
+            latest_action_at=action.datetime,
+            **increments,
+        ))
+
+    global_result = connection.execute(
+        global_table.update()
+        .where(global_table.c.practice_item_id == action.practice_item_id)
+        .values(**{
+            name: global_table.c[name] + increment
+            for name, increment in increments.items()
+        })
+    )
+    if not global_result.rowcount:
+        connection.execute(global_table.insert().values(
+            practice_item_id=action.practice_item_id,
+            **increments,
+        ))

@@ -1,10 +1,7 @@
-from datetime import timedelta
-
 from flask import current_app, session
-from sqlalchemy import desc, select
 
 from app.extensions import db
-from app.models import Action, User
+from app.models import Action, User, UserPracticeStats
 
 
 def add_action(
@@ -36,16 +33,12 @@ def get_anonymous_actions_remaining(user: User) -> int | None:
     """
     if not user.is_anonymous_account:
         return None
-    used = db.session.scalar(
-        select(db.func.count(Action.id)).where(
-            Action.user_id == user.id,
-            Action.action.in_([
-                Action.RIGHT_ANSWER,
-                Action.WRONG_ANSWER,
-                Action.SKIP,
-            ]),
-        )
-    ) or 0
+    stats = db.session.get(UserPracticeStats, user.id)
+    used = (
+        stats.right_count + stats.wrong_count + stats.skip_count
+        if stats is not None
+        else 0
+    )
     limit = int(current_app.config["ANONYMOUS_ACTION_LIMIT"])
     return max(0, limit - used)
 
@@ -56,27 +49,8 @@ def get_strike(user_id: int) -> int:
     :param user_id: Идентификатор пользователя.
     :return: Количество последовательных верных ответов с конца истории.
     """
-    actions = db.session.scalars(
-        select(Action.action)
-        .where(
-            Action.user_id == user_id,
-            Action.action.in_([
-                Action.RIGHT_ANSWER,
-                Action.WRONG_ANSWER,
-                Action.SKIP,
-            ]),
-        )
-        .order_by(desc(Action.datetime))
-    )
-
-    streak = 0
-    for action in actions:
-        if action == Action.RIGHT_ANSWER:
-            streak += 1
-        else:
-            break
-
-    return streak
+    stats = db.session.get(UserPracticeStats, user_id)
+    return stats.current_streak if stats is not None else 0
 
 
 def get_cached_strike(user_id: int) -> int:
@@ -96,54 +70,17 @@ def get_user_stats(user_id: int) -> dict[str, int | float]:
     :param user_id: Идентификатор пользователя.
     :return: Количество ответов и пропусков, точность, темп и лучшая серия.
     """
-    actions = db.session.execute(
-        select(Action.action, Action.datetime)
-        .where(
-            Action.user_id == user_id,
-            Action.action.in_([
-                Action.RIGHT_ANSWER,
-                Action.WRONG_ANSWER,
-                Action.SKIP,
-            ]),
-        )
-        .order_by(Action.datetime)
-    )
-
-    mistakes = 0
-    skips = 0
-    correct = 0
-    best_streak = 0
-    current_streak = 0
-
-    total_time = timedelta()
-    last_time = None
-    timed_intervals = 0
-    max_pause = timedelta(minutes=10)
-
-    for action in actions:
-        if last_time is not None:
-            pause = action.datetime - last_time
-            if pause <= max_pause:
-                total_time += pause
-                timed_intervals += 1
-        last_time = action.datetime
-
-        if action.action == Action.RIGHT_ANSWER:
-            correct += 1
-            current_streak += 1
-            best_streak = max(best_streak, current_streak)
-        elif action.action == Action.WRONG_ANSWER:
-            mistakes += 1
-            current_streak = 0
-        elif action.action == Action.SKIP:
-            skips += 1
-            current_streak = 0
+    stats = db.session.get(UserPracticeStats, user_id)
+    correct = stats.right_count if stats is not None else 0
+    mistakes = stats.wrong_count if stats is not None else 0
+    skips = stats.skip_count if stats is not None else 0
+    best_streak = stats.best_streak if stats is not None else 0
 
     answered = correct + mistakes
     percent_correct = (correct / answered * 100) if answered else 0
     average_seconds = (
-        total_time.total_seconds() / timed_intervals
-        if timed_intervals
+        stats.active_seconds / stats.timed_intervals
+        if stats is not None and stats.timed_intervals
         else 0
     )
 
