@@ -10,6 +10,7 @@ from app.extensions import db
 if TYPE_CHECKING:
     from app.models.action import Action
     from app.models.category import Category
+    from app.models.error_report import ErrorReport
 
 
 class PracticeItem(db.Model):
@@ -39,6 +40,10 @@ class PracticeItem(db.Model):
     actions: Mapped[list[Action]] = relationship(
         back_populates="practice_item",
         cascade="all, delete-orphan",
+    )
+    error_reports: Mapped[list[ErrorReport]] = relationship(
+        back_populates="practice_item",
+        passive_deletes=True,
     )
 
     __mapper_args__ = {

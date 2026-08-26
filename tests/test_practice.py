@@ -1,6 +1,4 @@
 from datetime import datetime, timedelta
-from unittest.mock import patch
-
 import pytest
 
 from tests.base import AppTestCase
@@ -8,6 +6,7 @@ from tests.base import AppTestCase
 from app.extensions import db
 from app.models import (
     Action,
+    ErrorReport,
     Paronym,
     ParonymExercise,
     ParonymGroup,
@@ -594,16 +593,72 @@ class TestPracticeApi(AppTestCase):
             ):
                 select_card(user)
 
-    def test_word_report_is_recorded_without_mutating_the_item(self) -> None:
+    def test_report_is_recorded_for_an_exercise_or_as_general_feedback(self) -> None:
         with self.app.app_context():
             word_id = self.make_word().id
+            group = ParonymGroup()
+            correct = Paronym(word="эффективный", group=group)
+            Paronym(word="эффектный", group=group)
+            paronym = ParonymExercise(
+                sentence="Это _______ метод",
+                paronym=correct,
+                word_tags="nomn,sing,masc",
+                task_number=5,
+            )
+            db.session.add(paronym)
+            db.session.commit()
+            paronym_id = paronym.id
 
-        with patch("app.services.practice.Path") as path:
-            created = self.client.post(f"/api/v1/words/{word_id}/reports")
-        missing = self.client.post("/api/v1/words/999/reports")
+        exercise = self.client.post(
+            "/api/v1/reports",
+            json={
+                "practice_item_id": word_id,
+                "message": "В упражнении неверный ответ",
+            },
+        )
+        general = self.client.post(
+            "/api/v1/reports",
+            json={"practice_item_id": None, "message": "Не работает кнопка"},
+        )
+        paronym_report = self.client.post(
+            "/api/v1/reports",
+            json={
+                "practice_item_id": paronym_id,
+                "message": "Неверный пароним",
+            },
+        )
 
-        assert created.status_code == 201
-        assert missing.status_code == 404
-        path.return_value.open.assert_called_once()
+        assert exercise.status_code == 201
+        assert general.status_code == 201
+        assert paronym_report.status_code == 201
         with self.app.app_context():
-            assert db.session.get(SpellingExercise, word_id) is not None
+            reports = ErrorReport.query.order_by(ErrorReport.id).all()
+            assert reports[0].practice_item_id == word_id
+            assert reports[0].message == "В упражнении неверный ответ"
+            assert reports[1].practice_item_id is None
+            assert reports[1].message == "Не работает кнопка"
+            assert reports[2].practice_item_id == paronym_id
+
+    @pytest.mark.parametrize(
+        ("payload", "error", "status"),
+        [
+            (None, "invalid_json", 400),
+            ({"message": 3}, "invalid_message", 400),
+            ({"message": "   "}, "empty_message", 400),
+            (
+                {"message": "Ошибка", "practice_item_id": "1"},
+                "invalid_practice_item_id",
+                400,
+            ),
+            (
+                {"message": "Ошибка", "practice_item_id": 999},
+                "item_not_found",
+                404,
+            ),
+        ],
+    )
+    def test_report_validation(self, payload, error: str, status: int) -> None:
+        response = self.client.post("/api/v1/reports", json=payload)
+
+        assert response.status_code == status
+        assert response.get_json()["error"] == error

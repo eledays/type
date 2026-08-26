@@ -10,6 +10,7 @@ from app.extensions import db
 
 if TYPE_CHECKING:
     from app.models.action import Action
+    from app.models.error_report import ErrorReport
     from app.models.settings import Settings
 
 
@@ -40,6 +41,10 @@ class User(UserMixin, db.Model):
         uselist=False,
     )
     actions: Mapped[list[Action]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    error_reports: Mapped[list[ErrorReport]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
     )

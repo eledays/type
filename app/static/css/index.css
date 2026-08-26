@@ -956,6 +956,48 @@ body.has-open-panel {
     opacity: .5;
 }
 
+.report-form {
+    display: grid;
+    gap: 10px;
+}
+
+.report-context,
+.report-feedback {
+    color: rgba(255, 255, 255, .72);
+    font-size: .8125rem;
+    line-height: 1.4;
+}
+
+.report-form label {
+    font-size: .875rem;
+}
+
+.report-form textarea {
+    width: 100%;
+    min-height: 120px;
+    resize: vertical;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, .2);
+    border-radius: 10px;
+    outline: none;
+    background: rgba(0, 0, 0, .22);
+    color: #fff;
+    font: inherit;
+}
+
+.report-form textarea:focus {
+    border-color: rgba(255, 255, 255, .7);
+}
+
+.report-form textarea::placeholder {
+    color: rgba(255, 255, 255, .48);
+}
+
+.report-submit {
+    justify-content: center;
+    padding: 8px 14px;
+}
+
 .word-details {
     display: grid;
     gap: 7px;

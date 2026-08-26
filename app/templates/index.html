@@ -128,7 +128,7 @@
             <button class="secondary-action" id="search-button" type="button">
                 <span class="material-symbols-rounded" aria-hidden="true">search</span>Искать в интернете
             </button>
-            <button class="secondary-action" id="report-button" type="button">
+            <button class="secondary-action" id="report-button" type="button" data-open-report="exercise">
                 <span class="material-symbols-rounded" aria-hidden="true">flag</span>Сообщить об ошибке
             </button>
         </div>
@@ -173,6 +173,29 @@
             </button>
         </div>
         {% endif %}
+        <div class="panel-section">
+            <h3>Обратная связь</h3>
+            <button class="setting-toggle" type="button" data-open-report="general">
+                <span>
+                    <strong>Сообщить об ошибке</strong>
+                    <small>Проблема или предложение</small>
+                </span>
+                <span class="material-symbols-rounded" aria-hidden="true">flag</span>
+            </button>
+        </div>
+    </section>
+
+    <section class="panel panel--headerless" id="report-panel" data-panel="report" role="dialog" aria-modal="true"
+        aria-label="Сообщить об ошибке" aria-hidden="true">
+        <form id="report-form" class="report-form">
+            <h3>Сообщить об ошибке</h3>
+            <p class="report-context" id="report-context">Общая ошибка в приложении</p>
+            <label for="report-message">Что пошло не так?</label>
+            <textarea id="report-message" name="message" maxlength="2000" required
+                placeholder="Опишите проблему или предложение"></textarea>
+            <button class="secondary-action report-submit" type="submit">Отправить</button>
+            <p class="report-feedback" id="report-feedback" role="status" aria-live="polite"></p>
+        </form>
     </section>
 
     <script>
@@ -185,7 +208,7 @@
         window.routeConfig = {{ {
             'cards': url_for('practice_api.get_cards'), 'skipAttempt': url_for('practice_api.skip_attempt'),
             'createAttempt': url_for('practice_api.create_attempt'),
-            'reportWord': url_for('practice_api.create_word_report', word_id=0),
+            'createReport': url_for('practice_api.create_report'),
             'updateExplanation': url_for('admin_api.patch_explanation', word_id=0),
             'deleteAnswer': url_for('admin_api.remove_answer', word_id=0),
             'updateSettings': url_for('profile_api.patch_settings')

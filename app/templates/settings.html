@@ -91,6 +91,19 @@
             </div>
         </div>
 
+        <div class="settings-block">
+            <h2>Обратная связь</h2>
+            <form class="settings-report-form" id="general-report-form">
+                <label for="general-report-message">Сообщить об ошибке</label>
+                <textarea id="general-report-message" maxlength="2000" required
+                    placeholder="Опишите проблему в приложении"></textarea>
+                <button class="setting-item report-send" type="submit">
+                    <span class="setting-name">Отправить сообщение</span>
+                </button>
+                <p id="general-report-feedback" class="report-feedback" role="status" aria-live="polite"></p>
+            </form>
+        </div>
+
         <div class="stats-block">
             <h2>Cтатистика</h2>
             <div class="stats-grid">
@@ -141,6 +154,7 @@
     <script>
         window.routeConfig = {{ {
             'updateSettings': url_for('profile_api.patch_settings'),
+            'createReport': url_for('practice_api.create_report'),
             'home': url_for('practice.index')
         }|tojson }};
     </script>

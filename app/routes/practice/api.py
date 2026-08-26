@@ -8,11 +8,11 @@ from app.routes.practice import api_bp
 from app.services.practice import (
     PracticeError,
     check_answer,
-    report_word,
     select_cards,
     serialize_cards,
     skip_card,
 )
+from app.services.reports import InvalidReport, create_error_report
 from app.utils import get_anonymous_actions_remaining
 
 
@@ -181,14 +181,31 @@ def skip_attempt():
     })
 
 
-@api_bp.post("/words/<int:word_id>/reports")
+@api_bp.post("/reports")
 @login_required
-def create_word_report(word_id: int):
-    """Создаёт пользовательский отчёт об ошибке в слове.
-
-    :param word_id: Идентификатор слова из адреса запроса.
-    :return: JSON-ответ о создании отчёта или отсутствии слова.
-    """
-    if not report_word(word_id):
-        return jsonify({"error": "word_not_found", "message": "Word not found"}), 404
-    return jsonify({"status": "success"}), 201
+def create_report():
+    """Создаёт сообщение об общей ошибке или ошибке в упражнении."""
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"error": "invalid_json", "message": "Invalid JSON"}), 400
+    message = payload.get("message")
+    item_id = payload.get("practice_item_id")
+    if not isinstance(message, str):
+        return jsonify({
+            "error": "invalid_message",
+            "message": "Message must be a string",
+        }), 400
+    if item_id is not None and type(item_id) is not int:
+        return jsonify({
+            "error": "invalid_practice_item_id",
+            "message": "Practice item id must be an integer or null",
+        }), 400
+    try:
+        user = cast(User, current_user._get_current_object())
+        report = create_error_report(user, message, item_id)
+    except InvalidReport as error:
+        return jsonify({
+            "error": error.code,
+            "message": error.message,
+        }), error.status
+    return jsonify({"status": "success", "id": report.id}), 201

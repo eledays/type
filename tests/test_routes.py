@@ -25,7 +25,7 @@ class TestRouteMap(AppTestCase):
             ("/api/v1/practice/cards", "GET"),
             ("/api/v1/profile/settings", "PATCH"),
             ("/api/v1/profile/background", "GET"),
-            ("/api/v1/words/<int:word_id>/reports", "POST"),
+            ("/api/v1/reports", "POST"),
             ("/api/v1/admin/words/<int:word_id>/explanation", "PATCH"),
             ("/api/v1/admin/words/<int:word_id>/answers", "DELETE"),
         }
@@ -57,9 +57,12 @@ class TestRouteMap(AppTestCase):
         assert b'id="profile-panel"' in response.data
         assert b'id="filters-panel"' in response.data
         assert b'id="word-panel"' in response.data
+        assert b'id="report-panel"' in response.data
         assert b'data-open-panel="profile"' in response.data
         assert b'data-open-panel="filters"' in response.data
         assert b'data-open-panel="word"' in response.data
+        assert b'data-open-report="exercise"' in response.data
+        assert b'data-open-report="general"' in response.data
         assert b'data-state="accent"' in response.data
 
     def test_header_hides_strike_until_first_answer_after_page_load(self) -> None:
@@ -103,6 +106,13 @@ class TestRouteMap(AppTestCase):
 
         assert b'data-strike-toggle' in response.data
         assert b'"updateSettings"' in response.data
+
+    def test_profile_page_has_general_error_report_form(self) -> None:
+        response = self.client.get("/profile")
+
+        assert response.status_code == 200
+        assert b'id="general-report-form"' in response.data
+        assert b'/api/v1/reports' in response.data
 
     def test_anonymous_header_shows_login_then_progress_prompt(self) -> None:
         initial = self.client.get("/")

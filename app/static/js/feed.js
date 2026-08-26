@@ -32,6 +32,7 @@
             this.answerLongPressTimer = null;
             this.suppressAnswerClick = false;
             this.answerFlashTimer = null;
+            this.reportItemId = null;
 
             this.feed = document.getElementById("feed");
             this.status = document.getElementById("feed-status");
@@ -496,11 +497,6 @@
             document.getElementById("word-mistakes").textContent = stats.mistakes || 0;
             document.getElementById("word-skips").textContent = stats.skips || 0;
             document.getElementById("word-percent").textContent = `${stats.correct_percent || 0}%`;
-            const report = document.getElementById("report-button");
-            report.disabled = card.type !== "spelling";
-            report.lastChild.textContent = report.disabled
-                ? " Недоступно для этого задания"
-                : " Сообщить об ошибке";
         }
 
         endpointFor(template, id) {
@@ -606,6 +602,45 @@
             if (this.current?.card) setTimeout(() => this.status.classList.add("is-hidden"), 2500);
         }
 
+        openReport(kind, trigger) {
+            const exerciseReport = kind === "exercise" && this.current?.card;
+            this.reportItemId = exerciseReport ? this.current.card.id : null;
+            const context = document.getElementById("report-context");
+            context.textContent = exerciseReport
+                ? `Сообщение будет привязано к заданию: ${this.current.card.prompt}`
+                : "";
+            document.getElementById("report-feedback").textContent = "";
+            this.openPanel("report", trigger);
+        }
+
+        async submitReport(form) {
+            const message = form.elements.message.value.trim();
+            if (!message) return;
+            const submit = form.querySelector('[type="submit"]');
+            const feedback = document.getElementById("report-feedback");
+            submit.disabled = true;
+            feedback.textContent = "Отправляем…";
+            try {
+                const response = await fetch(this.routes.createReport, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({
+                        message,
+                        practice_item_id: this.reportItemId,
+                    }),
+                });
+                const payload = await response.json();
+                if (!response.ok) throw new Error(payload.message);
+                form.reset();
+                this.closePanel();
+                this.showStatus("Спасибо, сообщение отправлено");
+            } catch (error) {
+                feedback.textContent = error.message || "Не удалось отправить сообщение";
+            } finally {
+                submit.disabled = false;
+            }
+        }
+
         bindEvents() {
             this.feed.addEventListener("click", (event) => {
                 const answer = event.target.closest("[data-answer]");
@@ -684,6 +719,15 @@
             document.querySelectorAll("[data-close-panel]").forEach((trigger) => {
                 trigger.addEventListener("click", () => this.closePanel());
             });
+            document.querySelectorAll("[data-open-report]").forEach((trigger) => {
+                trigger.addEventListener("click", () => {
+                    this.openReport(trigger.dataset.openReport, trigger);
+                });
+            });
+            document.getElementById("report-form").addEventListener("submit", (event) => {
+                event.preventDefault();
+                void this.submitReport(event.currentTarget);
+            });
             const strikeToggle = document.querySelector("[data-strike-toggle]");
             strikeToggle?.addEventListener("click", async () => {
                 const enabled = strikeToggle.getAttribute("aria-pressed") !== "true";
@@ -705,16 +749,6 @@
                 }
             });
             this.panelOverlay.addEventListener("click", () => this.closePanel());
-            document.getElementById("report-button").addEventListener("click", async (event) => {
-                const response = await fetch(
-                    this.endpointFor(this.routes.reportWord, this.current.card.id),
-                    {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"},
-                );
-                if (response.ok) {
-                    event.currentTarget.lastChild.textContent = " Запрос отправлен";
-                    event.currentTarget.disabled = true;
-                }
-            });
             document.getElementById("search-button").addEventListener("click", () => {
                 const query = encodeURIComponent(this.current.card.prompt);
                 window.open(`https://yandex.ru/search/?text=${query}`, "_blank", "noopener");

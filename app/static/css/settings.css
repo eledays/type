@@ -337,3 +337,43 @@ p {
     text-align: center;
     color: #d33;
 }
+
+.settings-report-form {
+    display: grid;
+    gap: 10px;
+}
+
+.settings-report-form label {
+    color: var(--tg-theme-hint-color, #777);
+}
+
+.settings-report-form textarea {
+    width: 100%;
+    min-height: 110px;
+    resize: vertical;
+    padding: 10px 12px;
+    border: 1px solid rgba(0, 0, 0, .12);
+    border-radius: 10px;
+    outline: none;
+    background: var(--tg-theme-secondary-bg-color);
+    color: var(--tg-theme-text-color);
+    font: inherit;
+}
+
+.settings-report-form textarea:focus {
+    border-color: var(--tg-theme-link-color, #30a4f4);
+}
+
+.report-send {
+    justify-content: center;
+}
+
+.report-send:disabled {
+    opacity: .6;
+}
+
+.report-feedback {
+    min-height: 1.2em;
+    color: var(--tg-theme-hint-color, #777);
+    font-size: .9rem;
+}

@@ -53,4 +53,28 @@ function backToReferrer() {
 
 addEventListener('DOMContentLoaded', () => {
     window.backToReferrer = backToReferrer;
+    const reportForm = document.getElementById('general-report-form');
+    reportForm?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const message = document.getElementById('general-report-message');
+        const feedback = document.getElementById('general-report-feedback');
+        const submit = reportForm.querySelector('[type="submit"]');
+        submit.disabled = true;
+        feedback.textContent = 'Отправляем…';
+        try {
+            const response = await fetch(window.routeConfig.createReport, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: message.value, practice_item_id: null}),
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.message);
+            reportForm.reset();
+            feedback.textContent = 'Спасибо, сообщение отправлено';
+        } catch (error) {
+            feedback.textContent = error.message || 'Не удалось отправить сообщение';
+        } finally {
+            submit.disabled = false;
+        }
+    });
 });

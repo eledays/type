@@ -1,6 +1,4 @@
 from dataclasses import dataclass
-from datetime import datetime
-from pathlib import Path
 import random
 from typing import Any
 
@@ -484,23 +482,6 @@ def skip_card(
         practice_item_id=item_id,
     )
     return 0
-
-
-def report_word(item_id: int) -> bool:
-    """Записывает пользовательский отчёт об ошибке в упражнении.
-
-    :param item_id: Идентификатор орфографического упражнения.
-    :return: ``True`` при успешной записи, иначе ``False``.
-    """
-    item = db.session.get(SpellingExercise, item_id)
-    if item is None:
-        return False
-    with Path("mistakes.txt").open("a", encoding="utf-8") as report_file:
-        report_file.write(f"{datetime.now()} - {item.word} [{item.id}]\n")
-    current_app.logger.info(
-        "Practice item reported as a mistake: %s [%s]", item.word, item.id
-    )
-    return True
 
 
 def _answer_stats(user_id: int):
