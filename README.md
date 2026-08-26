@@ -37,6 +37,7 @@
     PRACTICE_CARD_BATCH_MAX=12
     PRACTICE_DIFFICULT_CANDIDATE_LIMIT=50
     PRACTICE_SWIPE_GRACE_STRIKE=3
+    RATE_LIMIT_STORAGE_URI=memory://
     ```
 5. Примените миграции базы данных:
    ```bash
@@ -108,6 +109,19 @@ Callback URL должен в точности совпадать с
 `PRACTICE_SWIPE_GRACE_STRIKE`.
 В общей ленте орфографические и паронимические упражнения выбираются из
 единого набора `PracticeItem` по одинаковым правилам.
+
+## Ограничение частоты запросов
+
+Все маршруты ограничены по частоте. Для OAuth, изменяющих запросов и отправки
+сообщений действуют дополнительные, более строгие лимиты. Значения настраиваются
+переменными `RATE_LIMIT_DEFAULT`, `RATE_LIMIT_APPLICATION`,
+`RATE_LIMIT_AUTH`, `RATE_LIMIT_MUTATION` и `RATE_LIMIT_REPORT`.
+
+Локально счётчики хранятся в памяти процесса. При запуске нескольких Gunicorn
+worker-ов задайте общее хранилище, например
+`RATE_LIMIT_STORAGE_URI=redis://localhost:6379/0`.
+Если Flask находится за reverse proxy, укажите точное число доверенных прокси
+в `TRUSTED_PROXY_COUNT`; не включайте доверие к `X-Forwarded-For` без прокси.
 
 ## Администратор
 

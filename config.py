@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from typing import Annotated, Any
 
+from limits import parse_many
 from pydantic import (
     AliasChoices,
     Field,
@@ -94,6 +95,41 @@ class AppSettings(BaseSettings):
         validation_alias="PRACTICE_SWIPE_GRACE_STRIKE",
         ge=0,
     )
+    rate_limit_default: str = Field(
+        default="300 per minute",
+        validation_alias="RATE_LIMIT_DEFAULT",
+        min_length=1,
+    )
+    rate_limit_application: str = Field(
+        default="3000 per hour",
+        validation_alias="RATE_LIMIT_APPLICATION",
+        min_length=1,
+    )
+    rate_limit_auth: str = Field(
+        default="10 per minute",
+        validation_alias="RATE_LIMIT_AUTH",
+        min_length=1,
+    )
+    rate_limit_mutation: str = Field(
+        default="120 per minute",
+        validation_alias="RATE_LIMIT_MUTATION",
+        min_length=1,
+    )
+    rate_limit_report: str = Field(
+        default="5 per hour",
+        validation_alias="RATE_LIMIT_REPORT",
+        min_length=1,
+    )
+    rate_limit_storage_uri: str = Field(
+        default="memory://",
+        validation_alias="RATE_LIMIT_STORAGE_URI",
+        min_length=1,
+    )
+    trusted_proxy_count: int = Field(
+        default=0,
+        validation_alias="TRUSTED_PROXY_COUNT",
+        ge=0,
+    )
 
     @field_validator("secret_key")
     @classmethod
@@ -156,6 +192,22 @@ class AppSettings(BaseSettings):
             )
         return self
 
+    @field_validator(
+        "rate_limit_default",
+        "rate_limit_application",
+        "rate_limit_auth",
+        "rate_limit_mutation",
+        "rate_limit_report",
+    )
+    @classmethod
+    def validate_rate_limit(cls, value: str) -> str:
+        """Проверяет синтаксис лимита при запуске приложения."""
+        try:
+            parse_many(value)
+        except ValueError as error:
+            raise ValueError(f"Invalid rate limit: {value}") from error
+        return value
+
     def to_flask_config(self) -> dict[str, Any]:
         """Преобразует настройки в словарь ключей Flask.
 
@@ -186,6 +238,14 @@ class AppSettings(BaseSettings):
             "PRACTICE_SWIPE_GRACE_STRIKE": (
                 self.practice_swipe_grace_strike
             ),
+            "RATELIMIT_DEFAULT": self.rate_limit_default,
+            "RATELIMIT_APPLICATION": self.rate_limit_application,
+            "RATELIMIT_STORAGE_URI": self.rate_limit_storage_uri,
+            "RATELIMIT_HEADERS_ENABLED": True,
+            "RATE_LIMIT_AUTH": self.rate_limit_auth,
+            "RATE_LIMIT_MUTATION": self.rate_limit_mutation,
+            "RATE_LIMIT_REPORT": self.rate_limit_report,
+            "TRUSTED_PROXY_COUNT": self.trusted_proxy_count,
         }
 
 

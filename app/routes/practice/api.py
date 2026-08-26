@@ -3,6 +3,7 @@ from typing import Any, cast
 from flask import current_app, jsonify, request, session, url_for
 from flask_login import current_user, login_required
 
+from app.extensions import limiter
 from app.models import User
 from app.routes.practice import api_bp
 from app.services.practice import (
@@ -88,6 +89,10 @@ def get_cards():
 
 
 @api_bp.post("/attempts")
+@limiter.limit(
+    lambda: current_app.config["RATE_LIMIT_MUTATION"],
+    override_defaults=False,
+)
 @login_required
 def create_attempt():
     """Проверяет и сохраняет попытку ответа на карточку.
@@ -117,6 +122,10 @@ def create_attempt():
 
 
 @api_bp.post("/attempts/skip")
+@limiter.limit(
+    lambda: current_app.config["RATE_LIMIT_MUTATION"],
+    override_defaults=False,
+)
 @login_required
 def skip_attempt():
     """Пропускает карточку с серверной проверкой серии и квоты.
@@ -182,6 +191,10 @@ def skip_attempt():
 
 
 @api_bp.post("/reports")
+@limiter.limit(
+    lambda: current_app.config["RATE_LIMIT_REPORT"],
+    override_defaults=False,
+)
 @login_required
 def create_report():
     """Создаёт сообщение об общей ошибке или ошибке в упражнении."""

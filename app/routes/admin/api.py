@@ -1,11 +1,16 @@
-from flask import jsonify, request
+from flask import current_app, jsonify, request
 
+from app.extensions import limiter
 from app.routes.admin import bp
 from app.security.decorators import admin_required
 from app.services.admin import delete_answer, update_explanation
 
 
 @bp.patch("/words/<int:word_id>/explanation")
+@limiter.limit(
+    lambda: current_app.config["RATE_LIMIT_MUTATION"],
+    override_defaults=False,
+)
 @admin_required
 def patch_explanation(word_id: int):
     """Обновляет объяснение слова от имени администратора.
@@ -29,6 +34,10 @@ def patch_explanation(word_id: int):
 
 
 @bp.delete("/words/<int:word_id>/answers")
+@limiter.limit(
+    lambda: current_app.config["RATE_LIMIT_MUTATION"],
+    override_defaults=False,
+)
 @admin_required
 def remove_answer(word_id: int):
     """Удаляет вариант ответа от имени администратора.

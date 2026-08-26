@@ -4,6 +4,7 @@ import secrets
 from flask import abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
+from app.extensions import limiter
 from app.routes.auth import bp
 from app.services.auth import (
     OAuthError,
@@ -42,6 +43,10 @@ def login():
 
 
 @bp.get("/yandex")
+@limiter.limit(
+    lambda: current_app.config["RATE_LIMIT_AUTH"],
+    override_defaults=False,
+)
 def yandex_login():
     """Начинает авторизацию через Яндекс.
 
@@ -62,6 +67,10 @@ def yandex_login():
 
 
 @bp.get("/yandex/callback")
+@limiter.limit(
+    lambda: current_app.config["RATE_LIMIT_AUTH"],
+    override_defaults=False,
+)
 def yandex_callback():
     """Обрабатывает результат авторизации через Яндекс.
 
@@ -96,6 +105,10 @@ def yandex_callback():
 
 
 @bp.post("/logout")
+@limiter.limit(
+    lambda: current_app.config["RATE_LIMIT_AUTH"],
+    override_defaults=False,
+)
 @login_required
 def logout():
     """Завершает пользовательскую сессию.

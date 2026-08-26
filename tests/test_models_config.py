@@ -40,6 +40,10 @@ class TestConfig(AppTestCase):
         assert exported["SQLALCHEMY_DATABASE_URI"] == "sqlite:///custom.db"
         assert exported["STRIKE_LEVELS"] == (10, 20, 30)
         assert exported["SECRET_KEY"] == "a-secure-test-secret"
+        assert exported["RATELIMIT_DEFAULT"] == "300 per minute"
+        assert exported["RATELIMIT_APPLICATION"] == "3000 per hour"
+        assert exported["RATELIMIT_HEADERS_ENABLED"]
+        assert exported["TRUSTED_PROXY_COUNT"] == 0
 
     @pytest.mark.parametrize(
         "levels",
@@ -64,6 +68,10 @@ class TestConfig(AppTestCase):
                 "SECRET_KEY": "a-secure-test-secret",
                 "PRACTICE_CARD_BATCH_SIZE": 4,
                 "PRACTICE_CARD_BATCH_MAX": 3,
+            },
+            {
+                "SECRET_KEY": "a-secure-test-secret",
+                "RATE_LIMIT_DEFAULT": "not a limit",
             },
         ):
             with pytest.raises(ValidationError):

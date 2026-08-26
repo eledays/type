@@ -1,8 +1,17 @@
 from typing import cast
 
-from flask import jsonify, redirect, request, send_file, session, url_for
+from flask import (
+    current_app,
+    jsonify,
+    redirect,
+    request,
+    send_file,
+    session,
+    url_for,
+)
 from flask_login import current_user, login_required
 
+from app.extensions import limiter
 from app.models import User
 from app.routes.profile import api_bp
 from app.services.profile import InvalidSettings, update_settings
@@ -25,6 +34,10 @@ def background():
 
 
 @api_bp.patch("/settings")
+@limiter.limit(
+    lambda: current_app.config["RATE_LIMIT_MUTATION"],
+    override_defaults=False,
+)
 @login_required
 def patch_settings():
     """Проверяет и изменяет настройки текущего пользователя.

@@ -2,7 +2,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from flask import current_app, session
-from flask_login import LoginManager
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_login import LoginManager, current_user
 from flask_login.config import (
     COOKIE_DURATION,
     COOKIE_HTTPONLY,
@@ -64,6 +66,17 @@ class TimezoneAwareLoginManager(LoginManager):
         )
 
 
+def rate_limit_key() -> str:
+    """Ограничивает зарегистрированных по ID, остальных по IP-адресу."""
+    if (
+        current_user.is_authenticated
+        and not current_user.is_anonymous_account
+    ):
+        return f"user:{current_user.get_id()}"
+    return f"ip:{get_remote_address()}"
+
+
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = TimezoneAwareLoginManager()
+limiter = Limiter(key_func=rate_limit_key)
