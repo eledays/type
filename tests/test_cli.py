@@ -146,3 +146,14 @@ class TestImportCommands(AppTestCase):
             sentence = ParonymExercise.query.one()
             assert sentence.sentence == "Это был _______ метод."
             assert sentence.paronym.word == "эффективный"
+
+    def test_sqlite_transfer_requires_postgresql_target(self) -> None:
+        source = self.temp_dir / "source.db"
+        source.touch()
+
+        result = self.runner.invoke(
+            args=["sqlite_to_postgres", str(source)]
+        )
+
+        assert result.exit_code != 0
+        assert "Target DATABASE_URL must point to PostgreSQL" in result.output

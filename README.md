@@ -61,8 +61,24 @@ DOCKER_YANDEX_REDIRECT_URI=http://localhost:8000/auth/yandex/callback
 
 Значения по умолчанию предназначены только для локальной машины. Перед
 публичным развёртыванием задайте уникальные секреты, HTTPS URL и параметры
-доверенного reverse proxy. Существующая `instance/app.db` автоматически в
-PostgreSQL не импортируется.
+доверенного reverse proxy.
+
+### Перенос существующей SQLite-базы
+
+Импорт требует одинаковой актуальной Alembic-ревизии у источника и цели и
+отказывается изменять PostgreSQL, если в нём уже есть данные. На время переноса
+остановите основной контейнер приложения:
+
+```bash
+docker compose stop app
+docker compose run --rm --user root \
+  --volume "$(pwd)/instance/app.db:/tmp/source.db:ro" \
+  app flask --app app sqlite_to_postgres /tmp/source.db
+docker compose up -d app
+```
+
+Команда переносит данные одной транзакцией и синхронизирует PostgreSQL
+sequences. Исходный SQLite-файл подключается в контейнер только для чтения.
 
 ### Резервная копия PostgreSQL
 

@@ -16,6 +16,10 @@ from app.models import (
     ParonymGroup,
     SpellingExercise,
 )
+from app.services.database_transfer import (
+    DatabaseTransferError,
+    import_sqlite_database,
+)
 
 
 def _ensure_paronym_group(
@@ -429,6 +433,29 @@ def sentence_to_db(txt_path: Path) -> None:
     click.echo(f"Импортировано предложений: {imported}; пропущено: {skipped}.")
 
 
+@click.command("sqlite_to_postgres")
+@click.argument(
+    "sqlite_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@with_appcontext
+def sqlite_to_postgres(sqlite_path: Path) -> None:
+    """Переносит актуальную SQLite-базу в пустой PostgreSQL.
+
+    :param sqlite_path: Путь к исходной SQLite-базе.
+    :return: ``None``.
+    """
+    try:
+        copied = import_sqlite_database(sqlite_path)
+    except DatabaseTransferError as error:
+        raise click.ClickException(str(error)) from error
+    total = sum(copied.values())
+    details = ", ".join(
+        f"{table}: {count}" for table, count in copied.items() if count
+    )
+    click.echo(f"Перенесено строк: {total}. {details}")
+
+
 def register_commands(app: Flask) -> None:
     """Регистрирует команды импорта в Flask CLI.
 
@@ -438,3 +465,4 @@ def register_commands(app: Flask) -> None:
     app.cli.add_command(csv_to_db)
     app.cli.add_command(txt_to_db)
     app.cli.add_command(sentence_to_db)
+    app.cli.add_command(sqlite_to_postgres)
