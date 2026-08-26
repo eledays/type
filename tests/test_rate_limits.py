@@ -1,7 +1,20 @@
 from tests.base import AppTestCase
 
+from app.models import User
+
 
 class TestRateLimits(AppTestCase):
+    def test_limited_requests_do_not_create_anonymous_users(self) -> None:
+        responses = [
+            self.app.test_client(use_cookies=False).get("/favicon.ico")
+            for _ in range(301)
+        ]
+
+        assert all(response.status_code != 429 for response in responses[:300])
+        assert responses[-1].status_code == 429
+        with self.app.app_context():
+            assert User.query.count() == 300
+
     def test_routes_expose_rate_limit_headers(self) -> None:
         response = self.client.get("/filters")
 

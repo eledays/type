@@ -44,8 +44,8 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     from app.security.session import ensure_authenticated_user, load_user
 
     login_manager.user_loader(load_user)
-    app.before_request(ensure_authenticated_user)
     limiter.init_app(app)
+    app.before_request(ensure_authenticated_user)
     register_csrf(app)
     register_rate_limit_errors(app)
     register_commands(app)
