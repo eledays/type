@@ -312,6 +312,22 @@ class TestPracticeApi(AppTestCase):
                 action.action for action in Action.query.order_by(Action.id)
             ] == [Action.RIGHT_ANSWER, Action.WRONG_ANSWER]
 
+    def test_strike_is_counted_when_its_display_is_disabled(self) -> None:
+        user_id = self.current_user_id()
+        with self.app.app_context():
+            user = db.session.get(User, user_id)
+            user.settings.strike = False
+            word_id = self.make_word().id
+            db.session.commit()
+
+        response = self.client.post(
+            "/api/v1/attempts",
+            json={"card_id": word_id, "answer": "о", "card_type": "spelling"},
+        )
+
+        assert response.status_code == 200
+        assert response.get_json()["strike"]["n"] == 1
+
     def test_anonymous_quota_blocks_further_attempts_and_skips(self) -> None:
         with self.app.app_context():
             word_id = self.make_word().id

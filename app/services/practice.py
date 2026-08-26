@@ -419,8 +419,7 @@ def check_answer(
     blank = "_______" if item_type == "paronym" else "_"
     full_item = item.get_prompt().replace(blank, right_answer)
     correct = answer == right_answer
-    if user.settings.strike:
-        session["strike"] = get_cached_strike(user.id) + 1 if correct else 0
+    session["strike"] = get_cached_strike(user.id) + 1 if correct else 0
     add_action(
         user_id=user.id,
         action=Action.RIGHT_ANSWER if correct else Action.WRONG_ANSWER,
@@ -444,8 +443,6 @@ def _can_skip_without_confirmation(user: User, item_id: int) -> bool:
     :param item_id: Единый идентификатор карточки.
     :return: ``True``, если отдельное подтверждение не требуется.
     """
-    if not user.settings.strike:
-        return True
     grace_strike = int(current_app.config["PRACTICE_SWIPE_GRACE_STRIKE"])
     return (
         item_id in _recent_item_ids(user.id)
@@ -480,8 +477,7 @@ def skip_card(
         )
     if item_id in _recent_item_ids(user.id):
         return get_cached_strike(user.id)
-    if user.settings.strike:
-        session["strike"] = 0
+    session["strike"] = 0
     add_action(
         user_id=user.id,
         action=Action.SKIP,

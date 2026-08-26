@@ -89,7 +89,7 @@ def index():
     }
     return render_template(
         "index.html",
-        strike=get_cached_strike(user.id) if user.settings.strike else None,
+        strike=get_cached_strike(user.id),
         anonymous_remaining=anonymous_remaining,
         anonymous_started=anonymous_started,
         initial_cards=initial_cards,

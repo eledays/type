@@ -4,19 +4,13 @@ from pathlib import Path
 from flask import current_app
 
 from app.models import User
-from app.utils import get_cached_strike
-
-
 def choose_background(user: User) -> Path:
-    """Выбирает оптимизированный фон для текущего уровня серии.
+    """Выбирает фоновое изображение для ленты.
 
     :param user: Пользователь, для которого выбирается тема фона.
     :return: Путь к случайному WebP-фону или исходному изображению.
     """
-    strike = get_cached_strike(user.id)
-    levels = current_app.config["STRIKE_LEVELS"]
-    use_yellow = user.settings.strike and levels[0] <= strike < levels[1]
-    theme = "yellow" if use_yellow else "dark"
+    theme = "dark"
     directory = (
         Path(current_app.static_folder or "app/static")
         / "img"

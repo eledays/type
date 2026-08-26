@@ -62,7 +62,7 @@ class TestRouteMap(AppTestCase):
         assert b'data-open-panel="word"' in response.data
         assert b'data-state="accent"' in response.data
 
-    def test_header_compacts_actions_only_for_strikes_above_five(self) -> None:
+    def test_header_hides_strike_until_first_answer_after_page_load(self) -> None:
         user_id = self.current_user_id()
         with self.app.app_context():
             user = db.session.get(User, user_id)
@@ -73,8 +73,23 @@ class TestRouteMap(AppTestCase):
 
         response = self.client.get("/")
 
-        assert b'class="header has-info"' in response.data
-        assert b'aria-live="polite" hidden' not in response.data
+        assert b'class="header has-info"' not in response.data
+        assert b'aria-live="polite" hidden' in response.data
+        assert b'id="strike-value">6<' in response.data
+
+    def test_strike_setting_only_hides_its_header_block(self) -> None:
+        user_id = self.current_user_id()
+        with self.app.app_context():
+            user = db.session.get(User, user_id)
+            user.yandex_id = "registered-user"
+            user.settings.strike = False
+            db.session.commit()
+        with self.client.session_transaction() as browser_session:
+            browser_session["strike"] = 6
+
+        response = self.client.get("/")
+
+        assert b'class="header has-info"' not in response.data
         assert b'id="strike-value">6<' in response.data
 
     def test_profile_panel_has_strike_setting_for_registered_user(self) -> None:

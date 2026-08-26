@@ -9,6 +9,9 @@
             this.admin = Boolean(bootstrap.admin);
             this.isAnonymous = Boolean(bootstrap.anonymous);
             this.anonymousStarted = Boolean(bootstrap.anonymousStarted);
+            this.showStrike = Boolean(bootstrap.strikeVisible);
+            this.currentStrike = bootstrap.strike;
+            this.strikeRevealed = false;
             this.strikeLevels = bootstrap.strikeLevels || [];
             this.backgroundPools = bootstrap.backgroundPools || {};
             this.backgroundQueues = new Map();
@@ -372,7 +375,7 @@
                 }
                 if (!response.ok) throw new Error(payload.message);
                 this.updateAnonymousRemaining(payload.anonymous_remaining);
-                this.updateStrike(payload.strike);
+                this.updateStrike(payload.strike, {reveal: true});
                 this.revealAnswer(payload.full_word);
                 this.flashAnswer(payload.correct);
                 setTimeout(() => void this.moveNext({recordSkip: false}), payload.correct ? 700 : 1500);
@@ -401,12 +404,14 @@
             }, 1000);
         }
 
-        updateStrike(strike) {
+        updateStrike(strike, {reveal = false} = {}) {
             if (!strike || strike.n === null || strike.n === undefined) return false;
+            this.currentStrike = strike.n;
             const value = document.getElementById("strike-value");
             if (value) value.textContent = strike.n;
             if (!this.isAnonymous) {
-                const showHeaderInfo = strike.n > 5;
+                if (reveal) this.strikeRevealed = true;
+                const showHeaderInfo = this.showStrike && this.strikeRevealed;
                 clearTimeout(this.headerInfoTimer);
                 if (showHeaderInfo) {
                     this.headerInfo.dataset.state = "neutral";
@@ -691,11 +696,8 @@
                     });
                     if (!response.ok) throw new Error();
                     strikeToggle.setAttribute("aria-pressed", String(enabled));
-                    if (!enabled) {
-                        this.headerInfo.classList.remove("is-visible");
-                        this.headerInfo.hidden = true;
-                        this.header.classList.remove("has-info");
-                    }
+                    this.showStrike = enabled;
+                    this.updateStrike({n: this.currentStrike, levels: this.strikeLevels});
                 } catch {
                     this.showStatus("Не удалось изменить настройку");
                 } finally {
