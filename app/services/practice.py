@@ -3,7 +3,7 @@ import random
 from typing import Any
 
 from flask import current_app, session
-from sqlalchemy import and_, case, func, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.orm import selectin_polymorphic, selectinload
 
 from app.extensions import db
@@ -14,6 +14,8 @@ from app.models import (
     ParonymExercise,
     ParonymGroup,
     PracticeItem,
+    PracticeProgress,
+    GlobalPracticeStats,
     SpellingExercise,
     User,
 )
@@ -125,22 +127,15 @@ def serialize_cards(
     if item_ids:
         rows = db.session.execute(
             select(
-                Action.practice_item_id,
-                func.sum(case(
-                    (Action.action == Action.RIGHT_ANSWER, 1), else_=0
-                )),
-                func.sum(case(
-                    (Action.action == Action.WRONG_ANSWER, 1), else_=0
-                )),
-                func.sum(case(
-                    (Action.action == Action.SKIP, 1), else_=0
-                )),
+                PracticeProgress.practice_item_id,
+                PracticeProgress.right_count,
+                PracticeProgress.wrong_count,
+                PracticeProgress.skip_count,
             )
             .where(
-                Action.user_id == user_id,
-                Action.practice_item_id.in_(item_ids),
+                PracticeProgress.user_id == user_id,
+                PracticeProgress.practice_item_id.in_(item_ids),
             )
-            .group_by(Action.practice_item_id)
         )
         for item_id, correct, mistakes, skips in rows:
             correct_count = int(correct or 0)
@@ -229,15 +224,18 @@ def select_cards(
         base_items = base_items.filter(~PracticeItem.id.in_(excluded))
 
     if mistakes:
-        stats = _answer_stats(user.id)
         difficulty = (
-            stats.c.wrong_count
-            + 0.5 * stats.c.skip_count
-            - stats.c.right_count
+            PracticeProgress.wrong_count
+            + 0.5 * PracticeProgress.skip_count
+            - PracticeProgress.right_count
         )
         items = _random_window(
             base_items.join(
-                stats, PracticeItem.id == stats.c.practice_item_id
+                PracticeProgress,
+                and_(
+                    PracticeItem.id == PracticeProgress.practice_item_id,
+                    PracticeProgress.user_id == user.id,
+                ),
             ).filter(difficulty > 0),
             count,
         )
@@ -251,26 +249,25 @@ def select_cards(
             Card(item, ['Фильтр: "Неверные ответы"']) for item in items
         ]
 
-    user_stats = _user_answer_stats(user.id)
     seen_query = base_items.join(
-        Action,
+        PracticeProgress,
         and_(
-            PracticeItem.id == Action.practice_item_id,
-            Action.user_id == user.id,
+            PracticeItem.id == PracticeProgress.practice_item_id,
+            PracticeProgress.user_id == user.id,
         ),
-    ).distinct()
+    )
     unseen_query = base_items.outerjoin(
-        Action,
+        PracticeProgress,
         and_(
-            PracticeItem.id == Action.practice_item_id,
-            Action.user_id == user.id,
+            PracticeItem.id == PracticeProgress.practice_item_id,
+            PracticeProgress.user_id == user.id,
         ),
-    ).filter(Action.id.is_(None))
+    ).filter(PracticeProgress.user_id.is_(None))
     candidate_limit = max(
         count * 4,
         int(current_app.config["PRACTICE_DIFFICULT_CANDIDATE_LIMIT"]),
     )
-    candidates = seen_query.all()
+    candidates = _random_window(seen_query, candidate_limit)
     candidate_ids = {item.id for item in candidates}
     candidates.extend(
         item
@@ -278,26 +275,19 @@ def select_cards(
         if item.id not in candidate_ids
     )
     recent_actions = _recent_progress_actions(user.id)
+    progress_item_ids = [item.id for item in candidates]
+    user_stats = _user_answer_stats(user.id, progress_item_ids)
     progress = _item_progress(
         user_stats,
         recent_actions,
-        _global_answer_stats(),
+        _global_answer_stats(progress_item_ids),
     )
     pools = _adaptive_pools(candidates, progress)
     recent_ids = {
         action.practice_item_id
         for action in recent_actions[:REPEAT_GAP]
     }
-    action_count = db.session.scalar(
-        select(func.count(Action.id)).where(
-            Action.user_id == user.id,
-            Action.action.in_([
-                Action.RIGHT_ANSWER,
-                Action.WRONG_ANSWER,
-                Action.SKIP,
-            ]),
-        )
-    ) or 0
+    action_count = _user_action_count(user.id)
 
     selected: list[Card] = []
     selected_ids: set[int] = set()
@@ -411,7 +401,7 @@ def check_answer(
     :return: Результат проверки, раскрытый текст и состояние серии.
     :raises PracticeError: Если карточка не найдена или исчерпана квота.
     """
-    _ensure_quota(user)
+    anonymous_remaining = _ensure_quota(user)
     item = _get_typed_item(item_id, item_type)
     right_answer = item.get_correct_answer()
     blank = "_______" if item_type == "paronym" else "_"
@@ -431,10 +421,19 @@ def check_answer(
             "n": session.get("strike"),
             "levels": current_app.config["STRIKE_LEVELS"],
         },
+        "anonymous_remaining": (
+            None
+            if anonymous_remaining is None
+            else anonymous_remaining - 1
+        ),
     }
 
 
-def _can_skip_without_confirmation(user: User, item_id: int) -> bool:
+def _can_skip_without_confirmation(
+    user: User,
+    item_id: int,
+    recent_item_ids: list[int],
+) -> bool:
     """Проверяет, можно ли пропустить карточку без подтверждения.
 
     :param user: Пользователь, выполняющий свайп.
@@ -443,7 +442,7 @@ def _can_skip_without_confirmation(user: User, item_id: int) -> bool:
     """
     grace_strike = int(current_app.config["PRACTICE_SWIPE_GRACE_STRIKE"])
     return (
-        item_id in _recent_item_ids(user.id)
+        item_id in recent_item_ids
         or get_cached_strike(user.id) <= grace_strike
     )
 
@@ -454,58 +453,38 @@ def skip_card(
     item_type: str,
     *,
     confirmed: bool = False,
-) -> int:
+) -> tuple[int, int | None]:
     """Пропускает карточку и применяет правила серии и квоты.
 
     :param user: Пользователь, выполняющий пропуск.
     :param item_id: Единый идентификатор карточки практики.
     :param item_type: Тип карточки: ``spelling`` или ``paronym``.
     :param confirmed: Подтверждён ли пользователем сброс длинной серии.
-    :return: Актуальная длина серии после пропуска.
+    :return: Актуальная серия и остаток анонимной квоты.
     :raises PracticeError: Если карточка не найдена, исчерпана квота или
         требуется подтверждение сброса серии.
     """
     _get_typed_item(item_id, item_type)
-    _ensure_quota(user)
-    if not confirmed and not _can_skip_without_confirmation(user, item_id):
+    anonymous_remaining = _ensure_quota(user)
+    recent_item_ids = _recent_item_ids(user.id)
+    if not confirmed and not _can_skip_without_confirmation(
+        user, item_id, recent_item_ids
+    ):
         raise PracticeError(
             "strike_reset_confirmation_required",
             "Skipping this card will reset the strike",
             409,
         )
-    if item_id in _recent_item_ids(user.id):
-        return get_cached_strike(user.id)
+    if item_id in recent_item_ids:
+        return get_cached_strike(user.id), anonymous_remaining
     session["strike"] = 0
     add_action(
         user_id=user.id,
         action=Action.SKIP,
         practice_item_id=item_id,
     )
-    return 0
-
-
-def _answer_stats(user_id: int):
-    """Строит подзапрос агрегированной статистики ответов по карточкам.
-
-    :param user_id: Идентификатор пользователя.
-    :return: SQLAlchemy-подзапрос с количеством ошибок и верных ответов.
-    """
-    return (
-        db.session.query(
-            Action.practice_item_id,
-            func.sum(
-                case((Action.action == Action.WRONG_ANSWER, 1), else_=0)
-            ).label("wrong_count"),
-            func.sum(
-                case((Action.action == Action.RIGHT_ANSWER, 1), else_=0)
-            ).label("right_count"),
-            func.sum(
-                case((Action.action == Action.SKIP, 1), else_=0)
-            ).label("skip_count"),
-        )
-        .filter(Action.user_id == user_id)
-        .group_by(Action.practice_item_id)
-        .subquery()
+    return 0, (
+        None if anonymous_remaining is None else anonymous_remaining - 1
     )
 
 
@@ -526,21 +505,19 @@ def _recent_progress_actions(user_id: int) -> list[Action]:
     ))
 
 
-def _global_answer_stats() -> dict[int, tuple[int, int, int]]:
-    """Возвращает общую статистику, сглаживающую оценку новых карточек."""
+def _global_answer_stats(
+    item_ids: list[int],
+) -> dict[int, tuple[int, int, int]]:
+    """Возвращает глобальную статистику только для кандидатов ленты."""
+    if not item_ids:
+        return {}
     rows = db.session.execute(
         select(
-            Action.practice_item_id,
-            func.sum(case(
-                (Action.action == Action.RIGHT_ANSWER, 1), else_=0
-            )),
-            func.sum(case(
-                (Action.action == Action.WRONG_ANSWER, 1), else_=0
-            )),
-            func.sum(case(
-                (Action.action == Action.SKIP, 1), else_=0
-            )),
-        ).group_by(Action.practice_item_id)
+            GlobalPracticeStats.practice_item_id,
+            GlobalPracticeStats.right_count,
+            GlobalPracticeStats.wrong_count,
+            GlobalPracticeStats.skip_count,
+        ).where(GlobalPracticeStats.practice_item_id.in_(item_ids))
     )
     return {
         item_id: (int(right or 0), int(wrong or 0), int(skipped or 0))
@@ -548,28 +525,40 @@ def _global_answer_stats() -> dict[int, tuple[int, int, int]]:
     }
 
 
-def _user_answer_stats(user_id: int) -> dict[int, tuple[int, int, int]]:
-    """Возвращает накопленную статистику пользователя по карточкам."""
+def _user_answer_stats(
+    user_id: int,
+    item_ids: list[int],
+) -> dict[int, tuple[int, int, int]]:
+    """Возвращает прогресс пользователя только для кандидатов ленты."""
+    if not item_ids:
+        return {}
     rows = db.session.execute(
         select(
-            Action.practice_item_id,
-            func.sum(case(
-                (Action.action == Action.RIGHT_ANSWER, 1), else_=0
-            )),
-            func.sum(case(
-                (Action.action == Action.WRONG_ANSWER, 1), else_=0
-            )),
-            func.sum(case(
-                (Action.action == Action.SKIP, 1), else_=0
-            )),
+            PracticeProgress.practice_item_id,
+            PracticeProgress.right_count,
+            PracticeProgress.wrong_count,
+            PracticeProgress.skip_count,
         )
-        .where(Action.user_id == user_id)
-        .group_by(Action.practice_item_id)
+        .where(
+            PracticeProgress.user_id == user_id,
+            PracticeProgress.practice_item_id.in_(item_ids),
+        )
     )
     return {
         item_id: (int(right or 0), int(wrong or 0), int(skipped or 0))
         for item_id, right, wrong, skipped in rows
     }
+
+
+def _user_action_count(user_id: int) -> int:
+    """Считает учебные действия по компактным строкам прогресса."""
+    return int(db.session.scalar(
+        select(func.sum(
+            PracticeProgress.right_count
+            + PracticeProgress.wrong_count
+            + PracticeProgress.skip_count
+        )).where(PracticeProgress.user_id == user_id)
+    ) or 0)
 
 
 def _item_progress(
@@ -738,16 +727,18 @@ def _random_window(query, count: int, total: int | None = None) -> list[Any]:
     return query.offset(offset).limit(count).all()
 
 
-def _ensure_quota(user: User) -> None:
+def _ensure_quota(user: User) -> int | None:
     """Проверяет наличие доступного действия у анонимного пользователя.
 
     :param user: Пользователь, для которого проверяется квота.
-    :return: ``None``.
+    :return: Остаток квоты до действия или ``None`` для обычного пользователя.
     :raises PracticeError: Если лимит анонимных действий исчерпан.
     """
-    if get_anonymous_actions_remaining(user) == 0:
+    remaining = get_anonymous_actions_remaining(user)
+    if remaining == 0:
         raise PracticeError(
             "anonymous_limit_reached",
             "Войдите через Яндекс, чтобы продолжить.",
             403,
         )
+    return remaining

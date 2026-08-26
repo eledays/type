@@ -14,7 +14,6 @@ from app.services.practice import (
     skip_card,
 )
 from app.services.reports import InvalidReport, create_error_report
-from app.utils import get_anonymous_actions_remaining
 
 
 def error_response(error: PracticeError):
@@ -117,7 +116,6 @@ def create_attempt():
         result = check_answer(user, card_id, answer, card_type)
     except PracticeError as error:
         return error_response(error)
-    result["anonymous_remaining"] = get_anonymous_actions_remaining(user)
     return jsonify(result)
 
 
@@ -162,7 +160,7 @@ def skip_attempt():
         }), 400
     try:
         user = cast(User, current_user._get_current_object())
-        strike = skip_card(
+        strike, anonymous_remaining = skip_card(
             user,
             card_id,
             card_type,
@@ -186,7 +184,7 @@ def skip_attempt():
     return jsonify({
         "status": "success",
         "strike": strike,
-        "anonymous_remaining": get_anonymous_actions_remaining(user),
+        "anonymous_remaining": anonymous_remaining,
     })
 
 

@@ -7,9 +7,11 @@ from app.extensions import db
 from app.models import (
     Action,
     ErrorReport,
+    GlobalPracticeStats,
     Paronym,
     ParonymExercise,
     ParonymGroup,
+    PracticeProgress,
     SpellingExercise,
     User,
 )
@@ -64,6 +66,7 @@ class TestPracticeApi(AppTestCase):
                 ),
             ])
             db.session.commit()
+            word_id = word.id
 
         card = self.client.get(
             "/api/v1/practice/cards?limit=1&task=4"
@@ -76,6 +79,22 @@ class TestPracticeApi(AppTestCase):
             "skips": 1,
             "correct_percent": 50.0,
         }
+
+        with self.app.app_context():
+            progress = db.session.get(
+                PracticeProgress, (user_id, word_id)
+            )
+            global_stats = db.session.get(GlobalPracticeStats, word_id)
+            assert (
+                progress.right_count,
+                progress.wrong_count,
+                progress.skip_count,
+            ) == (1, 1, 1)
+            assert (
+                global_stats.right_count,
+                global_stats.wrong_count,
+                global_stats.skip_count,
+            ) == (1, 1, 1)
 
     def test_card_pool_validates_limit_and_exclusions(self) -> None:
         invalid_limit = self.client.get("/api/v1/practice/cards?limit=20")
