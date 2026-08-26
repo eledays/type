@@ -10,9 +10,9 @@ def _content_security_policy(nonce: str | None) -> str:
     return "; ".join((
         "default-src 'self'",
         script_sources,
-        "style-src 'self' https://fonts.googleapis.com",
+        "style-src 'self'",
         "style-src-attr 'unsafe-inline'",
-        "font-src 'self' https://fonts.gstatic.com",
+        "font-src 'self'",
         "img-src 'self' data: https://avatars.yandex.net",
         "connect-src 'self'",
         "object-src 'none'",

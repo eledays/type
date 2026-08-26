@@ -1,3 +1,4 @@
+from functools import lru_cache
 from pathlib import Path
 from typing import cast
 
@@ -7,7 +8,7 @@ from flask_login import current_user, login_required
 from app.models import Category, User
 from app.routes.practice import bp
 from app.services.auth import oauth_is_configured
-from app.services.backgrounds import choose_background
+from app.services.backgrounds import choose_background, get_background_pools
 from app.services.practice import (
     PracticeError,
     select_cards,
@@ -17,6 +18,12 @@ from app.utils import (
     get_anonymous_actions_remaining,
     get_cached_strike,
 )
+
+
+@lru_cache(maxsize=128)
+def _asset_version(path: str) -> int:
+    """Кэширует версию неизменяемого ресурса до перезапуска приложения."""
+    return Path(path).stat().st_mtime_ns
 
 
 @bp.get("/")
@@ -70,7 +77,7 @@ def index():
         return url_for(
             "static",
             filename=filename,
-            v=path.stat().st_mtime_ns,
+            v=_asset_version(str(path)),
         )
 
     background_name = (
@@ -78,17 +85,16 @@ def index():
         if static_root is not None
         else background.as_posix()
     )
-    background_root = background.parent.parent
     background_pools = {
         theme: [
             url_for(
                 "static",
                 filename=path.relative_to(static_root).as_posix(),
-                v=path.stat().st_mtime_ns,
+                v=_asset_version(str(path)),
             )
-            for path in sorted((background_root / theme).glob("*.webp"))
+            for path in paths
         ]
-        for theme in ("dark", "yellow")
+        for theme, paths in get_background_pools().items()
     }
     return render_template(
         "index.html",
@@ -101,10 +107,11 @@ def index():
         background_url=url_for(
             "static",
             filename=background_name,
-            v=background.stat().st_mtime_ns,
+            v=_asset_version(str(background)),
         ),
         feed_query={"task": task, "category": category, "mode": mode},
         strike_levels=current_app.config["STRIKE_LEVELS"],
+        swipe_grace_strike=current_app.config["PRACTICE_SWIPE_GRACE_STRIKE"],
         background_pools=background_pools,
         card_batch_size=batch_size,
         categories=Category.query.all(),
@@ -113,6 +120,6 @@ def index():
         oauth_configured=oauth_is_configured(),
         style_url=static_url("css/style.css"),
         index_style_url=static_url("css/index.css"),
-        feed_script_url=static_url("js/feed.js"),
+        feed_script_url=static_url("js/feed.min.js"),
         favicon_url=static_url("img/fav.ico"),
     )

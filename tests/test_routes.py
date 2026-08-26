@@ -53,6 +53,10 @@ class TestRouteMap(AppTestCase):
         assert b'/api/v1/practice/cards' in response.data
         assert b'<iframe' not in response.data
         assert b'/get_frame' not in response.data
+        assert b'js/feed.min.js' in response.data
+        assert b'fonts.googleapis.com' not in response.data
+        assert b'<symbol id="icon-search"' in response.data
+        assert b'"swipeGraceStrike": 3' in response.data
 
     def test_index_contains_inline_profile_filters_and_word_panels(self) -> None:
         response = self.client.get("/")

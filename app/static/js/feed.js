@@ -11,12 +11,17 @@
             this.anonymousStarted = Boolean(bootstrap.anonymousStarted);
             this.showStrike = Boolean(bootstrap.strikeVisible);
             this.currentStrike = bootstrap.strike;
+            this.swipeGraceStrike = Number(bootstrap.swipeGraceStrike) || 0;
             this.strikeRevealed = false;
             this.strikeLevels = bootstrap.strikeLevels || [];
             this.backgroundPools = bootstrap.backgroundPools || {};
             this.backgroundQueues = new Map();
             this.lastBackgrounds = new Map();
             this.backgroundTheme = "dark";
+            this.initialBackground = bootstrap.initialBackground || null;
+            if (this.initialBackground) {
+                this.lastBackgrounds.set(this.backgroundTheme, this.initialBackground);
+            }
             if (!Number.isInteger(bootstrap.batchSize) || bootstrap.batchSize < 1) {
                 throw new Error("Некорректный размер пакета карточек");
             }
@@ -74,8 +79,14 @@
             this.slots.forEach((slot, index) => {
                 if (slot.card && !slot.element.dataset.cardId) {
                     this.renderCard(slot, slot.card);
+                } else if (slot.card && index === 0) {
+                    this.assignBackground(
+                        slot.element,
+                        this.backgroundTheme,
+                        this.initialBackground,
+                    );
                 } else if (slot.card) {
-                    this.assignBackground(slot.element, this.backgroundTheme);
+                    this.deferBackground(slot.element, this.backgroundTheme);
                 }
                 this.setPosition(
                     slot,
@@ -255,20 +266,37 @@
             }
 
             void this.saveExplanation(this.current);
-            if (recordSkip && !await this.recordSkip(this.current.card)) {
-                this.locked = false;
-                return;
-            }
-
             const oldPrevious = this.previous;
             const oldCurrent = this.current;
             const oldNext = this.next;
             const oldBuffered = this.buffered;
+            let animation = null;
 
-            this.setPosition(oldCurrent, "previous");
-            this.setPosition(oldNext, "current");
-            if (oldBuffered?.card) this.setPosition(oldBuffered, "next");
-            await this.afterAnimation();
+            if (recordSkip && this.currentStrike <= this.swipeGraceStrike) {
+                this.setPosition(oldCurrent, "previous");
+                this.setPosition(oldNext, "current");
+                if (oldBuffered?.card) this.setPosition(oldBuffered, "next");
+                animation = this.afterAnimation();
+            }
+            if (recordSkip && !await this.recordSkip(this.current.card)) {
+                if (animation) {
+                    this.setPosition(oldCurrent, "current", true);
+                    this.setPosition(oldNext, "next", true);
+                    if (oldBuffered?.card) {
+                        this.setPosition(oldBuffered, "buffered", true);
+                    }
+                }
+                this.locked = false;
+                return;
+            }
+
+            if (!animation) {
+                this.setPosition(oldCurrent, "previous");
+                this.setPosition(oldNext, "current");
+                if (oldBuffered?.card) this.setPosition(oldBuffered, "next");
+                animation = this.afterAnimation();
+            }
+            await animation;
 
             this.previous = oldCurrent;
             this.current = oldNext;
@@ -476,6 +504,20 @@
             if (!element || !url) return;
             element.style.setProperty("--card-back-img", `url("${url}")`);
             element.dataset.backgroundTheme = theme;
+        }
+
+        deferBackground(element, theme) {
+            const cardId = element.dataset.cardId;
+            const assign = () => {
+                if (element.dataset.cardId === cardId) {
+                    this.assignBackground(element, theme);
+                }
+            };
+            if ("requestIdleCallback" in window) {
+                window.requestIdleCallback(assign, {timeout: 1000});
+            } else {
+                setTimeout(assign, 50);
+            }
         }
 
         updateAnonymousRemaining(remaining) {
