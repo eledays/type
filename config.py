@@ -1,6 +1,7 @@
 import json
+from datetime import timedelta
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from limits import parse_many
 from pydantic import (
@@ -130,6 +131,28 @@ class AppSettings(BaseSettings):
         validation_alias="TRUSTED_PROXY_COUNT",
         ge=0,
     )
+    cookie_secure: bool | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "COOKIE_SECURE", "SESSION_COOKIE_SECURE"
+        ),
+    )
+    cookie_samesite: Literal["Lax", "Strict"] = Field(
+        default="Lax",
+        validation_alias=AliasChoices(
+            "COOKIE_SAMESITE", "SESSION_COOKIE_SAMESITE"
+        ),
+    )
+    remember_cookie_days: int = Field(
+        default=30,
+        validation_alias="REMEMBER_COOKIE_DAYS",
+        ge=1,
+        le=365,
+    )
+    hsts_enabled: bool | None = Field(
+        default=None,
+        validation_alias="HSTS_ENABLED",
+    )
 
     @field_validator("secret_key")
     @classmethod
@@ -213,6 +236,12 @@ class AppSettings(BaseSettings):
 
         :return: Проверенная конфигурация с именами, ожидаемыми расширениями.
         """
+        secure_cookies = (
+            not self.debug if self.cookie_secure is None else self.cookie_secure
+        )
+        hsts_enabled = (
+            not self.debug if self.hsts_enabled is None else self.hsts_enabled
+        )
         return {
             "DEBUG": self.debug,
             "FLASK_PORT": self.flask_port,
@@ -246,6 +275,16 @@ class AppSettings(BaseSettings):
             "RATE_LIMIT_MUTATION": self.rate_limit_mutation,
             "RATE_LIMIT_REPORT": self.rate_limit_report,
             "TRUSTED_PROXY_COUNT": self.trusted_proxy_count,
+            "SESSION_COOKIE_SECURE": secure_cookies,
+            "SESSION_COOKIE_HTTPONLY": True,
+            "SESSION_COOKIE_SAMESITE": self.cookie_samesite,
+            "REMEMBER_COOKIE_SECURE": secure_cookies,
+            "REMEMBER_COOKIE_HTTPONLY": True,
+            "REMEMBER_COOKIE_SAMESITE": self.cookie_samesite,
+            "REMEMBER_COOKIE_DURATION": timedelta(
+                days=self.remember_cookie_days
+            ),
+            "HSTS_ENABLED": hsts_enabled,
         }
 
 

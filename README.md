@@ -29,6 +29,8 @@
     SECRET_KEY=replace-with-a-random-secret-key
     DATABASE_URL=sqlite:///app.db
     FLASK_PORT=5000
+    COOKIE_SAMESITE=Lax
+    REMEMBER_COOKIE_DAYS=30
     YANDEX_CLIENT_ID=your-client-id
     YANDEX_CLIENT_SECRET=your-client-secret
     YANDEX_REDIRECT_URI=http://localhost:5000/auth/yandex/callback

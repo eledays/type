@@ -40,6 +40,7 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     from app.cli import register_commands
     from app.routes import register_blueprints
     from app.security.csrf import register_csrf
+    from app.security.headers import register_security_headers
     from app.security.rate_limits import register_rate_limit_errors
     from app.security.session import ensure_authenticated_user, load_user
 
@@ -47,6 +48,7 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     limiter.init_app(app)
     app.before_request(ensure_authenticated_user)
     register_csrf(app)
+    register_security_headers(app)
     register_rate_limit_errors(app)
     register_commands(app)
     register_blueprints(app)

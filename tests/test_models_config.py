@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from pydantic import ValidationError
 import pytest
 
@@ -44,6 +46,23 @@ class TestConfig(AppTestCase):
         assert exported["RATELIMIT_APPLICATION"] == "3000 per hour"
         assert exported["RATELIMIT_HEADERS_ENABLED"]
         assert exported["TRUSTED_PROXY_COUNT"] == 0
+        assert exported["SESSION_COOKIE_SECURE"]
+        assert exported["SESSION_COOKIE_HTTPONLY"]
+        assert exported["SESSION_COOKIE_SAMESITE"] == "Lax"
+        assert exported["REMEMBER_COOKIE_DURATION"] == timedelta(days=30)
+        assert exported["HSTS_ENABLED"]
+
+    def test_debug_defaults_disable_https_only_options(self) -> None:
+        settings = AppSettings(
+            SECRET_KEY="a-secure-test-secret",
+            DEBUG=True,
+        )
+
+        exported = settings.to_flask_config()
+
+        assert not exported["SESSION_COOKIE_SECURE"]
+        assert not exported["REMEMBER_COOKIE_SECURE"]
+        assert not exported["HSTS_ENABLED"]
 
     @pytest.mark.parametrize(
         "levels",
