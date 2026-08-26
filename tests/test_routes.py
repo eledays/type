@@ -24,6 +24,7 @@ class TestRouteMap(AppTestCase):
             ("/api/v1/practice/cards", "GET"),
             ("/api/v1/profile/settings", "PATCH"),
             ("/api/v1/profile/background", "GET"),
+            ("/api/v1/profile/stats", "GET"),
             ("/api/v1/reports", "POST"),
             ("/api/v1/admin/words/<int:word_id>/explanation", "PATCH"),
             ("/api/v1/admin/words/<int:word_id>/answers", "DELETE"),
@@ -109,6 +110,16 @@ class TestRouteMap(AppTestCase):
 
         assert b'data-strike-toggle' in response.data
         assert b'"updateSettings"' in response.data
+
+    def test_profile_stats_are_loaded_from_panel_api(self) -> None:
+        response = self.client.get("/")
+
+        assert b'"profileStats": "/api/v1/profile/stats"' in response.data
+        assert b'id="profile-correct">\xe2\x80\x94<' in response.data
+
+        stats = self.client.get("/api/v1/profile/stats")
+        assert stats.status_code == 200
+        assert stats.get_json()["correct"] == 0
 
     def test_profile_page_has_general_error_report_form(self) -> None:
         response = self.client.get("/profile")

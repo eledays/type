@@ -13,7 +13,6 @@ from app.services.practice import (
     select_cards,
     serialize_cards,
 )
-from app.services.profile import get_profile_stats
 from app.utils import (
     get_anonymous_actions_remaining,
     get_cached_strike,
@@ -38,10 +37,15 @@ def index():
         and anonymous_remaining < current_app.config["ANONYMOUS_ACTION_LIMIT"]
     )
     initial_error = None
+    batch_size = int(current_app.config["PRACTICE_CARD_BATCH_SIZE"])
+    initial_count = min(
+        batch_size * 2,
+        int(current_app.config["PRACTICE_CARD_BATCH_MAX"]),
+    )
     try:
         selected_cards = select_cards(
             user,
-            int(current_app.config["PRACTICE_CARD_BATCH_SIZE"]),
+            initial_count,
             task_id=task,
             category_id=category,
             mistakes=mode == "mistakes",
@@ -54,7 +58,6 @@ def index():
         initial_error = error.message
 
     background = choose_background(user)
-    stats = get_profile_stats(user)
     static_root = current_app.static_folder
 
     def static_url(filename: str) -> str:
@@ -103,11 +106,10 @@ def index():
         feed_query={"task": task, "category": category, "mode": mode},
         strike_levels=current_app.config["STRIKE_LEVELS"],
         background_pools=background_pools,
-        card_batch_size=current_app.config["PRACTICE_CARD_BATCH_SIZE"],
+        card_batch_size=batch_size,
         categories=Category.query.all(),
         tasks=current_app.config["TASKS"],
         user=user,
-        stats=stats,
         oauth_configured=oauth_is_configured(),
         style_url=static_url("css/style.css"),
         index_style_url=static_url("css/index.css"),

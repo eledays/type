@@ -153,12 +153,12 @@
         <div class="panel-section">
             <h3>Статистика</h3>
             <div class="stats-grid profile-stats">
-                <div class="stat-card"><span>Верных</span><strong>{{ stats.correct }}</strong></div>
-                <div class="stat-card"><span>Ошибок</span><strong>{{ stats.mistakes }}</strong></div>
-                <div class="stat-card"><span>Пропусков</span><strong>{{ stats.skips }}</strong></div>
-                <div class="stat-card"><span>Точность</span><strong>{{ stats.correct_percent }}%</strong></div>
-                <div class="stat-card"><span>Среднее время</span><strong>{{ stats.avg_time_per_word }} сек</strong></div>
-                <div class="stat-card"><span>Лучшая серия</span><strong>{{ stats.best_streak }}</strong></div>
+                <div class="stat-card"><span>Верных</span><strong id="profile-correct">—</strong></div>
+                <div class="stat-card"><span>Ошибок</span><strong id="profile-mistakes">—</strong></div>
+                <div class="stat-card"><span>Пропусков</span><strong id="profile-skips">—</strong></div>
+                <div class="stat-card"><span>Точность</span><strong id="profile-percent">—</strong></div>
+                <div class="stat-card"><span>Среднее время</span><strong id="profile-average">—</strong></div>
+                <div class="stat-card"><span>Лучшая серия</span><strong id="profile-best-streak">—</strong></div>
             </div>
         </div>
         {% if not user.is_anonymous_account %}
@@ -214,6 +214,7 @@
             'updateExplanation': url_for('admin_api.patch_explanation', word_id=0),
             'deleteAnswer': url_for('admin_api.remove_answer', word_id=0),
             'updateSettings': url_for('profile_api.patch_settings'),
+            'profileStats': url_for('profile_api.stats'),
             'csrfToken': csrf_token()
         }|tojson }};
     </script>

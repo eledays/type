@@ -14,7 +14,7 @@ from flask_login import current_user, login_required
 from app.extensions import limiter
 from app.models import User
 from app.routes.profile import api_bp
-from app.services.profile import InvalidSettings, update_settings
+from app.services.profile import InvalidSettings, get_profile_stats, update_settings
 from app.services.backgrounds import choose_background
 
 
@@ -31,6 +31,14 @@ def background():
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
+
+
+@api_bp.get("/stats")
+@login_required
+def stats():
+    """Возвращает статистику профиля по запросу клиентской панели."""
+    user = cast(User, current_user._get_current_object())
+    return jsonify(get_profile_stats(user))
 
 
 @api_bp.patch("/settings")

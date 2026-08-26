@@ -33,6 +33,8 @@
             this.suppressAnswerClick = false;
             this.answerFlashTimer = null;
             this.reportItemId = null;
+            this.profileStatsLoaded = false;
+            this.profileStatsLoading = null;
 
             this.feed = document.getElementById("feed");
             this.status = document.getElementById("feed-status");
@@ -573,6 +575,30 @@
             requestAnimationFrame(() => this.panelOverlay.classList.add("is-open"));
             document.body.classList.add("has-open-panel");
             panel.querySelector("button, a, input")?.focus({preventScroll: true});
+            if (name === "profile") void this.loadProfileStats();
+        }
+
+        async loadProfileStats() {
+            if (this.profileStatsLoaded) return;
+            if (this.profileStatsLoading) return this.profileStatsLoading;
+            this.profileStatsLoading = fetch(this.routes.profileStats, {
+                headers: {Accept: "application/json"},
+            }).then(async (response) => {
+                const stats = await response.json();
+                if (!response.ok) throw new Error();
+                document.getElementById("profile-correct").textContent = stats.correct;
+                document.getElementById("profile-mistakes").textContent = stats.mistakes;
+                document.getElementById("profile-skips").textContent = stats.skips;
+                document.getElementById("profile-percent").textContent = `${stats.correct_percent}%`;
+                document.getElementById("profile-average").textContent = `${stats.avg_time_per_word} сек`;
+                document.getElementById("profile-best-streak").textContent = stats.best_streak;
+                this.profileStatsLoaded = true;
+            }).catch(() => {
+                this.showStatus("Не удалось загрузить статистику");
+            }).finally(() => {
+                this.profileStatsLoading = null;
+            });
+            return this.profileStatsLoading;
         }
 
         closePanel(restoreFocus = true) {
