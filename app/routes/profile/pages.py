@@ -1,6 +1,6 @@
 from typing import cast
 
-from flask import current_app, redirect, render_template, request, session, url_for
+from flask import current_app, render_template, session
 from flask_login import current_user, login_required
 
 from app.models import User
@@ -31,14 +31,3 @@ def index():
         stats=stats,
         oauth_configured=oauth_is_configured(),
     )
-
-
-@bp.get("/settings")
-def legacy_settings_redirect():
-    """Перенаправляет старый адрес настроек на профиль.
-
-    :return: Постоянное перенаправление на страницу профиля.
-    """
-    query = request.query_string.decode()
-    target = url_for("profile.index")
-    return redirect(f"{target}?{query}" if query else target, code=308)

@@ -114,16 +114,3 @@ def index():
         feed_script_url=static_url("js/feed.js"),
         favicon_url=static_url("img/fav.ico"),
     )
-
-
-@bp.get("/filters")
-def filters():
-    """Отображает страницу выбора фильтров практики.
-
-    :return: HTML-страница со списком категорий и заданий.
-    """
-    return render_template(
-        "filters.html",
-        categories=Category.query.all(),
-        tasks=current_app.config["TASKS"],
-    )

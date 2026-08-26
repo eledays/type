@@ -66,25 +66,6 @@ p {
     color: color-mix(in srgb, var(--main-color) 90%, var(--frame-background-color) 10%);
 }
 
-.filters {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 5px;
-}
-
-.filter {
-    display: block;
-    background-color: var(--tg-theme-secondary-bg-color);
-    padding: 10px 14px;
-    border-radius: 5px;
-    color: var(--tg-theme-text-color);
-    text-decoration: none;
-}
-
-.filter.selected {
-    background-color: color-mix(in srgb, var(--tg-theme-secondary-bg-color) 80%, var(--tg-theme-text-color) 20%);
-}
-
 /* input[type="time"] {
     text-align: left;
     background-color: var(--tg-theme-secondary-bg-color);

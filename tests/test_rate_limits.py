@@ -16,7 +16,7 @@ class TestRateLimits(AppTestCase):
             assert User.query.count() == 300
 
     def test_routes_expose_rate_limit_headers(self) -> None:
-        response = self.client.get("/filters")
+        response = self.client.get("/")
 
         assert response.status_code == 200
         assert response.headers["X-RateLimit-Limit"] == "300"

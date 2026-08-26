@@ -16,7 +16,6 @@ class TestRouteMap(AppTestCase):
         }
         expected = {
             ("/", "GET"),
-            ("/filters", "GET"),
             ("/profile", "GET"),
             ("/auth", "GET"),
             ("/auth/logout", "POST"),
@@ -36,12 +35,16 @@ class TestRouteMap(AppTestCase):
             "/task/5": "/?task=5",
             "/category/7": "/?category=7",
             "/mistakes": "/?mode=mistakes",
-            "/settings": "/profile",
         }
         for old_url, canonical_url in cases.items():
             response = self.client.get(old_url)
             assert response.status_code == 308
             assert response.location == canonical_url
+
+    def test_obsolete_standalone_pages_are_removed(self) -> None:
+        for url in ("/filters", "/settings"):
+            response = self.client.get(url)
+            assert response.status_code == 404
 
     def test_index_uses_batch_feed_without_iframes(self) -> None:
         response = self.client.get("/?task=5")

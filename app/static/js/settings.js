@@ -47,18 +47,7 @@ function handleTimeInput(id) {
     });
 }
 
-function backToReferrer() {
-    const referrer = new URLSearchParams(window.location.search).get('referrer');
-    
-    if (referrer) {
-        window.location.href = referrer;
-    } else {
-        window.location.href = window.routeConfig.home;
-    }
-}
-
 addEventListener('DOMContentLoaded', () => {
-    window.backToReferrer = backToReferrer;
     const reportForm = document.getElementById('general-report-form');
     reportForm?.addEventListener('submit', async (event) => {
         event.preventDefault();
