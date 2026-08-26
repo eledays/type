@@ -326,7 +326,10 @@
             try {
                 const response = await fetch(this.routes.skipAttempt, {
                     method: "POST",
-                    headers: {"Content-Type": "application/json"},
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": this.routes.csrfToken,
+                    },
                     body: JSON.stringify({
                         card_id: card.id,
                         card_type: card.type,
@@ -362,7 +365,10 @@
             try {
                 const response = await fetch(this.routes.createAttempt, {
                     method: "POST",
-                    headers: {"Content-Type": "application/json"},
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": this.routes.csrfToken,
+                    },
                     body: JSON.stringify({
                         card_id: this.current.card.id,
                         card_type: this.current.card.type,
@@ -512,7 +518,10 @@
             try {
                 await fetch(this.endpointFor(this.routes.updateExplanation, slot.card.id), {
                     method: "PATCH",
-                    headers: {"Content-Type": "application/json"},
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": this.routes.csrfToken,
+                    },
                     body: JSON.stringify({explanation: value}),
                 });
             } catch {
@@ -526,7 +535,10 @@
                 this.endpointFor(this.routes.deleteAnswer, this.current.card.id),
                 {
                     method: "DELETE",
-                    headers: {"Content-Type": "application/json"},
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": this.routes.csrfToken,
+                    },
                     body: JSON.stringify({answer}),
                 },
             );
@@ -623,7 +635,10 @@
             try {
                 const response = await fetch(this.routes.createReport, {
                     method: "POST",
-                    headers: {"Content-Type": "application/json"},
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": this.routes.csrfToken,
+                    },
                     body: JSON.stringify({
                         message,
                         practice_item_id: this.reportItemId,
@@ -735,7 +750,10 @@
                 try {
                     const response = await fetch(this.routes.updateSettings, {
                         method: "PATCH",
-                        headers: {"Content-Type": "application/json"},
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": this.routes.csrfToken,
+                        },
                         body: JSON.stringify({strike: enabled}),
                     });
                     if (!response.ok) throw new Error();

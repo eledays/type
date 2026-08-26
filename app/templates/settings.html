@@ -36,6 +36,7 @@
                 {% endif %}
             {% else %}
                 <form method="post" action="{{ url_for('auth.logout') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button class="logout-button" type="submit">Выйти</button>
                 </form>
             {% endif %}
@@ -94,6 +95,7 @@
         <div class="settings-block">
             <h2>Обратная связь</h2>
             <form class="settings-report-form" id="general-report-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <label for="general-report-message">Сообщить об ошибке</label>
                 <textarea id="general-report-message" maxlength="2000" required
                     placeholder="Опишите проблему в приложении"></textarea>
@@ -155,7 +157,8 @@
         window.routeConfig = {{ {
             'updateSettings': url_for('profile_api.patch_settings'),
             'createReport': url_for('practice_api.create_report'),
-            'home': url_for('practice.index')
+            'home': url_for('practice.index'),
+            'csrfToken': csrf_token()
         }|tojson }};
     </script>
     <script src="{{ url_for('static', filename='js/applyColorTheme.js') }}"></script>

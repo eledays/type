@@ -32,6 +32,7 @@
             </a>
             {% elif not user.is_anonymous_account %}
             <form method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="logout-link" type="submit">
                     <span class="material-symbols-rounded" aria-hidden="true">logout</span>Выйти
                 </button>
@@ -188,6 +189,7 @@
     <section class="panel panel--headerless" id="report-panel" data-panel="report" role="dialog" aria-modal="true"
         aria-label="Сообщить об ошибке" aria-hidden="true">
         <form id="report-form" class="report-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <h3>Сообщить об ошибке</h3>
             <p class="report-context" id="report-context">Общая ошибка в приложении</p>
             <label for="report-message">Что пошло не так?</label>
@@ -211,7 +213,8 @@
             'createReport': url_for('practice_api.create_report'),
             'updateExplanation': url_for('admin_api.patch_explanation', word_id=0),
             'deleteAnswer': url_for('admin_api.remove_answer', word_id=0),
-            'updateSettings': url_for('profile_api.patch_settings')
+            'updateSettings': url_for('profile_api.patch_settings'),
+            'csrfToken': csrf_token()
         }|tojson }};
     </script>
     <script defer src="{{ feed_script_url }}"></script>

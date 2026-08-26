@@ -15,7 +15,10 @@ function handleClick(id) {
 
     fetch(window.routeConfig.updateSettings, {
         method: 'PATCH',
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': window.routeConfig.csrfToken,
+        },
         body: JSON.stringify({[id]: value})
     })
     .then((data) => {
@@ -36,7 +39,10 @@ function handleTimeInput(id) {
     let item = document.querySelector(`.time-control#${id} #time-input`);
     fetch(window.routeConfig.updateSettings, {
         method: 'PATCH',
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': window.routeConfig.csrfToken,
+        },
         body: JSON.stringify({[id + '_time']: item.value})
     });
 }
@@ -64,7 +70,10 @@ addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(window.routeConfig.createReport, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': window.routeConfig.csrfToken,
+                },
                 body: JSON.stringify({message: message.value, practice_item_id: null}),
             });
             const payload = await response.json();

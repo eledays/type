@@ -21,6 +21,7 @@ class AppTestCase:
             "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
             "ANONYMOUS_ACTION_LIMIT": 3,
             "SERVER_NAME": "localhost",
+            "WTF_CSRF_ENABLED": False,
         })
         with self.app.app_context():
             db.create_all()
