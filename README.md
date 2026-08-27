@@ -47,9 +47,10 @@ PostgreSQL и Redis используют именованные volumes, поэ�
 удалит оба volume без возможности восстановления.
 
 Публичное развёртывание использует отдельный Compose-файл, Nginx и Certbot.
-Пошаговая инструкция по HTTPS и запуску находится в
-[`docs/deployment.md`](docs/deployment.md). Локальный `compose.override.yaml`
-на сервере не подключается.
+Русскоязычная инструкция, которую можно выполнять по шагам: [запуск Type в
+production](docs/production-runbook.md). Дополнительные замечания по переносу
+данных находятся в [`docs/deployment.md`](docs/deployment.md). Локальный
+`compose.override.yaml` на сервере не подключается.
 
 Параметры локального Docker-стека можно переопределить в `.env`:
 
