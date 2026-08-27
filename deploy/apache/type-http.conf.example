@@ -1,0 +1,13 @@
+<VirtualHost *:80>
+    ServerName example.com
+
+    DocumentRoot /var/www/type-certbot
+    <Directory /var/www/type-certbot>
+        Options None
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/type-error.log
+    CustomLog ${APACHE_LOG_DIR}/type-access.log combined
+</VirtualHost>

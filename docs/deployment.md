@@ -1,38 +1,27 @@
 # Production deployment
 
-This deployment targets one Linux server with Docker Engine and the Docker
-Compose plugin. Nginx is the only public container; it terminates TLS and
-proxies requests to Gunicorn over the private frontend network. The official
-Certbot container obtains and renews Let's Encrypt certificates. PostgreSQL
-and Redis are attached only to the internal backend network and publish no
-host ports.
+The supported production topology uses two machines:
 
-## 1. Server and DNS
-
-Use a supported 64-bit Linux distribution with at least 2 GB RAM and enough
-disk space for Docker images, PostgreSQL data, and backups. Install Docker
-Engine and the Compose plugin from Docker's official repository.
-
-Create an `A` record for the production domain pointing to the server. Add an
-`AAAA` record only if IPv6 routing and firewall rules are configured. Allow
-incoming TCP traffic on ports 22, 80, and 443.
-
-Do not publish ports 8000, 5432, or 6379. Docker-published ports may bypass
-host-level UFW rules, so the production Compose configuration exposes only
-Nginx on 80/443.
-
-## 2. Application files and secrets
-
-Clone the repository into a stable path such as `/opt/type`:
-
-```bash
-sudo mkdir -p /opt/type
-sudo chown "$USER":"$USER" /opt/type
-git clone <repository-url> /opt/type
-cd /opt/type
+```text
+Internet -> Apache (TLS) -> private/VPN HTTP -> Type application server
 ```
 
-Create the environment file and restrict its permissions:
+Apache owns the public domain, ports 80/443, Let's Encrypt certificate, and
+proxy configuration. The application server publishes Gunicorn only on an
+explicit private address. PostgreSQL and Redis remain inside Docker networks.
+
+For an executable Russian step-by-step guide, including Apache templates and
+certificate setup, see [`production-runbook.md`](production-runbook.md).
+
+The regular `docker compose up --build --detach` development stack still works
+without any reverse proxy at `http://localhost:8000`. The production stack is
+different: secure cookies, HSTS, OAuth callbacks, and trusted forwarding
+headers require a trusted HTTPS reverse proxy or load balancer. Do not expose
+the production origin directly to the public internet.
+
+## Application server
+
+Create the environment file:
 
 ```bash
 cp .env.production.example .env.production
@@ -41,47 +30,46 @@ openssl rand -hex 32
 openssl rand -hex 32
 ```
 
-Put the generated values into `SECRET_KEY` and `POSTGRES_PASSWORD`. Replace
-all remaining placeholders. `DOMAIN` must contain a host name without a scheme
-or path. Register this exact callback URL in the Yandex OAuth application:
+Set `DOMAIN` to the public hostname and `APP_BIND_IP` to the private/VPN
+address of the application server. Use different generated values for
+`SECRET_KEY` and `POSTGRES_PASSWORD`. Register this exact Yandex OAuth callback:
 
 ```text
 https://<DOMAIN>/auth/yandex/callback
 ```
 
-Never commit `.env.production`. The file is ignored by Git.
-
-## 3. First start
-
-Use the production wrapper on the server. It always passes both explicit
-Compose files and therefore prevents the local `compose.override.yaml` from
-publishing Gunicorn on port 8000:
+Validate and start the origin:
 
 ```bash
 scripts/compose_production.sh config --quiet
-```
-
-The initial TLS command starts Nginx in HTTP mode, obtains the certificate
-through an ACME webroot challenge, and restarts Nginx in HTTPS mode. Run it
-only after the domain resolves to this server and ports 80/443 are reachable:
-
-```bash
-scripts/init_tls.sh
+scripts/compose_production.sh up --build --detach
 scripts/compose_production.sh ps
-scripts/compose_production.sh logs --tail=200 app nginx
 ```
 
-Verify the deployment:
+Allow `${APP_PORT}` through the application-server firewall only from the
+Apache server. The connection must use a trusted private network or VPN; do not
+send authenticated origin traffic as plain HTTP over the public internet.
+
+Test from the Apache server while preserving the public host:
 
 ```bash
-curl --fail https://<DOMAIN>/health/live
-curl --fail https://<DOMAIN>/health/ready
+curl --fail --header 'Host: <DOMAIN>' \
+  http://<APP_BIND_IP>:<APP_PORT>/health/ready
 ```
 
-`/health/live` checks the HTTP process. `/health/ready` additionally checks
-PostgreSQL and Redis. Neither endpoint creates an anonymous user.
+Apache must preserve `Host`, append the client address to `X-Forwarded-For`,
+and set `X-Forwarded-Proto: https`. The application trusts exactly one proxy
+hop. Do not make the origin port publicly reachable, because direct clients
+could otherwise forge trusted forwarding headers.
 
-## 4. Moving the existing data
+Example Apache configurations are stored in:
+
+- [`type-http.conf.example`](../deploy/apache/type-http.conf.example) for the
+  first ACME webroot challenge;
+- [`type.conf.example`](../deploy/apache/type.conf.example) for HTTPS and
+  reverse proxying.
+
+## Moving existing PostgreSQL data
 
 Docker volumes do not travel with Git. Create a custom-format dump on the old
 machine:
@@ -91,35 +79,31 @@ docker compose exec -T postgres \
   pg_dump -U type -d type --format=custom > type.dump
 ```
 
-Treat the dump as sensitive user data and transfer it to the server over SSH.
-Before the site receives traffic, stop the app and recreate the empty target
-database. Substitute database/user names if they differ in `.env.production`:
+Treat the dump as sensitive user data and transfer it over SSH. Before the
+site receives traffic, recreate the empty target database. Substitute names if
+they differ in `.env.production`:
 
 ```bash
-scripts/compose_production.sh stop app nginx
+scripts/compose_production.sh stop app
 scripts/compose_production.sh exec -T postgres dropdb -U type --force type
 scripts/compose_production.sh exec -T postgres createdb -U type type
 scripts/compose_production.sh exec -T postgres pg_restore \
   -U type -d type --no-owner --no-privileges < type.dump
-scripts/compose_production.sh up --detach app nginx
+scripts/compose_production.sh up --detach app
 ```
 
 Delete or securely archive the transferred dump after verification.
 
-## 5. Backups and restore
+## Backups and restore tests
 
-Create a backup with the repository script:
+Create a permission-restricted custom-format dump:
 
 ```bash
 scripts/backup_postgres.sh
 ```
 
-The script writes a permission-restricted custom-format dump to `backups/`.
-Copy backups to storage outside the server and define retention there. A backup
-that exists only on the application server does not protect against disk or
-server loss.
-
-Test restoration periodically using a separate database:
+Copy backups outside the application server. Periodically test restoration in
+a dedicated database:
 
 ```bash
 scripts/compose_production.sh exec -T postgres \
@@ -132,45 +116,22 @@ scripts/compose_production.sh exec -T postgres pg_restore \
 
 Drop only the dedicated restore-test database after checking it.
 
-## 6. Deploying updates
+## Deploying updates
 
-Create a backup first, then update and rebuild:
+Apache is independent of ordinary application deployments:
 
 ```bash
 cd /opt/type
 scripts/backup_postgres.sh
 git pull --ff-only
-
-scripts/compose_production.sh build app nginx
+scripts/compose_production.sh build app
 scripts/compose_production.sh up --detach
+scripts/compose_production.sh ps
 ```
 
-The app entrypoint applies Alembic migrations before Gunicorn starts. Check
-container health, logs, and the external readiness endpoint after every
-deployment. Do not run `docker compose down --volumes` on the server: it
-removes the PostgreSQL, Redis, and Let's Encrypt volumes.
+The application entrypoint applies Alembic migrations before Gunicorn starts.
+Check container logs, the origin readiness endpoint, and the external HTTPS
+endpoint after every deployment.
 
-## 7. Certificate renewal
-
-Run the renewal script daily using cron or a systemd timer. Certbot renews only
-certificates that are close to expiry; Nginx is reloaded after the check:
-
-```bash
-scripts/renew_tls.sh
-```
-
-Example root crontab entry:
-
-```cron
-17 3 * * * cd /opt/type && ./scripts/renew_tls.sh >> /var/log/type-certbot.log 2>&1
-```
-
-## 8. Operations checklist
-
-- Monitor HTTPS availability and `/health/ready` from another machine.
-- Alert on disk usage, memory pressure, container restarts, and failed backups.
-- Keep Ubuntu and Docker security updates current.
-- Keep at least one recent database backup outside the VPS.
-- Test restoration before relying on the backup process.
-- Review `docker compose logs` after deployments and OAuth configuration
-  changes.
+Never run `docker compose down --volumes` in production. It removes PostgreSQL
+and Redis data volumes.

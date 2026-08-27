@@ -1,0 +1,44 @@
+<VirtualHost *:80>
+    ServerName example.com
+
+    DocumentRoot /var/www/type-certbot
+    <Directory /var/www/type-certbot>
+        Options None
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=308,L]
+
+    ErrorLog ${APACHE_LOG_DIR}/type-error.log
+    CustomLog ${APACHE_LOG_DIR}/type-access.log combined
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName example.com
+
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/example.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/example.com/privkey.pem
+
+    ProxyPreserveHost On
+    ProxyAddHeaders On
+    ProxyTimeout 60
+    RequestHeader unset X-Forwarded-Proto
+    RequestHeader set X-Forwarded-Proto "https"
+    RequestHeader unset X-Forwarded-Port
+    RequestHeader set X-Forwarded-Port "443"
+
+    ProxyPass / http://10.0.0.20:8000/ connectiontimeout=5 timeout=60 retry=0
+    ProxyPassReverse / http://10.0.0.20:8000/
+
+    LimitRequestBody 65536
+    AddOutputFilterByType DEFLATE \
+        text/html text/plain text/css \
+        application/json application/javascript image/svg+xml
+
+    ErrorLog ${APACHE_LOG_DIR}/type-error.log
+    CustomLog ${APACHE_LOG_DIR}/type-access.log combined
+</VirtualHost>

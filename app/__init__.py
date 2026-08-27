@@ -24,6 +24,8 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
         app.wsgi_app = ProxyFix(
             app.wsgi_app,
             x_for=trusted_proxy_count,
+            x_proto=trusted_proxy_count,
+            x_host=trusted_proxy_count,
         )
 
     db.init_app(app)

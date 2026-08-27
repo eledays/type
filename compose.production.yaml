@@ -19,6 +19,8 @@ services:
       TRUSTED_PROXY_COUNT: "1"
       COOKIE_SECURE: "true"
       HSTS_ENABLED: "true"
+    ports:
+      - "${APP_BIND_IP:?Set APP_BIND_IP to the private application-server IP}:${APP_PORT:-8000}:8000"
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777
@@ -40,52 +42,3 @@ services:
   redis:
     logging: *default-logging
     restart: always
-
-  nginx:
-    build:
-      context: .
-      dockerfile: deploy/nginx/Dockerfile
-    environment:
-      DOMAIN: ${DOMAIN:?Set DOMAIN in the production env file}
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - letsencrypt_data:/etc/letsencrypt:ro
-      - certbot_webroot:/var/www/certbot:ro
-    depends_on:
-      app:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost/nginx-health"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 5s
-    networks:
-      - frontend
-    security_opt:
-      - no-new-privileges:true
-    logging: *default-logging
-    restart: always
-
-  certbot:
-    image: certbot/certbot:v5.7.0
-    entrypoint: ["/bin/sh"]
-    environment:
-      DOMAIN: ${DOMAIN:?Set DOMAIN in the production env file}
-      CERTBOT_EMAIL: ${CERTBOT_EMAIL:?Set CERTBOT_EMAIL in the production env file}
-    volumes:
-      - letsencrypt_data:/etc/letsencrypt
-      - certbot_webroot:/var/www/certbot
-    networks:
-      - frontend
-    profiles:
-      - tools
-    security_opt:
-      - no-new-privileges:true
-    logging: *default-logging
-
-volumes:
-  letsencrypt_data:
-  certbot_webroot:

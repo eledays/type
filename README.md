@@ -46,11 +46,13 @@ PostgreSQL и Redis используют именованные volumes, поэ�
 `docker compose down` не удаляет данные. Команда `docker compose down -v`
 удалит оба volume без возможности восстановления.
 
-Публичное развёртывание использует отдельный Compose-файл, Nginx и Certbot.
-Русскоязычная инструкция, которую можно выполнять по шагам: [запуск Type в
-production](docs/production-runbook.md). Дополнительные замечания по переносу
-данных находятся в [`docs/deployment.md`](docs/deployment.md). Локальный
-`compose.override.yaml` на сервере не подключается.
+Публичное развёртывание использует Apache reverse proxy на отдельной машине и
+приватный origin-сервер приложения. Русскоязычная инструкция, которую можно
+выполнять по шагам: [запуск Type в production](docs/production-runbook.md).
+Дополнительные замечания по переносу данных находятся в
+[`docs/deployment.md`](docs/deployment.md). Локальный `compose.override.yaml`
+на сервере не подключается. Для локального запуска reverse proxy не нужен;
+публичный production требует HTTPS reverse proxy или load balancer.
 
 Параметры локального Docker-стека можно переопределить в `.env`:
 
