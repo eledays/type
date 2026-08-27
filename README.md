@@ -46,8 +46,8 @@ PostgreSQL и Redis используют именованные volumes, поэ�
 `docker compose down` не удаляет данные. Команда `docker compose down -v`
 удалит оба volume без возможности восстановления.
 
-Публичное развёртывание использует отдельный Compose-файл и Caddy с
-автоматическим HTTPS. Пошаговая инструкция находится в
+Публичное развёртывание использует отдельный Compose-файл, Nginx и Certbot.
+Пошаговая инструкция по HTTPS и запуску находится в
 [`docs/deployment.md`](docs/deployment.md). Локальный `compose.override.yaml`
 на сервере не подключается.
 

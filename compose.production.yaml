@@ -41,22 +41,27 @@ services:
     logging: *default-logging
     restart: always
 
-  caddy:
+  nginx:
     build:
       context: .
-      dockerfile: deploy/caddy/Dockerfile
+      dockerfile: deploy/nginx/Dockerfile
     environment:
       DOMAIN: ${DOMAIN:?Set DOMAIN in the production env file}
-      CADDY_EMAIL: ${CADDY_EMAIL:?Set CADDY_EMAIL in the production env file}
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - caddy_data:/data
-      - caddy_config:/config
+      - letsencrypt_data:/etc/letsencrypt:ro
+      - certbot_webroot:/var/www/certbot:ro
     depends_on:
       app:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost/nginx-health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     networks:
       - frontend
     security_opt:
@@ -64,6 +69,23 @@ services:
     logging: *default-logging
     restart: always
 
+  certbot:
+    image: certbot/certbot:v5.7.0
+    entrypoint: ["/bin/sh"]
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in the production env file}
+      CERTBOT_EMAIL: ${CERTBOT_EMAIL:?Set CERTBOT_EMAIL in the production env file}
+    volumes:
+      - letsencrypt_data:/etc/letsencrypt
+      - certbot_webroot:/var/www/certbot
+    networks:
+      - frontend
+    profiles:
+      - tools
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
 volumes:
-  caddy_data:
-  caddy_config:
+  letsencrypt_data:
+  certbot_webroot:

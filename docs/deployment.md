@@ -1,10 +1,11 @@
 # Production deployment
 
 This deployment targets one Linux server with Docker Engine and the Docker
-Compose plugin. Caddy is the only public container; it obtains and renews TLS
-certificates and proxies requests to Gunicorn over the private frontend
-network. PostgreSQL and Redis are attached only to the internal backend
-network and publish no host ports.
+Compose plugin. Nginx is the only public container; it terminates TLS and
+proxies requests to Gunicorn over the private frontend network. The official
+Certbot container obtains and renews Let's Encrypt certificates. PostgreSQL
+and Redis are attached only to the internal backend network and publish no
+host ports.
 
 ## 1. Server and DNS
 
@@ -18,7 +19,7 @@ incoming TCP traffic on ports 22, 80, and 443.
 
 Do not publish ports 8000, 5432, or 6379. Docker-published ports may bypass
 host-level UFW rules, so the production Compose configuration exposes only
-Caddy on 80/443.
+Nginx on 80/443.
 
 ## 2. Application files and secrets
 
@@ -58,15 +59,16 @@ publishing Gunicorn on port 8000:
 
 ```bash
 scripts/compose_production.sh config --quiet
-scripts/compose_production.sh up --build --detach
 ```
 
-Caddy can obtain a public certificate only after the domain resolves to this
-server and ports 80/443 are reachable. Inspect startup and certificate logs:
+The initial TLS command starts Nginx in HTTP mode, obtains the certificate
+through an ACME webroot challenge, and restarts Nginx in HTTPS mode. Run it
+only after the domain resolves to this server and ports 80/443 are reachable:
 
 ```bash
+scripts/init_tls.sh
 scripts/compose_production.sh ps
-scripts/compose_production.sh logs --tail=200 app caddy
+scripts/compose_production.sh logs --tail=200 app nginx
 ```
 
 Verify the deployment:
@@ -94,12 +96,12 @@ Before the site receives traffic, stop the app and recreate the empty target
 database. Substitute database/user names if they differ in `.env.production`:
 
 ```bash
-scripts/compose_production.sh stop app caddy
+scripts/compose_production.sh stop app nginx
 scripts/compose_production.sh exec -T postgres dropdb -U type --force type
 scripts/compose_production.sh exec -T postgres createdb -U type type
 scripts/compose_production.sh exec -T postgres pg_restore \
   -U type -d type --no-owner --no-privileges < type.dump
-scripts/compose_production.sh up --detach app caddy
+scripts/compose_production.sh up --detach app nginx
 ```
 
 Delete or securely archive the transferred dump after verification.
@@ -139,16 +141,31 @@ cd /opt/type
 scripts/backup_postgres.sh
 git pull --ff-only
 
-scripts/compose_production.sh build app caddy
+scripts/compose_production.sh build app nginx
 scripts/compose_production.sh up --detach
 ```
 
 The app entrypoint applies Alembic migrations before Gunicorn starts. Check
 container health, logs, and the external readiness endpoint after every
 deployment. Do not run `docker compose down --volumes` on the server: it
-removes the PostgreSQL, Redis, and Caddy volumes.
+removes the PostgreSQL, Redis, and Let's Encrypt volumes.
 
-## 7. Operations checklist
+## 7. Certificate renewal
+
+Run the renewal script daily using cron or a systemd timer. Certbot renews only
+certificates that are close to expiry; Nginx is reloaded after the check:
+
+```bash
+scripts/renew_tls.sh
+```
+
+Example root crontab entry:
+
+```cron
+17 3 * * * cd /opt/type && ./scripts/renew_tls.sh >> /var/log/type-certbot.log 2>&1
+```
+
+## 8. Operations checklist
 
 - Monitor HTTPS availability and `/health/ready` from another machine.
 - Alert on disk usage, memory pressure, container restarts, and failed backups.
