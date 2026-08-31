@@ -125,10 +125,15 @@ class TestPracticeApi(AppTestCase):
         oversized_pool = self.client.get(
             "/api/v1/practice/cards?task=4&limit=3"
         )
+        invalid_task = self.client.get(
+            "/api/v1/practice/cards?task=not-a-number"
+        )
 
         assert len(default_pool.get_json()["cards"]) == 2
         assert oversized_pool.status_code == 400
         assert oversized_pool.get_json()["error"] == "invalid_limit"
+        assert invalid_task.status_code == 400
+        assert invalid_task.get_json()["error"] == "invalid_task"
 
     def test_unfiltered_feed_mixes_spelling_and_paronym_exercises(self) -> None:
         with self.app.app_context():

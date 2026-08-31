@@ -192,6 +192,17 @@ def select_cards(
             "Task, category and mistakes filters cannot be combined",
             400,
         )
+    if task_id:
+        try:
+            task_number = int(task_id)
+        except ValueError as error:
+            raise PracticeError(
+                "invalid_task",
+                "Task must be an integer",
+                400,
+            ) from error
+    else:
+        task_number = None
     excluded = set(exclude_ids or ())
 
     category = (
@@ -204,11 +215,11 @@ def select_cards(
         .joinedload(Paronym.group)
         .selectinload(ParonymGroup.paronyms),
     )
-    if task_id:
+    if task_number is not None:
         base_items = base_items.filter(
-            PracticeItem.task_number == task_id
+            PracticeItem.task_number == task_number
         )
-        base_info = [f'Фильтр: "Задание №{task_id}"']
+        base_info = [f'Фильтр: "Задание №{task_number}"']
     elif category_id:
         if category is None:
             raise PracticeError("category_not_found", "Category not found", 404)
