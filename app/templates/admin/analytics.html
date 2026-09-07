@@ -74,14 +74,14 @@
                     <small>По ответам и пропускам · администраторы исключены</small>
             </div>
             <div class="metric-grid metric-grid--primary">
-                <article class="metric"><span>Пользователей</span><strong>{{ summary.total_users }}</strong><small>{{ summary.registered_users }} авторизованных · {{ summary.anonymous_users }} анонимных</small></article>
+                <article class="metric"><span>Пользователей в выборке</span><strong>{{ summary.total_users }}</strong><small>{{ summary.audience_label }}</small></article>
                 <article class="metric accent"><span>Активных за период</span><strong>{{ summary.active_users }}</strong><small>DAU {{ summary.dau }} · WAU {{ summary.wau }} · MAU {{ summary.mau }}</small></article>
                 <article class="metric"><span>Карточек пройдено</span><strong>{{ summary.cards }}</strong><small>{{ summary.cards_per_user }} на активного пользователя</small></article>
                 <article class="metric"><span>Точность</span><strong>{{ summary.accuracy }}%</strong><small>{{ summary.right }} верно · {{ summary.wrong }} ошибок · {{ summary.skips }} пропусков</small></article>
             </div>
             <div class="metric-grid">
-                <article class="metric"><span>Активное время</span><strong>{{ format_duration(summary.active_seconds) }}</strong><small>{{ format_duration(summary.avg_active_seconds) }} в среднем на пользователя</small></article>
-                <article class="metric"><span>Сессии</span><strong>{{ summary.sessions }}</strong><small>Средняя — {{ format_duration(summary.avg_session_seconds) }}</small></article>
+                <article class="metric"><span>Время в сессиях, оценка</span><strong>{{ format_duration(summary.active_seconds) }}</strong><small>{{ format_duration(summary.avg_active_seconds) }} на пользователя · по интервалам между действиями</small></article>
+                <article class="metric"><span>Сессии</span><strong>{{ summary.sessions }}</strong><small>Средняя оценка — {{ format_duration(summary.avg_session_seconds) }} · пауза до 30 минут</small></article>
                 <article class="metric"><span>Новые</span><strong>{{ summary.new_users }}</strong><small>{{ summary.returning_users }} вернувшихся пользователей</small></article>
                 <article class="metric"><span>Активные дни</span><strong>{{ summary.avg_active_days }}</strong><small>В среднем на активного пользователя</small></article>
                 <article class="metric"><span>Конверсия во вход</span><strong>{{ summary.conversion_rate }}%</strong><small>{{ summary.conversions }} новых профилей авторизовались</small></article>

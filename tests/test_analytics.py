@@ -48,8 +48,8 @@ class TestAnalytics(AppTestCase):
             word = self.make_word()
             for offset, minute, action in (
                 (1, 0, Action.RIGHT_ANSWER),
-                (1, 5, Action.WRONG_ANSWER),
-                (1, 40, Action.SKIP),
+                (1, 20, Action.WRONG_ANSWER),
+                (1, 55, Action.SKIP),
                 (7, 0, Action.RIGHT_ANSWER),
                 (30, 0, Action.RIGHT_ANSWER),
             ):
@@ -78,11 +78,35 @@ class TestAnalytics(AppTestCase):
         assert summary["skips"] == 1
         assert summary["accuracy"] == 75.0
         assert summary["sessions"] == 4
-        assert summary["active_seconds"] == 300
+        assert summary["active_seconds"] == 1200
         assert summary["retention"]["d1"]["retained"] == 1
         assert summary["retention"]["d7"]["retained"] == 1
         assert summary["retention"]["d30"]["retained"] == 1
         assert summary["conversions"] == 1
+
+    def test_user_total_respects_type_and_historical_end(self) -> None:
+        with self.app.app_context():
+            self.make_user(
+                yandex_id="registered-before-end",
+                created_at=datetime(2026, 1, 1, 12),
+            )
+            self.make_user(created_at=datetime(2026, 1, 1, 13))
+            self.make_user(
+                yandex_id="registered-after-end",
+                created_at=datetime(2026, 1, 3, 12),
+            )
+            filters = parse_filters({
+                "period": "custom",
+                "start": "2026-01-01",
+                "end": "2026-01-02",
+                "user_type": "registered",
+            })
+            dashboard = build_dashboard(filters)
+
+        assert dashboard["summary"]["total_users"] == 1
+        assert dashboard["summary"]["audience_label"] == (
+            "Авторизованные к концу периода"
+        )
 
     def test_filters_item_detail_and_csv(self) -> None:
         self._make_admin()

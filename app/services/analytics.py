@@ -19,7 +19,6 @@ LEARNING_ACTIONS = (
     Action.SKIP,
 )
 SESSION_GAP_SECONDS = 30 * 60
-ACTIVE_GAP_SECONDS = 10 * 60
 ALLOWED_PERIODS = {7, 30, 90, 365}
 
 
@@ -304,14 +303,14 @@ def _session_metrics(filters: AnalyticsFilters) -> dict[str, int | float]:
         ),
         else_=0,
     )
-    active_gap = case(
-        ((gap >= 0) & (gap <= ACTIVE_GAP_SECONDS), gap),
+    session_span = case(
+        ((gap >= 0) & (gap <= SESSION_GAP_SECONDS), gap),
         else_=0,
     )
     totals = db.session.execute(select(
         func.count(func.distinct(timed.c.user_id)),
         func.sum(new_session),
-        func.sum(active_gap),
+        func.sum(session_span),
     )).one()
     active_users = int(totals[0] or 0)
     sessions = int(totals[1] or 0)
@@ -342,6 +341,44 @@ def _session_metrics(filters: AnalyticsFilters) -> dict[str, int | float]:
 
 def _users_query(filters: AnalyticsFilters):
     return _apply_user_filter(select(User), filters)
+
+
+def _audience_counts(filters: AnalyticsFilters) -> dict[str, int | str]:
+    base_conditions = (
+        User.is_admin.is_(False),
+        User.created_at < filters.end_at,
+    )
+    registered_condition = (
+        (User.yandex_id.is_not(None)) | (User.telegram_id.is_not(None))
+    )
+    registered = int(db.session.scalar(
+        select(func.count(User.id)).where(
+            *base_conditions,
+            registered_condition,
+        )
+    ) or 0)
+    anonymous = int(db.session.scalar(
+        select(func.count(User.id)).where(
+            *base_conditions,
+            User.yandex_id.is_(None),
+            User.telegram_id.is_(None),
+        )
+    ) or 0)
+    if filters.user_type == "registered":
+        total = registered
+        label = "Авторизованные к концу периода"
+    elif filters.user_type == "anonymous":
+        total = anonymous
+        label = "Анонимные к концу периода"
+    else:
+        total = registered + anonymous
+        label = f"{registered} авторизованных · {anonymous} анонимных"
+    return {
+        "total_users": total,
+        "registered_users": registered,
+        "anonymous_users": anonymous,
+        "audience_label": label,
+    }
 
 
 def _lifecycle_metrics(filters: AnalyticsFilters) -> dict[str, Any]:
@@ -579,20 +616,9 @@ def build_dashboard(filters: AnalyticsFilters) -> dict[str, Any]:
         filters,
         (filters.end - filters.start).days + 1,
     )
-    total_users = db.session.scalar(
-        select(func.count(User.id)).where(User.is_admin.is_(False))
-    ) or 0
-    registered_users = db.session.scalar(
-        select(func.count(User.id)).where(
-            User.is_admin.is_(False),
-            (User.yandex_id.is_not(None)) | (User.telegram_id.is_not(None)),
-        )
-    ) or 0
     items, item_count = _serialized_items(filters)
     summary = {
-        "total_users": int(total_users),
-        "registered_users": int(registered_users),
-        "anonymous_users": int(total_users - registered_users),
+        **_audience_counts(filters),
         "active_users": active_users,
         "dau": _period_active_count(filters, 1),
         "wau": _period_active_count(filters, 7),
