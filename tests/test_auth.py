@@ -122,13 +122,21 @@ class TestAuth(AppTestCase):
         guest_id = self.current_user_id()
         with self.app.app_context():
             word = self.make_word()
+            registered_word = self.make_word(word="зар_ница")
             registered = self.make_user(yandex_id="ya-existing")
             registered_id = registered.id
-            db.session.add(Action(
+            db.session.add_all([
+                Action(
                 user_id=guest_id,
                 practice_item_id=word.id,
                 action=Action.RIGHT_ANSWER,
-            ))
+                ),
+                Action(
+                    user_id=registered_id,
+                    practice_item_id=registered_word.id,
+                    action=Action.WRONG_ANSWER,
+                ),
+            ])
             db.session.commit()
 
         self.app.config.update(
@@ -149,5 +157,16 @@ class TestAuth(AppTestCase):
             authenticate_yandex("code", "https://callback")
 
         with self.app.app_context():
+            from app.models import PracticeProgress, UserPracticeStats
+
             assert db.session.get(User, guest_id) is None
-            assert Action.query.one().user_id == registered_id
+            assert {action.user_id for action in Action.query.all()} == {
+                registered_id
+            }
+            stats = db.session.get(UserPracticeStats, registered_id)
+            assert stats.right_count == 1
+            assert stats.wrong_count == 1
+            assert stats.best_streak == 1
+            assert PracticeProgress.query.filter_by(
+                user_id=registered_id
+            ).count() == 2

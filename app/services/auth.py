@@ -9,7 +9,7 @@ from flask_login import current_user
 
 from app.extensions import db
 from app.models import Settings, User
-from app.models.action import Action
+from app.services.progress import merge_user_progress
 
 
 # Public provider endpoint, not a credential.
@@ -132,9 +132,7 @@ def _merge_yandex_profile(profile: dict[str, Any], yandex_id: str) -> User:
         and current_account.id != user.id
         and current_account.is_anonymous_account
     ):
-        Action.query.filter_by(user_id=current_account.id).update(
-            {Action.user_id: user.id}, synchronize_session=False
-        )
+        merge_user_progress(current_account.id, user.id)
         db.session.delete(current_account)
 
     if user.identified_at is None:

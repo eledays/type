@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from dataclasses import dataclass, replace
 from datetime import date, datetime, time, timedelta
 from typing import Any, Mapping
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 
 from app.extensions import db
 from app.models import Action, Category, PracticeItem, User
@@ -50,7 +49,10 @@ class AnalyticsFilters:
             "exercise_type": self.exercise_type,
         }
         if self.period == "custom":
-            result.update({"start": self.start.isoformat(), "end": self.end.isoformat()})
+            result.update({
+                "start": self.start.isoformat(),
+                "end": self.end.isoformat(),
+            })
         if self.task is not None:
             result["task"] = str(self.task)
         if self.category is not None:
@@ -144,38 +146,48 @@ def _apply_item_filter(statement, filters: AnalyticsFilters):
     return statement
 
 
-def _action_rows(
+def _filtered_actions(
     filters: AnalyticsFilters,
     *,
+    start_at: datetime | None = None,
+    end_at: datetime | None = None,
     item_id: int | None = None,
 ):
     statement = (
         select(
-            Action.user_id,
-            Action.practice_item_id,
-            Action.action,
-            Action.datetime,
+            Action.id.label("id"),
+            Action.user_id.label("user_id"),
+            Action.practice_item_id.label("practice_item_id"),
+            Action.action.label("action"),
+            Action.datetime.label("datetime"),
         )
         .join(User, User.id == Action.user_id)
         .join(PracticeItem, PracticeItem.id == Action.practice_item_id)
         .where(
             Action.action.in_(LEARNING_ACTIONS),
-            Action.datetime >= filters.start_at,
-            Action.datetime < filters.end_at,
+            Action.datetime >= (start_at or filters.start_at),
+            Action.datetime < (end_at or filters.end_at),
         )
-        .order_by(Action.user_id, Action.datetime)
     )
     statement = _apply_user_filter(statement, filters)
     statement = _apply_item_filter(statement, filters)
     if item_id is not None:
         statement = statement.where(Action.practice_item_id == item_id)
-    return db.session.execute(statement).all()
+    return statement
 
 
-def _counts(rows) -> dict[str, int | float]:
-    right = sum(row.action == Action.RIGHT_ANSWER for row in rows)
-    wrong = sum(row.action == Action.WRONG_ANSWER for row in rows)
-    skips = sum(row.action == Action.SKIP for row in rows)
+def _count_expressions(actions):
+    return (
+        func.sum(case((actions.c.action == Action.RIGHT_ANSWER, 1), else_=0)),
+        func.sum(case((actions.c.action == Action.WRONG_ANSWER, 1), else_=0)),
+        func.sum(case((actions.c.action == Action.SKIP, 1), else_=0)),
+    )
+
+
+def _counts(right: int | None, wrong: int | None, skips: int | None):
+    right = int(right or 0)
+    wrong = int(wrong or 0)
+    skips = int(skips or 0)
     answered = right + wrong
     return {
         "right": right,
@@ -187,61 +199,114 @@ def _counts(rows) -> dict[str, int | float]:
     }
 
 
-def _daily_series(filters: AnalyticsFilters, rows) -> list[dict[str, Any]]:
-    grouped: dict[date, list[Any]] = defaultdict(list)
-    active: dict[date, set[int]] = defaultdict(set)
-    for row in rows:
-        day = row.datetime.date()
-        grouped[day].append(row)
-        active[day].add(row.user_id)
+def _summary_counts(filters: AnalyticsFilters) -> dict[str, int | float]:
+    actions = _filtered_actions(filters).subquery()
+    right, wrong, skips = _count_expressions(actions)
+    row = db.session.execute(select(right, wrong, skips)).one()
+    return _counts(*row)
 
+
+def _as_date(value: Any) -> date:
+    if isinstance(value, date):
+        return value
+    return date.fromisoformat(str(value))
+
+
+def _daily_series(
+    filters: AnalyticsFilters,
+    *,
+    item_id: int | None = None,
+) -> list[dict[str, Any]]:
+    actions = _filtered_actions(filters, item_id=item_id).subquery()
+    day = func.date(actions.c.datetime).label("day")
+    right, wrong, skips = _count_expressions(actions)
+    rows = db.session.execute(
+        select(
+            day,
+            func.count(func.distinct(actions.c.user_id)),
+            right,
+            wrong,
+            skips,
+        ).group_by(day).order_by(day)
+    ).all()
+    grouped = {
+        _as_date(row[0]): {
+            "active_users": int(row[1]),
+            **_counts(row[2], row[3], row[4]),
+        }
+        for row in rows
+    }
     result = []
-    day = filters.start
-    while day <= filters.end:
-        values = _counts(grouped[day])
+    current = filters.start
+    while current <= filters.end:
         result.append({
-            "date": day.isoformat(),
-            "label": day.strftime("%d.%m"),
-            "active_users": len(active[day]),
-            **values,
+            "date": current.isoformat(),
+            "label": current.strftime("%d.%m"),
+            **grouped.get(current, {
+                "active_users": 0,
+                **_counts(0, 0, 0),
+            }),
         })
-        day += timedelta(days=1)
+        current += timedelta(days=1)
     return result
 
 
-def _session_metrics(rows) -> dict[str, int | float]:
-    by_user: dict[int, list[datetime]] = defaultdict(list)
-    for row in rows:
-        by_user[row.user_id].append(row.datetime)
+def _session_metrics(filters: AnalyticsFilters) -> dict[str, int | float]:
+    actions = _filtered_actions(filters).subquery()
+    previous = func.lag(actions.c.datetime).over(
+        partition_by=actions.c.user_id,
+        order_by=(actions.c.datetime, actions.c.id),
+    ).label("previous")
+    timed = select(
+        actions.c.user_id,
+        actions.c.datetime,
+        previous,
+    ).subquery()
+    if db.session.get_bind().dialect.name == "sqlite":
+        gap = (
+            func.julianday(timed.c.datetime)
+            - func.julianday(timed.c.previous)
+        ) * 86400.0
+    else:
+        gap = func.extract("epoch", timed.c.datetime - timed.c.previous)
+    new_session = case(
+        (
+            timed.c.previous.is_(None) | (gap < 0)
+            | (gap > SESSION_GAP_SECONDS),
+            1,
+        ),
+        else_=0,
+    )
+    active_gap = case(
+        ((gap >= 0) & (gap <= ACTIVE_GAP_SECONDS), gap),
+        else_=0,
+    )
+    totals = db.session.execute(select(
+        func.count(func.distinct(timed.c.user_id)),
+        func.sum(new_session),
+        func.sum(active_gap),
+    )).one()
+    active_users = int(totals[0] or 0)
+    sessions = int(totals[1] or 0)
+    active_seconds = round(float(totals[2] or 0))
 
-    session_count = 0
-    active_seconds = 0.0
-    active_days: dict[int, set[date]] = defaultdict(set)
-    for user_id, timestamps in by_user.items():
-        previous = None
-        for timestamp in timestamps:
-            active_days[user_id].add(timestamp.date())
-            if previous is None:
-                session_count += 1
-            else:
-                gap = (timestamp - previous).total_seconds()
-                if gap < 0 or gap > SESSION_GAP_SECONDS:
-                    session_count += 1
-                elif gap <= ACTIVE_GAP_SECONDS:
-                    active_seconds += gap
-            previous = timestamp
-
-    active_users = len(by_user)
+    user_days = select(
+        actions.c.user_id,
+        func.date(actions.c.datetime).label("day"),
+    ).group_by(actions.c.user_id, func.date(actions.c.datetime)).subquery()
+    days_per_user = select(
+        user_days.c.user_id,
+        func.count().label("days"),
+    ).group_by(user_days.c.user_id).subquery()
+    avg_active_days = db.session.scalar(select(func.avg(days_per_user.c.days)))
     return {
-        "sessions": session_count,
-        "active_seconds": round(active_seconds),
+        "sessions": sessions,
+        "active_seconds": active_seconds,
         "avg_active_seconds": round(active_seconds / active_users)
         if active_users else 0,
-        "avg_session_seconds": round(active_seconds / session_count)
-        if session_count else 0,
-        "avg_active_days": round(
-            sum(map(len, active_days.values())) / active_users, 1
-        ) if active_users else 0.0,
+        "avg_session_seconds": round(active_seconds / sessions)
+        if sessions else 0,
+        "avg_active_days": round(float(avg_active_days or 0), 1),
     }
 
 
@@ -249,39 +314,56 @@ def _users_query(filters: AnalyticsFilters):
     return _apply_user_filter(select(User), filters)
 
 
-def _lifecycle_metrics(filters: AnalyticsFilters, rows) -> dict[str, Any]:
-    users = db.session.execute(_users_query(filters)).scalars().all()
-    period_users = [
-        user for user in users
-        if filters.start_at <= user.created_at < filters.end_at
-    ]
-    active_ids = {row.user_id for row in rows}
-    returning = {
-        user.id for user in users
-        if user.id in active_ids and user.created_at < filters.start_at
-    }
-    converted = [
-        user for user in period_users
-        if user.identified_at is not None
-        and user.identified_at > user.created_at
-        and user.identified_at < filters.end_at
-    ]
+def _lifecycle_metrics(filters: AnalyticsFilters) -> dict[str, Any]:
+    users = _users_query(filters).subquery()
+    new_users = db.session.scalar(select(func.count()).select_from(users).where(
+        users.c.created_at >= filters.start_at,
+        users.c.created_at < filters.end_at,
+    )) or 0
+    conversions = db.session.scalar(select(func.count()).select_from(users).where(
+        users.c.created_at >= filters.start_at,
+        users.c.created_at < filters.end_at,
+        users.c.identified_at.is_not(None),
+        users.c.identified_at > users.c.created_at,
+        users.c.identified_at < filters.end_at,
+    )) or 0
 
-    action_days: dict[int, set[date]] = defaultdict(set)
-    for row in rows:
-        action_days[row.user_id].add(row.datetime.date())
+    actions = _filtered_actions(filters).subquery()
+    returning_users = db.session.scalar(
+        select(func.count(func.distinct(actions.c.user_id)))
+        .join(User, User.id == actions.c.user_id)
+        .where(User.created_at < filters.start_at)
+    ) or 0
+    action_days = {
+        (row.user_id, _as_date(row.day))
+        for row in db.session.execute(select(
+            actions.c.user_id,
+            func.date(actions.c.datetime).label("day"),
+        ).distinct()).all()
+    }
+    earliest_cohort = datetime.combine(
+        filters.start - timedelta(days=30), time.min
+    )
+    cohorts = db.session.execute(
+        _users_query(filters)
+        .with_only_columns(User.id, User.created_at)
+        .where(
+            User.created_at >= earliest_cohort,
+            User.created_at < filters.end_at,
+        )
+    ).all()
     retention = {}
     for offset in (1, 7, 30):
         eligible = [
-            user for user in users
+            row for row in cohorts
             if filters.start
-            <= user.created_at.date() + timedelta(days=offset)
+            <= row.created_at.date() + timedelta(days=offset)
             <= filters.end
         ]
         retained = sum(
-            user.created_at.date() + timedelta(days=offset)
-            in action_days[user.id]
-            for user in eligible
+            (row.id, row.created_at.date() + timedelta(days=offset))
+            in action_days
+            for row in eligible
         )
         retention[f"d{offset}"] = {
             "percent": round(retained * 100 / len(eligible), 1)
@@ -289,25 +371,27 @@ def _lifecycle_metrics(filters: AnalyticsFilters, rows) -> dict[str, Any]:
             "retained": retained,
             "cohort": len(eligible),
         }
-
     return {
-        "new_users": len(period_users),
-        "returning_users": len(returning),
-        "conversions": len(converted),
-        "conversion_rate": round(len(converted) * 100 / len(period_users), 1)
-        if period_users else 0.0,
+        "new_users": int(new_users),
+        "returning_users": int(returning_users),
+        "conversions": int(conversions),
+        "conversion_rate": round(conversions * 100 / new_users, 1)
+        if new_users else 0.0,
         "retention": retention,
     }
 
 
 def _period_active_count(filters: AnalyticsFilters, days: int) -> int:
-    end = filters.end
-    window = replace(
+    end_at = datetime.combine(filters.end + timedelta(days=1), time.min)
+    start_at = end_at - timedelta(days=days)
+    actions = _filtered_actions(
         filters,
-        start=end - timedelta(days=days - 1),
-        end=end,
-    )
-    return len({row.user_id for row in _action_rows(window)})
+        start_at=start_at,
+        end_at=end_at,
+    ).subquery()
+    return int(db.session.scalar(
+        select(func.count(func.distinct(actions.c.user_id)))
+    ) or 0)
 
 
 def _item_title(item: PracticeItem) -> str:
@@ -356,42 +440,45 @@ def _exercise_matches(
     )
 
 
-def _content_analytics(
-    rows,
+def _item_aggregate_rows(filters: AnalyticsFilters, item_id: int | None = None):
+    actions = _filtered_actions(filters, item_id=item_id).subquery()
+    right, wrong, skips = _count_expressions(actions)
+    return db.session.execute(select(
+        actions.c.practice_item_id,
+        func.count(func.distinct(actions.c.user_id)),
+        right,
+        wrong,
+        skips,
+    ).group_by(actions.c.practice_item_id)).all()
+
+
+def _serialized_items(
+    filters: AnalyticsFilters,
     *,
     limit: int | None = 10,
-    exercise_query: str = "",
-    exercise_sort: str = "accuracy",
-) -> dict[str, Any]:
-    item_rows: dict[int, list[Any]] = defaultdict(list)
-    for row in rows:
-        item_rows[row.practice_item_id].append(row)
-    if not item_rows:
-        return {"breakdown": [], "items": [], "item_count": 0}
-
+) -> tuple[list[dict[str, Any]], int]:
+    rows = _item_aggregate_rows(filters)
+    if not rows:
+        return [], 0
+    item_ids = [row[0] for row in rows]
     items = {
         item.id: item
         for item in db.session.execute(
-            select(PracticeItem).where(PracticeItem.id.in_(item_rows))
+            select(PracticeItem).where(PracticeItem.id.in_(item_ids))
         ).scalars().all()
     }
     categories = {
         category.id: category.name
         for category in db.session.execute(select(Category)).scalars()
     }
-
-    grouped: dict[tuple[str, int | None, int | None], list[Any]] = defaultdict(list)
     serialized = []
-    for item_id, values in item_rows.items():
-        item = items.get(item_id)
+    for row in rows:
+        item = items.get(row[0])
         if item is None:
             continue
         category = categories.get(item.category_id, "—")
-        grouped[(item.type, item.task_number, item.category_id)].extend(values)
-        if exercise_query and not _exercise_matches(
-            item,
-            category,
-            exercise_query,
+        if filters.exercise_query and not _exercise_matches(
+            item, category, filters.exercise_query
         ):
             continue
         serialized.append({
@@ -400,51 +487,75 @@ def _content_analytics(
             "type": item.type,
             "task": item.task_number,
             "category": category,
-            "unique_users": len({row.user_id for row in values}),
-            **_counts(values),
+            "unique_users": int(row[1]),
+            **_counts(row[2], row[3], row[4]),
         })
-
-    breakdown = []
-    for (item_type, task, category_id), values in grouped.items():
-        breakdown.append({
-            "type": item_type,
-            "task": task,
-            "category": categories.get(category_id, "—"),
-            "unique_users": len({row.user_id for row in values}),
-            **_counts(values),
-        })
-    breakdown.sort(key=lambda value: value["cards"], reverse=True)
     sort_keys = {
         "accuracy": lambda value: (value["accuracy"], -value["cards"]),
         "wrong": lambda value: (-value["wrong"], value["accuracy"]),
         "skips": lambda value: (-value["skips"], value["accuracy"]),
     }
-    serialized.sort(key=sort_keys[exercise_sort])
-    return {
-        "breakdown": breakdown,
-        "items": serialized if limit is None else serialized[:limit],
-        "item_count": len(serialized),
+    serialized.sort(key=sort_keys[filters.exercise_sort])
+    total = len(serialized)
+    return (serialized if limit is None else serialized[:limit]), total
+
+
+def _content_breakdown(filters: AnalyticsFilters) -> list[dict[str, Any]]:
+    actions = _filtered_actions(filters).subquery()
+    right, wrong, skips = _count_expressions(actions)
+    rows = db.session.execute(
+        select(
+            PracticeItem.type,
+            PracticeItem.task_number,
+            PracticeItem.category_id,
+            func.count(func.distinct(actions.c.user_id)),
+            right,
+            wrong,
+            skips,
+        )
+        .join(PracticeItem, PracticeItem.id == actions.c.practice_item_id)
+        .group_by(
+            PracticeItem.type,
+            PracticeItem.task_number,
+            PracticeItem.category_id,
+        )
+    ).all()
+    categories = {
+        category.id: category.name
+        for category in db.session.execute(select(Category)).scalars()
     }
+    result = [{
+        "type": row[0],
+        "task": row[1],
+        "category": categories.get(row[2], "—"),
+        "unique_users": int(row[3]),
+        **_counts(row[4], row[5], row[6]),
+    } for row in rows]
+    result.sort(key=lambda value: value["cards"], reverse=True)
+    return result
 
 
 def build_dashboard(filters: AnalyticsFilters) -> dict[str, Any]:
     """Calculate all metrics displayed on the admin dashboard."""
-    rows = _action_rows(filters)
-    counts = _counts(rows)
-    active_users = len({row.user_id for row in rows})
+    counts = _summary_counts(filters)
+    active_users = _period_active_count(
+        filters,
+        (filters.end - filters.start).days + 1,
+    )
     total_users = db.session.scalar(
         select(func.count(User.id)).where(User.is_admin.is_(False))
     ) or 0
     registered_users = db.session.scalar(
         select(func.count(User.id)).where(
             User.is_admin.is_(False),
-            (User.yandex_id.is_not(None)) | (User.telegram_id.is_not(None))
+            (User.yandex_id.is_not(None)) | (User.telegram_id.is_not(None)),
         )
     ) or 0
+    items, item_count = _serialized_items(filters)
     summary = {
-        "total_users": total_users,
-        "registered_users": registered_users,
-        "anonymous_users": total_users - registered_users,
+        "total_users": int(total_users),
+        "registered_users": int(registered_users),
+        "anonymous_users": int(total_users - registered_users),
         "active_users": active_users,
         "dau": _period_active_count(filters, 1),
         "wau": _period_active_count(filters, 7),
@@ -452,18 +563,18 @@ def build_dashboard(filters: AnalyticsFilters) -> dict[str, Any]:
         "cards_per_user": round(counts["cards"] / active_users, 1)
         if active_users else 0.0,
         **counts,
-        **_session_metrics(rows),
-        **_lifecycle_metrics(filters, rows),
+        **_session_metrics(filters),
+        **_lifecycle_metrics(filters),
     }
     return {
         "filters": filters,
         "summary": summary,
-        "daily": _daily_series(filters, rows),
-        "content": _content_analytics(
-            rows,
-            exercise_query=filters.exercise_query,
-            exercise_sort=filters.exercise_sort,
-        ),
+        "daily": _daily_series(filters),
+        "content": {
+            "breakdown": _content_breakdown(filters),
+            "items": items,
+            "item_count": item_count,
+        },
     }
 
 
@@ -481,49 +592,45 @@ def build_item_detail(
         task=None,
         category=None,
     )
-    rows = _action_rows(item_filters, item_id=item_id)
-    counts = _counts(rows)
+    rows = _item_aggregate_rows(item_filters, item_id=item_id)
+    counts = _counts(
+        rows[0][2] if rows else 0,
+        rows[0][3] if rows else 0,
+        rows[0][4] if rows else 0,
+    )
     return {
         "id": item.id,
         "title": _item_title(item),
         "type": item.type,
         "task": item.task_number,
         "category": item.category.name if item.category else "—",
-        "unique_users": len({row.user_id for row in rows}),
-        "repeat_users": sum(
-            count > 1
-            for count in _frequency(row.user_id for row in rows).values()
-        ),
+        "unique_users": int(rows[0][1]) if rows else 0,
+        "repeat_users": _repeat_users(item_filters, item_id),
         **counts,
-        "daily": _daily_series(item_filters, rows),
+        "daily": _daily_series(item_filters, item_id=item_id),
     }
+
+
+def _repeat_users(filters: AnalyticsFilters, item_id: int) -> int:
+    actions = _filtered_actions(filters, item_id=item_id).subquery()
+    frequencies = select(
+        actions.c.user_id,
+        func.count().label("frequency"),
+    ).group_by(actions.c.user_id).subquery()
+    return int(db.session.scalar(
+        select(func.count()).select_from(frequencies).where(
+            frequencies.c.frequency > 1
+        )
+    ) or 0)
 
 
 def build_exercise_results(filters: AnalyticsFilters) -> dict[str, Any]:
     """Return the small exercise result set used by live search."""
-    content = _content_analytics(
-        _action_rows(filters),
-        exercise_query=filters.exercise_query,
-        exercise_sort=filters.exercise_sort,
-    )
-    return {
-        "items": content["items"],
-        "item_count": content["item_count"],
-    }
+    items, item_count = _serialized_items(filters)
+    return {"items": items, "item_count": item_count}
 
 
 def build_item_export(filters: AnalyticsFilters) -> list[dict[str, Any]]:
     """Return every per-item aggregate matching the export filters."""
-    return _content_analytics(
-        _action_rows(filters),
-        limit=None,
-        exercise_query=filters.exercise_query,
-        exercise_sort=filters.exercise_sort,
-    )["items"]
-
-
-def _frequency(values) -> dict[Any, int]:
-    result: dict[Any, int] = defaultdict(int)
-    for value in values:
-        result[value] += 1
-    return result
+    items, _ = _serialized_items(filters, limit=None)
+    return items

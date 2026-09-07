@@ -20,6 +20,8 @@ class Action(db.Model):
         Index("ix_action_user_item", "user_id", "practice_item_id"),
         Index("ix_action_user_datetime", "user_id", "datetime"),
         Index("ix_action_user_action", "user_id", "action"),
+        Index("ix_action_datetime", "datetime"),
+        Index("ix_action_item_datetime", "practice_item_id", "datetime"),
     )
 
     RIGHT_ANSWER: ClassVar[int] = 100
