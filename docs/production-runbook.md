@@ -143,7 +143,6 @@ YANDEX_CLIENT_ID=идентификатор-приложения
 YANDEX_CLIENT_SECRET=секрет-приложения
 
 LEGAL_OPERATOR_NAME=полное наименование организации или ФИО ИП/физлица
-LEGAL_OPERATOR_ADDRESS=полный почтовый адрес оператора
 LEGAL_CONTACT_EMAIL=privacy@example.com
 ```
 
@@ -152,7 +151,7 @@ LEGAL_CONTACT_EMAIL=privacy@example.com
 - `DOMAIN` — публичный домен без `https://` и пути;
 - `APP_BIND_IP` — приватный/VPN IP именно сервера приложения;
 - `APP_PORT` — порт, к которому будет подключаться Apache;
-- `LEGAL_OPERATOR_NAME`, `LEGAL_OPERATOR_ADDRESS` и `LEGAL_CONTACT_EMAIL` —
+- `LEGAL_OPERATOR_NAME` и `LEGAL_CONTACT_EMAIL` —
   реальные публичные реквизиты оператора персональных данных; без них
   production-контейнер не запускается;
 - не добавляйте кавычки и маркеры `<...>` вокруг значений;

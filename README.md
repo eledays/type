@@ -125,7 +125,6 @@ docker compose exec -T postgres psql -U type -d type < type-backup.sql
     YANDEX_CLIENT_SECRET=your-client-secret
     YANDEX_REDIRECT_URI=http://localhost:5000/auth/yandex/callback
     LEGAL_OPERATOR_NAME=ФИО или наименование оператора
-    LEGAL_OPERATOR_ADDRESS=почтовый адрес оператора
     LEGAL_CONTACT_EMAIL=privacy@example.com
     ANONYMOUS_ACTION_LIMIT=30
     PRACTICE_CARD_BATCH_SIZE=3

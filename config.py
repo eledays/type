@@ -82,9 +82,6 @@ class AppSettings(BaseSettings):
     legal_operator_name: str | None = Field(
         default=None, validation_alias="LEGAL_OPERATOR_NAME"
     )
-    legal_operator_address: str | None = Field(
-        default=None, validation_alias="LEGAL_OPERATOR_ADDRESS"
-    )
     legal_contact_email: str | None = Field(
         default=None, validation_alias="LEGAL_CONTACT_EMAIL"
     )
@@ -303,7 +300,6 @@ class AppSettings(BaseSettings):
                 name
                 for name, value in (
                     ("LEGAL_OPERATOR_NAME", self.legal_operator_name),
-                    ("LEGAL_OPERATOR_ADDRESS", self.legal_operator_address),
                     ("LEGAL_CONTACT_EMAIL", self.legal_contact_email),
                 )
                 if not value or not value.strip()
@@ -374,9 +370,6 @@ class AppSettings(BaseSettings):
             "ANALYTICS_TIMEZONE": self.analytics_timezone,
             "LEGAL_OPERATOR_NAME": (
                 self.legal_operator_name or "Разработчик сервиса type"
-            ),
-            "LEGAL_OPERATOR_ADDRESS": (
-                self.legal_operator_address or "Не применяется локально"
             ),
             "LEGAL_CONTACT_EMAIL": (
                 self.legal_contact_email or "privacy@localhost"

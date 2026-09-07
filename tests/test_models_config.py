@@ -123,7 +123,6 @@ class TestConfig(AppTestCase):
             {
                 "SECRET_KEY": TEST_SECRET,
                 "LEGAL_OPERATOR_NAME": None,
-                "LEGAL_OPERATOR_ADDRESS": None,
                 "LEGAL_CONTACT_EMAIL": None,
             },
         ):

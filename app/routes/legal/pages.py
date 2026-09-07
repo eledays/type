@@ -21,7 +21,6 @@ from app.services.legal import (
 def _legal_context() -> dict[str, str]:
     return {
         "operator_name": current_app.config["LEGAL_OPERATOR_NAME"],
-        "operator_address": current_app.config["LEGAL_OPERATOR_ADDRESS"],
         "contact_email": current_app.config["LEGAL_CONTACT_EMAIL"],
         "service_url": current_app.config["URL"].rstrip("/"),
         "terms_version": TERMS_VERSION,
