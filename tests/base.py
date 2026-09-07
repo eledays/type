@@ -24,6 +24,7 @@ class AppTestCase:
             "SERVER_NAME": "localhost",
             "TRUSTED_HOSTS": ["localhost"],
             "RATELIMIT_STORAGE_URI": "memory://",
+            "ANALYTICS_TIMEZONE": "Europe/Moscow",
             "WTF_CSRF_ENABLED": False,
         })
         with self.app.app_context():

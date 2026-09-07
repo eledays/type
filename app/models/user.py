@@ -18,6 +18,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
+from app.time_utils import utc_now
 
 if TYPE_CHECKING:
     from app.models.action import Action
@@ -45,14 +46,14 @@ class User(UserMixin, db.Model):
         Boolean, nullable=False, default=False, server_default=false()
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=False,
-        default=datetime.now,
+        default=utc_now,
         server_default=func.now(),
         index=True,
     )
     identified_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=True, index=True
+        DateTime(timezone=True), nullable=True, index=True
     )
 
     settings: Mapped[Settings] = relationship(

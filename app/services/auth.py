@@ -1,4 +1,3 @@
-from datetime import datetime
 import hmac
 from typing import Any, cast
 from urllib.parse import urlsplit
@@ -10,6 +9,7 @@ from flask_login import current_user
 from app.extensions import db
 from app.models import Settings, User
 from app.services.progress import merge_user_progress
+from app.time_utils import utc_now
 
 
 # Public provider endpoint, not a credential.
@@ -136,7 +136,7 @@ def _merge_yandex_profile(profile: dict[str, Any], yandex_id: str) -> User:
         db.session.delete(current_account)
 
     if user.identified_at is None:
-        user.identified_at = datetime.now()
+        user.identified_at = utc_now()
 
     user.yandex_login = _profile_text(profile, "login", 255)
     user.first_name = _profile_text(profile, "first_name", 255)

@@ -37,7 +37,7 @@ class PracticeProgress(db.Model):
     )
     latest_action: Mapped[int] = mapped_column(Integer, nullable=False)
     latest_action_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False
+        DateTime(timezone=True), nullable=False
     )
 
 
@@ -94,5 +94,5 @@ class UserPracticeStats(db.Model):
         Integer, nullable=False, default=0, server_default="0"
     )
     latest_action_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=True
+        DateTime(timezone=True), nullable=True
     )

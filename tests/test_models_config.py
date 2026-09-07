@@ -50,6 +50,7 @@ class TestConfig(AppTestCase):
         assert exported["RATELIMIT_HEADERS_ENABLED"]
         assert exported["TRUSTED_PROXY_COUNT"] == 0
         assert exported["MAX_CONTENT_LENGTH"] == 65_536
+        assert exported["ANALYTICS_TIMEZONE"] == "Europe/Moscow"
         assert exported["TRUSTED_HOSTS"] == ["type.eleday.ru"]
         assert exported["SESSION_COOKIE_SECURE"]
         assert exported["SESSION_COOKIE_HTTPONLY"]
@@ -111,6 +112,10 @@ class TestConfig(AppTestCase):
             {
                 "SECRET_KEY": TEST_SECRET,
                 "RATE_LIMIT_STORAGE_URI": "memory://",
+            },
+            {
+                "SECRET_KEY": TEST_SECRET,
+                "ANALYTICS_TIMEZONE": "Not/A-Timezone",
             },
         ):
             with pytest.raises(ValidationError):

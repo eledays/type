@@ -8,6 +8,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from app.extensions import db
+from app.time_utils import ensure_utc, utc_now
 
 if TYPE_CHECKING:
     from app.models.practice_item import PracticeItem
@@ -40,7 +41,7 @@ class Action(db.Model):
     )
     action: Mapped[int] = mapped_column(Integer, nullable=False)
     datetime: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.now
+        DateTime(timezone=True), nullable=False, default=utc_now
     )
 
     user: Mapped[User] = relationship(back_populates="actions")
@@ -68,10 +69,10 @@ def update_practice_progress(session: Session, *_args: object) -> None:
     user_cache: dict[int, UserPracticeStats] = {}
     for action in sorted(
         new_actions,
-        key=lambda item: (item.user_id, item.datetime or datetime.now()),
+        key=lambda item: (item.user_id, ensure_utc(item.datetime or utc_now())),
     ):
         if action.datetime is None:
-            action.datetime = datetime.now()
+            action.datetime = utc_now()
         user_stats = user_cache.get(action.user_id)
         if user_stats is None:
             user_stats = session.get(
@@ -102,10 +103,14 @@ def update_practice_progress(session: Session, *_args: object) -> None:
 
         if (
             user_stats.latest_action_at is None
-            or action.datetime >= user_stats.latest_action_at
+            or ensure_utc(action.datetime)
+            >= ensure_utc(user_stats.latest_action_at)
         ):
             if user_stats.latest_action_at is not None:
-                pause = (action.datetime - user_stats.latest_action_at).total_seconds()
+                pause = (
+                    ensure_utc(action.datetime)
+                    - ensure_utc(user_stats.latest_action_at)
+                ).total_seconds()
                 if 0 <= pause <= 600:
                     user_stats.active_seconds = (
                         user_stats.active_seconds or 0.0

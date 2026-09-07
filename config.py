@@ -3,6 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Annotated, Any, Literal
 from urllib.parse import urlsplit
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from limits import parse_many
 from pydantic import (
@@ -70,6 +71,11 @@ class AppSettings(BaseSettings):
     )
     url: str = Field(
         default="https://type.eleday.ru/", validation_alias="URL"
+    )
+    analytics_timezone: str = Field(
+        default="Europe/Moscow",
+        validation_alias="ANALYTICS_TIMEZONE",
+        min_length=1,
     )
 
     # Yandex OAuth settings
@@ -178,6 +184,16 @@ class AppSettings(BaseSettings):
             raise ValueError("SECRET_KEY must contain at least 32 characters")
         if any(marker in normalized for marker in ("replace-with", "changeme")):
             raise ValueError("SECRET_KEY must not be a placeholder")
+        return value
+
+    @field_validator("analytics_timezone")
+    @classmethod
+    def validate_analytics_timezone(cls, value: str) -> str:
+        """Require a valid IANA timezone for calendar analytics."""
+        try:
+            ZoneInfo(value)
+        except ZoneInfoNotFoundError as error:
+            raise ValueError("ANALYTICS_TIMEZONE must be a valid IANA zone") from error
         return value
 
     @field_validator("trusted_hosts", mode="before")
@@ -320,6 +336,7 @@ class AppSettings(BaseSettings):
             "STRIKE_LEVELS": self.strike_levels,
             "TASKS": self.tasks,
             "URL": self.url,
+            "ANALYTICS_TIMEZONE": self.analytics_timezone,
             "YANDEX_CLIENT_ID": self.yandex_client_id,
             "YANDEX_CLIENT_SECRET": (
                 self.yandex_client_secret.get_secret_value()

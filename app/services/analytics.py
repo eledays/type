@@ -3,11 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import date, datetime, time, timedelta
 from typing import Any, Mapping
+from zoneinfo import ZoneInfo
 
+from flask import current_app
 from sqlalchemy import case, func, select
 
 from app.extensions import db
 from app.models import Action, Category, PracticeItem, User
+from app.time_utils import UTC, ensure_utc
 
 
 LEARNING_ACTIONS = (
@@ -33,14 +36,25 @@ class AnalyticsFilters:
     category: int | None = None
     exercise_query: str = ""
     exercise_sort: str = "accuracy"
+    timezone_name: str = "Europe/Moscow"
 
     @property
     def start_at(self) -> datetime:
-        return datetime.combine(self.start, time.min)
+        local = datetime.combine(
+            self.start,
+            time.min,
+            tzinfo=ZoneInfo(self.timezone_name),
+        )
+        return local.astimezone(UTC)
 
     @property
     def end_at(self) -> datetime:
-        return datetime.combine(self.end + timedelta(days=1), time.min)
+        local = datetime.combine(
+            self.end + timedelta(days=1),
+            time.min,
+            tzinfo=ZoneInfo(self.timezone_name),
+        )
+        return local.astimezone(UTC)
 
     def as_query(self) -> dict[str, str]:
         result = {
@@ -66,7 +80,8 @@ class AnalyticsFilters:
 
 def parse_filters(args: Mapping[str, Any]) -> AnalyticsFilters:
     """Build analytics filters from untrusted query parameters."""
-    today = date.today()
+    timezone_name = current_app.config["ANALYTICS_TIMEZONE"]
+    today = datetime.now(ZoneInfo(timezone_name)).date()
     raw_period = str(args.get("period", "30"))
     if raw_period == "custom":
         try:
@@ -112,6 +127,7 @@ def parse_filters(args: Mapping[str, Any]) -> AnalyticsFilters:
         category=_positive_int(args.get("category")),
         exercise_query=str(args.get("exercise_query", "")).strip()[:100],
         exercise_sort=exercise_sort,
+        timezone_name=timezone_name,
     )
 
 
@@ -212,13 +228,24 @@ def _as_date(value: Any) -> date:
     return date.fromisoformat(str(value))
 
 
+def _local_day(timestamp, filters: AnalyticsFilters):
+    if db.session.get_bind().dialect.name == "postgresql":
+        return func.date(func.timezone(filters.timezone_name, timestamp))
+    zone = ZoneInfo(filters.timezone_name)
+    offset = filters.start_at.astimezone(zone).utcoffset() or timedelta()
+    minutes = round(offset.total_seconds() / 60)
+    modifier = f"{minutes:+d} minutes"
+    return func.date(func.datetime(timestamp, modifier))
+
+
 def _daily_series(
     filters: AnalyticsFilters,
     *,
     item_id: int | None = None,
 ) -> list[dict[str, Any]]:
     actions = _filtered_actions(filters, item_id=item_id).subquery()
-    day = func.date(actions.c.datetime).label("day")
+    day_expression = _local_day(actions.c.datetime, filters)
+    day = day_expression.label("day")
     right, wrong, skips = _count_expressions(actions)
     rows = db.session.execute(
         select(
@@ -292,8 +319,11 @@ def _session_metrics(filters: AnalyticsFilters) -> dict[str, int | float]:
 
     user_days = select(
         actions.c.user_id,
-        func.date(actions.c.datetime).label("day"),
-    ).group_by(actions.c.user_id, func.date(actions.c.datetime)).subquery()
+        _local_day(actions.c.datetime, filters).label("day"),
+    ).group_by(
+        actions.c.user_id,
+        _local_day(actions.c.datetime, filters),
+    ).subquery()
     days_per_user = select(
         user_days.c.user_id,
         func.count().label("days"),
@@ -338,12 +368,10 @@ def _lifecycle_metrics(filters: AnalyticsFilters) -> dict[str, Any]:
         (row.user_id, _as_date(row.day))
         for row in db.session.execute(select(
             actions.c.user_id,
-            func.date(actions.c.datetime).label("day"),
+            _local_day(actions.c.datetime, filters).label("day"),
         ).distinct()).all()
     }
-    earliest_cohort = datetime.combine(
-        filters.start - timedelta(days=30), time.min
-    )
+    earliest_cohort = filters.start_at - timedelta(days=30)
     cohorts = db.session.execute(
         _users_query(filters)
         .with_only_columns(User.id, User.created_at)
@@ -356,12 +384,21 @@ def _lifecycle_metrics(filters: AnalyticsFilters) -> dict[str, Any]:
     for offset in (1, 7, 30):
         eligible = [
             row for row in cohorts
-            if filters.start
-            <= row.created_at.date() + timedelta(days=offset)
-            <= filters.end
+            if filters.start <= (
+                ensure_utc(row.created_at)
+                .astimezone(ZoneInfo(filters.timezone_name))
+                .date()
+                + timedelta(days=offset)
+            ) <= filters.end
         ]
         retained = sum(
-            (row.id, row.created_at.date() + timedelta(days=offset))
+            (
+                row.id,
+                ensure_utc(row.created_at)
+                .astimezone(ZoneInfo(filters.timezone_name))
+                .date()
+                + timedelta(days=offset),
+            )
             in action_days
             for row in eligible
         )
@@ -382,7 +419,7 @@ def _lifecycle_metrics(filters: AnalyticsFilters) -> dict[str, Any]:
 
 
 def _period_active_count(filters: AnalyticsFilters, days: int) -> int:
-    end_at = datetime.combine(filters.end + timedelta(days=1), time.min)
+    end_at = filters.end_at
     start_at = end_at - timedelta(days=days)
     actions = _filtered_actions(
         filters,

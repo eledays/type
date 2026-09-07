@@ -7,6 +7,7 @@ from sqlalchemy import DateTime, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
+from app.time_utils import utc_now
 
 if TYPE_CHECKING:
     from app.models.practice_item import PracticeItem
@@ -31,7 +32,7 @@ class ErrorReport(db.Model):
     )
     message: Mapped[str] = mapped_column(String(2000), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.now
+        DateTime(timezone=True), nullable=False, default=utc_now
     )
 
     user: Mapped[User] = relationship(back_populates="error_reports")

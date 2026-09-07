@@ -6,6 +6,7 @@ from sqlalchemy import delete, select, update
 
 from app.extensions import db
 from app.models import Action, PracticeProgress, UserPracticeStats
+from app.time_utils import ensure_utc
 
 
 LEARNING_ACTIONS = (
@@ -76,7 +77,9 @@ def merge_user_progress(source_user_id: int, target_user_id: int) -> None:
         item["latest_action"] = row.action
         item["latest_action_at"] = row.datetime
         if previous_at is not None:
-            pause = (row.datetime - previous_at).total_seconds()
+            pause = (
+                ensure_utc(row.datetime) - ensure_utc(previous_at)
+            ).total_seconds()
             if 0 <= pause <= ACTIVE_GAP_SECONDS:
                 active_seconds += pause
                 timed_intervals += 1

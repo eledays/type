@@ -1,4 +1,4 @@
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 
 from app.extensions import db
 from app.models import Action, User
@@ -173,3 +173,29 @@ class TestAnalytics(AppTestCase):
         assert response.status_code == 200
         assert response.get_json()["item_count"] == 1
         assert response.get_json()["items"][0]["title"] == "экз_менатор"
+
+    def test_calendar_days_use_configured_timezone(self) -> None:
+        with self.app.app_context():
+            learner = self.make_user(yandex_id="timezone-learner")
+            word = self.make_word()
+            db.session.add(Action(
+                user_id=learner.id,
+                practice_item_id=word.id,
+                action=Action.RIGHT_ANSWER,
+                datetime=datetime(
+                    2026, 1, 1, 21, 30, tzinfo=timezone.utc
+                ),
+            ))
+            db.session.commit()
+            filters = parse_filters({
+                "period": "custom",
+                "start": "2026-01-02",
+                "end": "2026-01-02",
+            })
+            dashboard = build_dashboard(filters)
+
+        assert filters.start_at == datetime(
+            2026, 1, 1, 21, 0, tzinfo=timezone.utc
+        )
+        assert dashboard["daily"][0]["date"] == "2026-01-02"
+        assert dashboard["daily"][0]["right"] == 1
