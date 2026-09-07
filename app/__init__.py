@@ -19,6 +19,8 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     app.config.from_mapping(settings.to_flask_config())
     if config is not None:
         app.config.from_mapping(config)
+        if config.get("TESTING") and "LEGAL_CONSENT_REQUIRED" not in config:
+            app.config["LEGAL_CONSENT_REQUIRED"] = False
     trusted_proxy_count = int(app.config.get("TRUSTED_PROXY_COUNT", 0))
     if trusted_proxy_count:
         app.wsgi_app = ProxyFix(
@@ -44,11 +46,16 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     from app.security.csrf import register_csrf
     from app.security.headers import register_security_headers
     from app.security.rate_limits import register_rate_limit_errors
-    from app.security.session import ensure_authenticated_user, load_user
+    from app.security.session import (
+        ensure_authenticated_user,
+        load_user,
+        require_current_legal_acceptance,
+    )
 
     login_manager.user_loader(load_user)
     limiter.init_app(app)
     app.before_request(ensure_authenticated_user)
+    app.before_request(require_current_legal_acceptance)
     register_csrf(app)
     register_security_headers(app)
     register_rate_limit_errors(app)

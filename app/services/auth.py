@@ -133,6 +133,8 @@ def _merge_yandex_profile(profile: dict[str, Any], yandex_id: str) -> User:
         and current_account.is_anonymous_account
     ):
         merge_user_progress(current_account.id, user.id)
+        for acceptance in list(current_account.legal_acceptances):
+            acceptance.user = user
         db.session.delete(current_account)
 
     if user.identified_at is None:

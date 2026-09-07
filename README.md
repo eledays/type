@@ -124,6 +124,9 @@ docker compose exec -T postgres psql -U type -d type < type-backup.sql
     YANDEX_CLIENT_ID=your-client-id
     YANDEX_CLIENT_SECRET=your-client-secret
     YANDEX_REDIRECT_URI=http://localhost:5000/auth/yandex/callback
+    LEGAL_OPERATOR_NAME=ФИО или наименование оператора
+    LEGAL_OPERATOR_ADDRESS=почтовый адрес оператора
+    LEGAL_CONTACT_EMAIL=privacy@example.com
     ANONYMOUS_ACTION_LIMIT=30
     PRACTICE_CARD_BATCH_SIZE=3
     PRACTICE_CARD_BATCH_MAX=12
@@ -208,6 +211,24 @@ flask --app app sentence_to_db path/to/sentences.txt
 Импорт создаёт или дополняет группу паронимов и связывает с ней упражнение.
 
 Перед импортом база должна быть обновлена командой `flask --app app db upgrade`.
+
+## Правовые документы и согласие
+
+Условия использования, политика обработки данных и отдельное согласие
+публикуются по адресам `/legal/terms`, `/legal/privacy` и
+`/legal/personal-data-consent`. До принятия текущих версий HTML-запросы
+перенаправляются на `/legal/consent`, а API отвечает кодом 403. Принятые
+версии и время фиксируются в `legal_acceptance`; после изменения документа
+обновите соответствующую константу версии в `app/services/legal.py`, чтобы
+запросить согласие повторно.
+
+Перед публичным запуском укажите настоящие `LEGAL_OPERATOR_*` реквизиты,
+разместите базы персональных данных граждан РФ в России и выполните внешние
+организационные обязанности оператора, включая применимое уведомление
+Роскомнадзора. Тексты должны быть проверены юристом с учётом реального
+владельца, инфраструктуры и процессов проекта.
+Подробное описание каждой переменной и примеры приведены в
+[`docs/legal-configuration.md`](docs/legal-configuration.md).
 
 ## Миграции
 

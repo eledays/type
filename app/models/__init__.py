@@ -1,6 +1,7 @@
 from app.models.action import Action
 from app.models.category import Category
 from app.models.error_report import ErrorReport
+from app.models.legal_acceptance import LegalAcceptance
 from app.models.paronym import Paronym
 from app.models.paronym_exercise import ParonymExercise
 from app.models.paronym_group import ParonymGroup
@@ -18,6 +19,7 @@ __all__ = [
     "Action",
     "Category",
     "ErrorReport",
+    "LegalAcceptance",
     "Paronym",
     "ParonymExercise",
     "ParonymGroup",

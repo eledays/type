@@ -358,3 +358,10 @@ p {
     color: var(--tg-theme-hint-color, #777);
     font-size: .9rem;
 }
+.legal-document-links {
+    display: grid;
+    gap: 12px;
+}
+
+.legal-document-links a { color: inherit; }
+.legal-document-links .danger-link { color: #b83030; }

@@ -1,0 +1,45 @@
+{% extends "legal/base.html" %}
+{% block title %}type — Перед началом использования{% endblock %}
+{% block body_class %}consent-page{% endblock %}
+{% block shell_class %}consent-shell{% endblock %}
+{% block content %}
+<div class="consent-preview" aria-hidden="true" inert>
+    <div class="preview-header">
+        <img src="{{ url_for('static', filename='img/default_avatar.png') }}" alt="">
+        <span class="preview-login">Войти</span>
+        <span class="preview-action">Фильтры</span>
+        <span class="preview-action">О слове</span>
+    </div>
+    <div class="preview-word">м<span aria-hidden="true"></span>локо</div>
+    <div class="preview-answers">
+        <span>о</span>
+        <span>а</span>
+    </div>
+</div>
+<div class="consent-dimmer">
+<section class="consent-card" aria-labelledby="consent-title">
+    <h1 class="visually-hidden" id="consent-title">Начало использования сервиса type</h1>
+    <div class="consent-brand" aria-hidden="true">
+        <img class="consent-logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="">
+        <span>type</span>
+    </div>
+    <p class="consent-service-copy">Листай — готовься к ЕГЭ по русскому</p>
+
+    {% if consent_revoked %}<p class="form-success" role="status">Согласие отозвано, профиль и связанные данные удалены. Чтобы начать заново, примите документы повторно.</p>{% endif %}
+    {% if consent_error %}<p class="form-error" role="alert">{{ consent_error }}</p>{% endif %}
+
+    <form method="post" action="{{ url_for('legal.accept_consent') }}" class="consent-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ next_url }}">
+        {% if oauth_configured %}
+        <button type="submit" class="primary-action yandex-consent-button" name="flow" value="yandex">
+            <img src="{{ url_for('static', filename='img/yandex-id.svg') }}" alt="">
+            Войти через Яндекс
+        </button>
+        {% endif %}
+        <button type="submit" class="guest-consent-button" name="flow" value="guest">Попробовать без регистрации</button>
+    </form>
+    <p class="consent-legal-copy">Нажимая {% if oauth_configured %}«Войти через Яндекс» или {% endif %}«Попробовать без регистрации», я принимаю <a href="{{ url_for('legal.terms') }}" target="_blank" rel="noopener">Условия использования</a>, подтверждаю ознакомление с <a href="{{ url_for('legal.privacy') }}" target="_blank" rel="noopener">Политикой конфиденциальности</a> и отдельно даю <a href="{{ url_for('legal.personal_data_consent') }}" target="_blank" rel="noopener">Согласие на обработку персональных данных</a>.</p>
+</section>
+</div>
+{% endblock %}

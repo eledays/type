@@ -19,6 +19,9 @@ services:
       TRUSTED_PROXY_COUNT: "1"
       COOKIE_SECURE: "true"
       HSTS_ENABLED: "true"
+      LEGAL_OPERATOR_NAME: ${LEGAL_OPERATOR_NAME:?Set the legal operator name}
+      LEGAL_OPERATOR_ADDRESS: ${LEGAL_OPERATOR_ADDRESS:?Set the legal operator address}
+      LEGAL_CONTACT_EMAIL: ${LEGAL_CONTACT_EMAIL:?Set the legal contact email}
     ports:
       - "${APP_BIND_IP:?Set APP_BIND_IP to the private application-server IP}:${APP_PORT:-8000}:8000"
     read_only: true

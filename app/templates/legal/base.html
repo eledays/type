@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#161616">
+    <title>{% block title %}type — Правовая информация{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/legal.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='img/fav.ico') }}" type="image/x-icon">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    <header class="legal-header">
+        <a class="brand" href="{{ url_for('legal.consent') }}" aria-label="type — к экрану согласия">type</a>
+        <nav aria-label="Правовые документы">
+            <a href="{{ url_for('legal.terms') }}">Условия</a>
+            <a href="{{ url_for('legal.privacy') }}">Конфиденциальность</a>
+            <a href="{{ url_for('legal.personal_data_consent') }}">Согласие на ПД</a>
+        </nav>
+    </header>
+    <main class="legal-shell {% block shell_class %}{% endblock %}">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

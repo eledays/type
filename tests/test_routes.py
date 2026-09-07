@@ -55,6 +55,13 @@ class TestRouteMap(AppTestCase):
             ("/profile", "GET"),
             ("/auth", "GET"),
             ("/auth/logout", "POST"),
+            ("/legal/terms", "GET"),
+            ("/legal/privacy", "GET"),
+            ("/legal/personal-data-consent", "GET"),
+            ("/legal/consent", "GET"),
+            ("/legal/consent", "POST"),
+            ("/legal/revoke", "GET"),
+            ("/legal/revoke", "POST"),
             ("/api/v1/attempts", "POST"),
             ("/api/v1/attempts/skip", "POST"),
             ("/api/v1/practice/cards", "GET"),
@@ -119,6 +126,26 @@ class TestRouteMap(AppTestCase):
         assert b'data-open-report="exercise"' in response.data
         assert b'data-open-report="general"' in response.data
         assert b'data-state="accent"' in response.data
+        assert b'href="/legal/terms"' in response.data
+        assert b'href="/legal/privacy"' in response.data
+        assert b'href="/legal/personal-data-consent"' in response.data
+        assert b'href="/legal/revoke"' in response.data
+        assert b'class="legal-item-title"' in response.data
+        assert (
+            "Бесконечная лента слов для подготовки к ЕГЭ по русскому языку"
+            .encode() in response.data
+        )
+
+    def test_overlay_panels_allow_internal_vertical_scrolling(self) -> None:
+        response = self.client.get("/static/css/index.css")
+
+        assert response.status_code == 200
+        css = response.get_data(as_text=True)
+        assert ".panel {" in css
+        assert "overflow-y: auto" in css
+        assert "touch-action: pan-y" in css
+        profile_rule = css.split(".profile-panel {", 1)[1].split("}", 1)[0]
+        assert "overflow-y: auto" in profile_rule
 
     def test_header_hides_strike_until_first_answer_after_page_load(self) -> None:
         user_id = self.current_user_id()

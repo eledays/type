@@ -13,6 +13,9 @@ services:
       RATE_LIMIT_STORAGE_URI: redis://redis:6379/0
       TRUSTED_HOSTS: ${DOCKER_TRUSTED_HOSTS:-localhost,127.0.0.1}
       TRUSTED_PROXY_COUNT: "0"
+      LEGAL_OPERATOR_NAME: ${LEGAL_OPERATOR_NAME:-Разработчик сервиса type}
+      LEGAL_OPERATOR_ADDRESS: ${LEGAL_OPERATOR_ADDRESS:-Локальная разработка}
+      LEGAL_CONTACT_EMAIL: ${LEGAL_CONTACT_EMAIL:-privacy@localhost}
     expose:
       - "8000"
     depends_on:

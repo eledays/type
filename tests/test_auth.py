@@ -6,7 +6,12 @@ import pytest
 from tests.base import AppTestCase
 
 from app.extensions import db
-from app.models import Action, User
+from app.models import Action, LegalAcceptance, User
+from app.services.legal import (
+    PERSONAL_DATA_CONSENT_VERSION,
+    PRIVACY_VERSION,
+    TERMS_VERSION,
+)
 from app.services.auth import OAuthError, authenticate_yandex, safe_next_url, validate_state
 
 
@@ -136,6 +141,14 @@ class TestAuth(AppTestCase):
                     practice_item_id=registered_word.id,
                     action=Action.WRONG_ANSWER,
                 ),
+                LegalAcceptance(
+                    user_id=guest_id,
+                    terms_version=TERMS_VERSION,
+                    privacy_version=PRIVACY_VERSION,
+                    personal_data_consent_version=(
+                        PERSONAL_DATA_CONSENT_VERSION
+                    ),
+                ),
             ])
             db.session.commit()
 
@@ -170,3 +183,7 @@ class TestAuth(AppTestCase):
             assert PracticeProgress.query.filter_by(
                 user_id=registered_id
             ).count() == 2
+            assert LegalAcceptance.query.filter_by(
+                user_id=registered_id,
+                terms_version=TERMS_VERSION,
+            ).count() == 1

@@ -270,6 +270,9 @@ a {
     max-height: calc(100dvh - 92px);
     padding: 18px;
     overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     border: 1px solid rgba(255, 255, 255, .6);
     border-radius: 18px;
     opacity: 0;
@@ -820,7 +823,11 @@ body.has-open-panel {
 
 .profile-panel {
     padding: 0;
-    overflow: visible;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -829,6 +836,14 @@ body.has-open-panel {
     -webkit-backdrop-filter: none;
     transition: opacity .2s ease, transform .24s ease,
         visibility 0s linear .36s;
+}
+
+.profile-panel > .profile-description {
+    margin: 0 4px 14px;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.4;
 }
 
 .profile-panel.is-open {
@@ -1164,6 +1179,22 @@ body.has-open-panel {
         transform: translateY(0) scale(1);
     }
 }
+.profile-panel .legal-menu .setting-toggle + .setting-toggle {
+    margin-top: 9px;
+    padding-top: 9px;
+    border-top: 1px solid rgba(255, 255, 255, .16);
+}
+
+.profile-panel .legal-menu .legal-item-title {
+    font-size: .875rem;
+    font-weight: 400;
+}
+
+.profile-panel .danger-link .legal-item-title,
+.profile-panel .danger-link small {
+    color: #ffb0b0;
+}
+
 @font-face {
     font-family: "Material Symbols Rounded";
     font-style: normal;

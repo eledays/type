@@ -78,6 +78,20 @@ class AppSettings(BaseSettings):
         min_length=1,
     )
 
+    # Public legal details. Production must identify the real operator.
+    legal_operator_name: str | None = Field(
+        default=None, validation_alias="LEGAL_OPERATOR_NAME"
+    )
+    legal_operator_address: str | None = Field(
+        default=None, validation_alias="LEGAL_OPERATOR_ADDRESS"
+    )
+    legal_contact_email: str | None = Field(
+        default=None, validation_alias="LEGAL_CONTACT_EMAIL"
+    )
+    legal_consent_required: bool = Field(
+        default=True, validation_alias="LEGAL_CONSENT_REQUIRED"
+    )
+
     # Yandex OAuth settings
     yandex_client_id: str | None = Field(
         default=None, validation_alias="YANDEX_CLIENT_ID"
@@ -284,6 +298,21 @@ class AppSettings(BaseSettings):
             raise ValueError(
                 "RATE_LIMIT_STORAGE_URI must use shared storage outside DEBUG mode"
             )
+        if not self.debug and self.legal_consent_required:
+            missing_legal_details = [
+                name
+                for name, value in (
+                    ("LEGAL_OPERATOR_NAME", self.legal_operator_name),
+                    ("LEGAL_OPERATOR_ADDRESS", self.legal_operator_address),
+                    ("LEGAL_CONTACT_EMAIL", self.legal_contact_email),
+                )
+                if not value or not value.strip()
+            ]
+            if missing_legal_details:
+                raise ValueError(
+                    "Production legal details are required: "
+                    + ", ".join(missing_legal_details)
+                )
         if self.yandex_redirect_uri:
             redirect = urlsplit(self.yandex_redirect_uri)
             local_redirect = redirect.hostname in {
@@ -343,6 +372,16 @@ class AppSettings(BaseSettings):
             "TASKS": self.tasks,
             "URL": self.url,
             "ANALYTICS_TIMEZONE": self.analytics_timezone,
+            "LEGAL_OPERATOR_NAME": (
+                self.legal_operator_name or "Разработчик сервиса type"
+            ),
+            "LEGAL_OPERATOR_ADDRESS": (
+                self.legal_operator_address or "Не применяется локально"
+            ),
+            "LEGAL_CONTACT_EMAIL": (
+                self.legal_contact_email or "privacy@localhost"
+            ),
+            "LEGAL_CONSENT_REQUIRED": self.legal_consent_required,
             "YANDEX_CLIENT_ID": self.yandex_client_id,
             "YANDEX_CLIENT_SECRET": (
                 self.yandex_client_secret.get_secret_value()

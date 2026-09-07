@@ -6,6 +6,9 @@ import pytest
 os.environ["DEBUG"] = "false"
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-test-suite-32chars")
 os.environ.setdefault("RATE_LIMIT_STORAGE_URI", "redis://localhost:6379/15")
+os.environ.setdefault("LEGAL_OPERATOR_NAME", "Test operator")
+os.environ.setdefault("LEGAL_OPERATOR_ADDRESS", "Test address")
+os.environ.setdefault("LEGAL_CONTACT_EMAIL", "privacy@example.test")
 
 from app import create_app  # noqa: E402
 from app.extensions import db  # noqa: E402
@@ -26,6 +29,9 @@ class AppTestCase:
             "RATELIMIT_STORAGE_URI": "memory://",
             "ANALYTICS_TIMEZONE": "Europe/Moscow",
             "WTF_CSRF_ENABLED": False,
+            "LEGAL_CONSENT_REQUIRED": getattr(
+                self, "legal_consent_required", False
+            ),
         })
         with self.app.app_context():
             db.create_all()

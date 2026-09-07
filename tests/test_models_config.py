@@ -52,6 +52,8 @@ class TestConfig(AppTestCase):
         assert exported["TRUSTED_PROXY_COUNT"] == 0
         assert exported["MAX_CONTENT_LENGTH"] == 65_536
         assert exported["ANALYTICS_TIMEZONE"] == "Europe/Moscow"
+        assert exported["LEGAL_OPERATOR_NAME"] == "Test operator"
+        assert exported["LEGAL_CONSENT_REQUIRED"]
         assert exported["TRUSTED_HOSTS"] == ["type.eleday.ru"]
         assert exported["SESSION_COOKIE_SECURE"]
         assert exported["SESSION_COOKIE_HTTPONLY"]
@@ -117,6 +119,12 @@ class TestConfig(AppTestCase):
             {
                 "SECRET_KEY": TEST_SECRET,
                 "ANALYTICS_TIMEZONE": "Not/A-Timezone",
+            },
+            {
+                "SECRET_KEY": TEST_SECRET,
+                "LEGAL_OPERATOR_NAME": None,
+                "LEGAL_OPERATOR_ADDRESS": None,
+                "LEGAL_CONTACT_EMAIL": None,
             },
         ):
             with pytest.raises(ValidationError):

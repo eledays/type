@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from app.models.action import Action
     from app.models.error_report import ErrorReport
     from app.models.settings import Settings
+    from app.models.legal_acceptance import LegalAcceptance
 
 
 class User(UserMixin, db.Model):
@@ -67,6 +68,10 @@ class User(UserMixin, db.Model):
         cascade="all, delete-orphan",
     )
     error_reports: Mapped[list[ErrorReport]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    legal_acceptances: Mapped[list[LegalAcceptance]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
     )

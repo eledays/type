@@ -1,0 +1,25 @@
+{% extends "legal/base.html" %}
+{% block title %}type — Отзыв согласия{% endblock %}
+{% block body_class %}revoke-page{% endblock %}
+{% block shell_class %}consent-shell{% endblock %}
+{% block content %}
+<section class="consent-card" aria-labelledby="revoke-title">
+    <img class="consent-logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="type">
+    <p class="eyebrow">Управление данными</p>
+    <h1 id="revoke-title">Отозвать согласие?</h1>
+    <p class="lead">Действие завершит сеанс и удалит профильные данные, настройки, прогресс и обращения. Восстановить их будет нельзя.</p>
+    <p class="consent-note">Останется только минимальная запись о факте принятия и отзыва документов — для подтверждения исполнения юридических обязанностей и защиты прав. В ней нет имени, данных Яндекс ID, ответов или настроек.</p>
+
+    {% if revoke_error %}<p class="form-error" role="alert">{{ revoke_error }}</p>{% endif %}
+
+    <form method="post" action="{{ url_for('legal.confirm_revoke') }}" class="consent-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="consent-option consent-option--danger">
+            <input type="checkbox" name="confirm_revocation" value="accepted" required>
+            <span>Я понимаю, что данные и прогресс будут удалены без возможности восстановления.</span>
+        </label>
+        <button type="submit" class="primary-action danger-action">Отозвать согласие и удалить данные</button>
+        <a class="cancel-action" href="{{ url_for('practice.index') }}">Отмена</a>
+    </form>
+</section>
+{% endblock %}

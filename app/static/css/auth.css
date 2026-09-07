@@ -73,6 +73,14 @@
     text-decoration: none;
 }
 
+.legal-links {
+    color: #888;
+    font-size: .78rem;
+    text-align: center;
+}
+
+.legal-links a { color: inherit; }
+
 .auth-continue:hover {
     color: #fff;
 }

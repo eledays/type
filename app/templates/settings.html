@@ -146,6 +146,13 @@
                 {% endif %}
             </div>
         </div>
+        <div class="settings-block legal-document-links">
+            <h2>Документы и данные</h2>
+            <a href="{{ url_for('legal.terms') }}">Условия использования</a>
+            <a href="{{ url_for('legal.privacy') }}">Политика конфиденциальности</a>
+            <a href="{{ url_for('legal.personal_data_consent') }}">Согласие на обработку персональных данных</a>
+            <a class="danger-link" href="{{ url_for('legal.revoke') }}">Отозвать согласие и удалить данные</a>
+        </div>
     </div>
 
     <script nonce="{{ csp_nonce }}">
