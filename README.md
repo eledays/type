@@ -154,6 +154,33 @@ docker compose exec -T postgres psql -U type -d type < type-backup.sql
 scripts/build_static.sh
 ```
 
+## Проверки
+
+Основной набор (SQLite и тест браузерной логики через Node.js):
+
+```bash
+pytest
+```
+
+PostgreSQL-проверка намеренно принимает только отдельную базу с именем,
+оканчивающимся на `_test`, и очищает её:
+
+```bash
+ALLOW_POSTGRES_TESTS=1 \
+TEST_POSTGRES_URL=postgresql+psycopg://type:type-test@localhost/type_test \
+pytest -m postgres
+```
+
+Аудит Python-зависимостей и статический анализ безопасности:
+
+```bash
+pip install -r requirements-audit.txt
+scripts/check_security.sh
+```
+
+Все эти проверки, включая применение миграций к PostgreSQL 17, также описаны
+в workflow GitHub Actions.
+
 ## Архитектура
 
 Соглашения по структуре blueprint, URL, API и совместимости описаны в
@@ -215,7 +242,8 @@ Callback URL должен в точности совпадать с
 Все маршруты ограничены по частоте. Для OAuth, изменяющих запросов и отправки
 сообщений действуют дополнительные, более строгие лимиты. Значения настраиваются
 переменными `RATE_LIMIT_DEFAULT`, `RATE_LIMIT_APPLICATION`,
-`RATE_LIMIT_AUTH`, `RATE_LIMIT_MUTATION` и `RATE_LIMIT_REPORT`.
+`RATE_LIMIT_AUTH`, `RATE_LIMIT_MUTATION`, `RATE_LIMIT_REPORT` и
+`RATE_LIMIT_ANALYTICS_SEARCH`.
 
 Локально счётчики хранятся в памяти процесса. При запуске нескольких Gunicorn
 worker-ов задайте общее хранилище, например

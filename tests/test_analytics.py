@@ -2,9 +2,15 @@ import csv
 from datetime import date, datetime, time, timedelta, timezone
 from io import StringIO
 
+from sqlalchemy import event
+
 from app.extensions import db
-from app.models import Action, User
-from app.services.analytics import build_dashboard, parse_filters
+from app.models import Action, Category, SpellingExercise, User
+from app.services.analytics import (
+    build_dashboard,
+    build_exercise_results,
+    parse_filters,
+)
 from tests.base import AppTestCase
 
 
@@ -256,3 +262,47 @@ class TestAnalytics(AppTestCase):
         )
         assert dashboard["daily"][0]["date"] == "2026-01-02"
         assert dashboard["daily"][0]["right"] == 1
+
+    def test_exercise_results_use_a_bounded_number_of_queries(self) -> None:
+        with self.app.app_context():
+            learner = self.make_user(yandex_id="large-analytics-user")
+            category = Category(name="Нагрузка")
+            exercises = [
+                SpellingExercise(
+                    word=f"нагрузка{index}",
+                    answers=["а", "о"],
+                    correct_answer="а",
+                    task_number=9,
+                    category=category,
+                )
+                for index in range(250)
+            ]
+            db.session.add_all(exercises)
+            db.session.flush()
+            db.session.execute(Action.__table__.insert(), [
+                {
+                    "user_id": learner.id,
+                    "practice_item_id": exercise.id,
+                    "action": Action.RIGHT_ANSWER,
+                    "datetime": datetime.now(timezone.utc),
+                }
+                for exercise in exercises
+                for _ in range(10)
+            ])
+            db.session.commit()
+            filters = parse_filters({"period": "7"})
+            statements = []
+
+            def count_query(*args) -> None:
+                statements.append(args[2])
+
+            engine = db.session.get_bind()
+            event.listen(engine, "before_cursor_execute", count_query)
+            try:
+                result = build_exercise_results(filters)
+            finally:
+                event.remove(engine, "before_cursor_execute", count_query)
+
+        assert result["item_count"] == 250
+        assert len(result["items"]) == 10
+        assert len(statements) <= 3

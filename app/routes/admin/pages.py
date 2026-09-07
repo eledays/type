@@ -65,6 +65,7 @@ def analytics():
         format_duration=_format_duration,
         style_url=_static_url("css/style.css"),
         analytics_style_url=_static_url("css/analytics.css"),
+        analytics_search_script_url=_static_url("js/analytics-search.js"),
         analytics_script_url=_static_url("js/analytics.js"),
         favicon_url=_static_url("img/fav.ico"),
     )

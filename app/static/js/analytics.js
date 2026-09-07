@@ -2,6 +2,7 @@
     "use strict";
 
     const bootstrap = window.analyticsBootstrap;
+    const searchHelpers = window.analyticsSearch;
     const svgNS = "http://www.w3.org/2000/svg";
 
     function svgElement(name, attributes = {}) {
@@ -228,8 +229,7 @@
     function scheduleSearch() {
         clearTimeout(searchTimer);
         const value = searchInput.value.trim();
-        const searchable = value.normalize("NFKC").match(/[\p{L}\p{N}]/gu) || [];
-        if (value && searchable.length < 2) {
+        if (!searchHelpers.isReady(value)) {
             searchRequest?.abort();
             searchReset.hidden = false;
             searchStatus.textContent = "Введите минимум 2 буквы или цифры";

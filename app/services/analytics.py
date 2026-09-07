@@ -316,12 +316,13 @@ def _session_metrics(filters: AnalyticsFilters) -> dict[str, int | float]:
     sessions = int(totals[1] or 0)
     active_seconds = round(float(totals[2] or 0))
 
+    local_day = _local_day(actions.c.datetime, filters)
     user_days = select(
         actions.c.user_id,
-        _local_day(actions.c.datetime, filters).label("day"),
+        local_day.label("day"),
     ).group_by(
         actions.c.user_id,
-        _local_day(actions.c.datetime, filters),
+        local_day,
     ).subquery()
     days_per_user = select(
         user_days.c.user_id,
