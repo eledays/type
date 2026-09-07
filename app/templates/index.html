@@ -150,7 +150,6 @@
 
     <section class="panel profile-panel panel--headerless" id="profile-panel" data-panel="profile" role="dialog" aria-modal="true"
         aria-label="Профиль" aria-hidden="true">
-        <p class="profile-description">Бесконечная лента слов для подготовки к ЕГЭ по русскому языку</p>
         <div class="panel-section">
             <h3>Статистика</h3>
             <div class="stats-grid profile-stats">
@@ -200,19 +199,19 @@
         <div class="panel-section legal-menu">
             <h3>Документы и данные</h3>
             <a class="setting-toggle" href="{{ url_for('legal.terms') }}">
-                <span><span class="legal-item-title">Условия использования</span><small>Перечитать документ</small></span>
+                <span class="legal-item-title">Условия использования</span>
                 <span aria-hidden="true">→</span>
             </a>
             <a class="setting-toggle" href="{{ url_for('legal.privacy') }}">
-                <span><span class="legal-item-title">Конфиденциальность</span><small>Как обрабатываются данные</small></span>
+                <span class="legal-item-title">Конфиденциальность</span>
                 <span aria-hidden="true">→</span>
             </a>
             <a class="setting-toggle" href="{{ url_for('legal.personal_data_consent') }}">
-                <span><span class="legal-item-title">Согласие на обработку ПД</span><small>Перечитать данное согласие</small></span>
+                <span class="legal-item-title">Согласие на обработку ПД</span>
                 <span aria-hidden="true">→</span>
             </a>
             <a class="setting-toggle danger-link" href="{{ url_for('legal.revoke') }}">
-                <span><span class="legal-item-title">Отозвать согласие</span><small>Удалить профиль и прекратить использование</small></span>
+                <span class="legal-item-title">Отозвать согласие</span>
                 <span aria-hidden="true">→</span>
             </a>
         </div>

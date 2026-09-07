@@ -131,10 +131,18 @@ class TestRouteMap(AppTestCase):
         assert b'href="/legal/personal-data-consent"' in response.data
         assert b'href="/legal/revoke"' in response.data
         assert b'class="legal-item-title"' in response.data
-        assert (
-            "Бесконечная лента слов для подготовки к ЕГЭ по русскому языку"
-            .encode() in response.data
-        )
+        assert "Условия использования".encode() in response.data
+        assert "Конфиденциальность".encode() in response.data
+        assert "Согласие на обработку ПД".encode() in response.data
+        assert "Отозвать согласие".encode() in response.data
+        for removed_copy in (
+            "Бесконечная лента слов для подготовки к ЕГЭ по русскому языку",
+            "Перечитать документ",
+            "Как обрабатываются данные",
+            "Перечитать данное согласие",
+            "Удалить профиль и прекратить использование",
+        ):
+            assert removed_copy.encode() not in response.data
 
     def test_overlay_panels_allow_internal_vertical_scrolling(self) -> None:
         response = self.client.get("/static/css/index.css")

@@ -838,14 +838,6 @@ body.has-open-panel {
         visibility 0s linear .36s;
 }
 
-.profile-panel > .profile-description {
-    margin: 0 4px 14px;
-    color: #fff;
-    font-size: 1rem;
-    font-weight: 400;
-    line-height: 1.4;
-}
-
 .profile-panel.is-open {
     transition: opacity .2s ease, transform .24s ease;
 }
@@ -1190,8 +1182,7 @@ body.has-open-panel {
     font-weight: 400;
 }
 
-.profile-panel .danger-link .legal-item-title,
-.profile-panel .danger-link small {
+.profile-panel .danger-link .legal-item-title {
     color: #ffb0b0;
 }
 
