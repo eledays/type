@@ -21,6 +21,7 @@ class TestAnalytics(AppTestCase):
         assert self.client.get("/admin/analytics").status_code == 403
         assert self.client.get("/admin/analytics.csv").status_code == 403
         assert self.client.get("/api/v1/admin/analytics/items/1").status_code == 403
+        assert self.client.get("/api/v1/admin/analytics/exercises").status_code == 403
         assert "Перейти в аналитику".encode() not in self.client.get("/").data
 
         self._make_admin()
@@ -127,7 +128,7 @@ class TestAnalytics(AppTestCase):
         with self.app.app_context():
             learner = self.make_user(yandex_id="search-learner")
             for index in range(12):
-                word = self.make_word(word=f"слово_{index}")
+                word = self.make_word(word=f"термин{index}")
                 db.session.add(Action(
                     user_id=learner.id,
                     practice_item_id=word.id,
@@ -144,10 +145,31 @@ class TestAnalytics(AppTestCase):
 
         search = self.client.get(
             "/admin/analytics",
-            query_string={"period": "7", "exercise_query": "слово_11"},
+            query_string={"period": "7", "exercise_query": "11"},
         )
 
         assert search.status_code == 200
         assert search.data.count(b"data-item-id=") == 1
-        assert "слово_11".encode() in search.data
+        assert "термин11".encode() in search.data
         assert "Показано 1 из 1".encode() in search.data
+
+    def test_live_search_treats_exercise_blank_as_a_letter(self) -> None:
+        self._make_admin()
+        with self.app.app_context():
+            learner = self.make_user(yandex_id="fuzzy-search-learner")
+            word = self.make_word(word="экз_менатор")
+            db.session.add(Action(
+                user_id=learner.id,
+                practice_item_id=word.id,
+                action=Action.WRONG_ANSWER,
+            ))
+            db.session.commit()
+
+        response = self.client.get(
+            "/api/v1/admin/analytics/exercises",
+            query_string={"period": "7", "exercise_query": "экзаме"},
+        )
+
+        assert response.status_code == 200
+        assert response.get_json()["item_count"] == 1
+        assert response.get_json()["items"][0]["title"] == "экз_менатор"

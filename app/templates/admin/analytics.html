@@ -148,13 +148,13 @@
                 <div class="table-toolbar">
                     <div>
                         <h3>Упражнения</h3>
-                        <small>Показано {{ content['items']|length }} из {{ content.item_count }}</small>
+                        <small data-exercise-count aria-live="polite">Показано {{ content['items']|length }} из {{ content.item_count }}</small>
                     </div>
-                    {% if content['items'] %}<div class="sort-tabs" role="group" aria-label="Сортировка заданий">
-                        <a{% if filters.exercise_sort == 'accuracy' %} class="is-active"{% endif %} href="{{ url_for('admin.analytics', **sort_queries.accuracy) }}">Сложные</a>
-                        <a{% if filters.exercise_sort == 'wrong' %} class="is-active"{% endif %} href="{{ url_for('admin.analytics', **sort_queries.wrong) }}">По ошибкам</a>
-                        <a{% if filters.exercise_sort == 'skips' %} class="is-active"{% endif %} href="{{ url_for('admin.analytics', **sort_queries.skips) }}">По пропускам</a>
-                    </div>{% endif %}
+                    <div class="sort-tabs" role="group" aria-label="Сортировка заданий" data-exercise-sorts{% if not content['items'] %} hidden{% endif %}>
+                        <a data-exercise-sort="accuracy"{% if filters.exercise_sort == 'accuracy' %} class="is-active"{% endif %} href="{{ url_for('admin.analytics', **sort_queries.accuracy) }}">Сложные</a>
+                        <a data-exercise-sort="wrong"{% if filters.exercise_sort == 'wrong' %} class="is-active"{% endif %} href="{{ url_for('admin.analytics', **sort_queries.wrong) }}">По ошибкам</a>
+                        <a data-exercise-sort="skips"{% if filters.exercise_sort == 'skips' %} class="is-active"{% endif %} href="{{ url_for('admin.analytics', **sort_queries.skips) }}">По пропускам</a>
+                    </div>
                 </div>
                 <form class="exercise-search" method="get" action="{{ url_for('admin.analytics') }}">
                     {% for key, value in search_reset_query.items() %}
@@ -165,11 +165,11 @@
                         <input id="exercise-query" type="search" name="exercise_query" value="{{ exercise_query }}"
                             maxlength="100" placeholder="Например, молоко">
                         <button type="submit">Найти</button>
-                        {% if exercise_query %}<a href="{{ url_for('admin.analytics', **search_reset_query) }}">Сбросить</a>{% endif %}
+                        <a data-search-reset href="{{ url_for('admin.analytics', **search_reset_query) }}"{% if not exercise_query %} hidden{% endif %}>Сбросить</a>
                     </div>
+                    <small class="search-status" data-search-status aria-live="polite"></small>
                 </form>
-                {% if content['items'] %}
-                <div class="table-scroll">
+                <div class="table-scroll" data-exercise-table{% if not content['items'] %} hidden{% endif %}>
                     <table class="responsive-table exercise-table">
                         <thead><tr><th>Задание</th><th>Тип</th><th>Ответов</th><th>Ошибки</th><th>Пропуски</th><th>Точность</th></tr></thead>
                         <tbody data-item-rows>
@@ -186,9 +186,7 @@
                         </tbody>
                     </table>
                 </div>
-                {% else %}
-                <div class="exercise-empty">По этому запросу упражнений не найдено.</div>
-                {% endif %}
+                <div class="exercise-empty" data-exercise-empty{% if content['items'] %} hidden{% endif %}>По этому запросу упражнений не найдено.</div>
             </div>
             {% else %}
             <div class="empty-state">За выбранный период действий по заданиям пока нет.</div>
@@ -205,6 +203,7 @@
         window.analyticsBootstrap = {{ {
             'daily': daily,
             'itemUrl': url_for('admin_api.analytics_item', item_id=0),
+            'exerciseSearchUrl': url_for('admin_api.analytics_exercises'),
             'query': query
         }|tojson }};
     </script>

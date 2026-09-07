@@ -315,6 +315,47 @@ def _item_title(item: PracticeItem) -> str:
     return prompt if len(prompt) <= 90 else f"{prompt[:87]}…"
 
 
+def _compact_search(value: str, *, keep_placeholder: bool = False) -> str:
+    normalized = value.casefold().replace("ё", "е")
+    return "".join(
+        character
+        for character in normalized
+        if character.isalnum() or (keep_placeholder and character == "_")
+    )
+
+
+def _template_contains(query: str, value: str) -> bool:
+    """Match a partial query while treating an exercise blank as one letter."""
+    needle = _compact_search(query)
+    candidate = _compact_search(value, keep_placeholder=True)
+    if not needle:
+        return True
+    if needle in candidate.replace("_", ""):
+        return True
+    if len(needle) > len(candidate):
+        return False
+    return any(
+        all(
+            candidate[start + offset] in {"_", character}
+            for offset, character in enumerate(needle)
+        )
+        for start in range(len(candidate) - len(needle) + 1)
+    )
+
+
+def _exercise_matches(
+    item: PracticeItem,
+    category: str,
+    query: str,
+) -> bool:
+    if _template_contains(query, item.get_prompt()):
+        return True
+    metadata = " ".join((category, item.type, str(item.task_number or "")))
+    return query.casefold().replace("ё", "е") in metadata.casefold().replace(
+        "ё", "е"
+    )
+
+
 def _content_analytics(
     rows,
     *,
@@ -345,13 +386,20 @@ def _content_analytics(
         item = items.get(item_id)
         if item is None:
             continue
+        category = categories.get(item.category_id, "—")
         grouped[(item.type, item.task_number, item.category_id)].extend(values)
+        if exercise_query and not _exercise_matches(
+            item,
+            category,
+            exercise_query,
+        ):
+            continue
         serialized.append({
             "id": item.id,
             "title": _item_title(item),
             "type": item.type,
             "task": item.task_number,
-            "category": categories.get(item.category_id, "—"),
+            "category": category,
             "unique_users": len({row.user_id for row in values}),
             **_counts(values),
         })
@@ -366,17 +414,6 @@ def _content_analytics(
             **_counts(values),
         })
     breakdown.sort(key=lambda value: value["cards"], reverse=True)
-    if exercise_query:
-        query = exercise_query.casefold()
-        serialized = [
-            item for item in serialized
-            if query in " ".join((
-                item["title"],
-                item["category"],
-                item["type"],
-                str(item["task"] or ""),
-            )).casefold()
-        ]
     sort_keys = {
         "accuracy": lambda value: (value["accuracy"], -value["cards"]),
         "wrong": lambda value: (-value["wrong"], value["accuracy"]),
@@ -459,6 +496,19 @@ def build_item_detail(
         ),
         **counts,
         "daily": _daily_series(item_filters, rows),
+    }
+
+
+def build_exercise_results(filters: AnalyticsFilters) -> dict[str, Any]:
+    """Return the small exercise result set used by live search."""
+    content = _content_analytics(
+        _action_rows(filters),
+        exercise_query=filters.exercise_query,
+        exercise_sort=filters.exercise_sort,
+    )
+    return {
+        "items": content["items"],
+        "item_count": content["item_count"],
     }
 
 

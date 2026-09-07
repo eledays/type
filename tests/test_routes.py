@@ -67,6 +67,7 @@ class TestRouteMap(AppTestCase):
             ("/admin/analytics", "GET"),
             ("/admin/analytics.csv", "GET"),
             ("/api/v1/admin/analytics/items/<int:item_id>", "GET"),
+            ("/api/v1/admin/analytics/exercises", "GET"),
         }
         assert expected <= routes
 

@@ -28,6 +28,7 @@ body {
 }
 
 a { color: inherit; }
+[hidden] { display: none !important; }
 
 .analytics-header,
 .analytics-layout {
@@ -243,6 +244,12 @@ td small { display: block; margin-top: 4px; }
 .exercise-search label {
     color: var(--muted-color);
     font-size: .76rem;
+}
+
+.search-status {
+    min-height: 1em;
+    color: var(--muted-color);
+    font-size: .75rem;
 }
 
 .exercise-search > div {

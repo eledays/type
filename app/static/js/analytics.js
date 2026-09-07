@@ -115,27 +115,136 @@
         `.trim();
     }
 
-    document.querySelectorAll("[data-item-id]").forEach((button) => {
-        button.addEventListener("click", async () => {
-            detailContent.innerHTML = "<p>Загрузка…</p>";
-            dialog.showModal();
-            const endpoint = bootstrap.itemUrl.replace("/0", `/${button.dataset.itemId}`);
-            const query = new URLSearchParams(bootstrap.query);
-            try {
-                const response = await fetch(`${endpoint}?${query}`, { headers: { Accept: "application/json" } });
-                if (!response.ok) throw new Error();
-                const item = await response.json();
-                detailContent.innerHTML = detailMarkup(item);
-                detailContent.querySelector("h2").textContent = item.title;
-                const type = item.type === "spelling" ? "Орфография" : "Паронимы";
-                detailContent.querySelector(".detail-meta").textContent = [
-                    type, item.task ? `ЕГЭ ${item.task}` : null, item.category,
-                ].filter(Boolean).join(" · ");
-                const chart = detailContent.querySelector("[data-detail-chart]");
-                renderChart(chart, item.daily, "cards", "#7c5cff");
-            } catch {
-                detailContent.innerHTML = "<p>Не удалось загрузить статистику задания.</p>";
-            }
+    async function openItemDetail(itemId) {
+        detailContent.innerHTML = "<p>Загрузка…</p>";
+        dialog.showModal();
+        const endpoint = bootstrap.itemUrl.replace("/0", `/${itemId}`);
+        const query = new URLSearchParams(bootstrap.query);
+        try {
+            const response = await fetch(`${endpoint}?${query}`, {
+                headers: { Accept: "application/json" },
+            });
+            if (!response.ok) throw new Error();
+            const item = await response.json();
+            detailContent.innerHTML = detailMarkup(item);
+            detailContent.querySelector("h2").textContent = item.title;
+            const type = item.type === "spelling" ? "Орфография" : "Паронимы";
+            detailContent.querySelector(".detail-meta").textContent = [
+                type, item.task ? `ЕГЭ ${item.task}` : null, item.category,
+            ].filter(Boolean).join(" · ");
+            const chart = detailContent.querySelector("[data-detail-chart]");
+            renderChart(chart, item.daily, "cards", "#7c5cff");
+        } catch {
+            detailContent.innerHTML = "<p>Не удалось загрузить статистику задания.</p>";
+        }
+    }
+
+    const exerciseRows = document.querySelector("[data-item-rows]");
+    const exerciseTable = document.querySelector("[data-exercise-table]");
+    const exerciseEmpty = document.querySelector("[data-exercise-empty]");
+    const exerciseCount = document.querySelector("[data-exercise-count]");
+    const exerciseSorts = document.querySelector("[data-exercise-sorts]");
+    const searchForm = document.querySelector(".exercise-search");
+    const searchInput = document.querySelector("#exercise-query");
+    const searchReset = document.querySelector("[data-search-reset]");
+    const searchStatus = document.querySelector("[data-search-status]");
+    let searchTimer = null;
+    let searchRequest = null;
+
+    function appendMetricCell(row, label, value) {
+        const cell = document.createElement("td");
+        cell.dataset.label = label;
+        cell.textContent = value;
+        row.appendChild(cell);
+    }
+
+    function renderExercises(payload) {
+        exerciseRows.replaceChildren();
+        payload.items.forEach((item) => {
+            const row = document.createElement("tr");
+            const titleCell = document.createElement("td");
+            titleCell.dataset.label = "Упражнение";
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "item-link";
+            button.dataset.itemId = item.id;
+            button.textContent = item.title;
+            const metadata = document.createElement("small");
+            metadata.textContent = `${item.category}${item.task ? ` · ЕГЭ ${item.task}` : ""}`;
+            titleCell.append(button, metadata);
+            row.appendChild(titleCell);
+            appendMetricCell(row, "Тип", item.type === "spelling" ? "Орфография" : "Паронимы");
+            appendMetricCell(row, "Ответы", item.answered);
+            appendMetricCell(row, "Ошибки", item.wrong);
+            appendMetricCell(row, "Пропуски", item.skips);
+            appendMetricCell(row, "Точность", `${item.accuracy}%`);
+            exerciseRows.appendChild(row);
         });
+        const hasItems = payload.items.length > 0;
+        exerciseTable.hidden = !hasItems;
+        exerciseEmpty.hidden = hasItems;
+        exerciseSorts.hidden = !hasItems;
+        exerciseCount.textContent = `Показано ${payload.items.length} из ${payload.item_count}`;
+    }
+
+    function updateSearchLinks(params) {
+        document.querySelectorAll("[data-exercise-sort]").forEach((link) => {
+            const linkParams = new URLSearchParams(params);
+            linkParams.set("exercise_sort", link.dataset.exerciseSort);
+            link.href = `${window.location.pathname}?${linkParams}`;
+        });
+        const resetParams = new URLSearchParams(params);
+        resetParams.delete("exercise_query");
+        searchReset.href = `${window.location.pathname}?${resetParams}`;
+    }
+
+    async function searchExercises() {
+        searchRequest?.abort();
+        searchRequest = new AbortController();
+        const params = new URLSearchParams(bootstrap.query);
+        const value = searchInput.value.trim();
+        if (value) params.set("exercise_query", value);
+        else params.delete("exercise_query");
+        searchReset.hidden = !value;
+        searchStatus.textContent = "Ищем…";
+        try {
+            const response = await fetch(`${bootstrap.exerciseSearchUrl}?${params}`, {
+                headers: { Accept: "application/json" },
+                signal: searchRequest.signal,
+            });
+            if (!response.ok) throw new Error();
+            renderExercises(await response.json());
+            bootstrap.query = Object.fromEntries(params);
+            updateSearchLinks(params);
+            window.history.replaceState(null, "", `${window.location.pathname}?${params}`);
+            searchStatus.textContent = "";
+        } catch (error) {
+            if (error.name !== "AbortError") {
+                searchStatus.textContent = "Не удалось выполнить поиск";
+            }
+        }
+    }
+
+    function scheduleSearch() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(searchExercises, 280);
+    }
+
+    searchInput?.addEventListener("input", scheduleSearch);
+    searchForm?.addEventListener("submit", (event) => {
+        event.preventDefault();
+        clearTimeout(searchTimer);
+        searchExercises();
+    });
+    searchReset?.addEventListener("click", (event) => {
+        event.preventDefault();
+        searchInput.value = "";
+        clearTimeout(searchTimer);
+        searchExercises();
+        searchInput.focus();
+    });
+    exerciseRows?.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-item-id]");
+        if (button) openItemDetail(button.dataset.itemId);
     });
 })();
