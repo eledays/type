@@ -8,6 +8,7 @@ def register_blueprints(app: Flask) -> None:
     :return: ``None``.
     """
     from app.routes.admin import bp as admin_api_bp
+    from app.routes.admin import pages_bp as admin_pages_bp
     from app.routes.auth import bp as auth_bp
     from app.routes.legacy import bp as legacy_bp
     from app.routes.practice import api_bp as practice_api_bp
@@ -21,6 +22,7 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(practice_api_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(profile_api_bp)
+    app.register_blueprint(admin_pages_bp)
     app.register_blueprint(admin_api_bp)
     app.register_blueprint(system_bp)
     app.register_blueprint(legacy_bp)

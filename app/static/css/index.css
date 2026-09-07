@@ -860,6 +860,7 @@ body.has-open-panel {
     background: transparent;
     color: #fff;
     text-align: left;
+    text-decoration: none;
 }
 
 .setting-toggle > span:first-child {

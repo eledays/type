@@ -174,6 +174,18 @@
             </button>
         </div>
         {% endif %}
+        {% if user.is_admin %}
+        <div class="panel-section">
+            <h3>Администрирование</h3>
+            <a class="setting-toggle" href="{{ url_for('admin.analytics') }}">
+                <span>
+                    <strong>Перейти в аналитику</strong>
+                    <small>Активность, удержание и задания</small>
+                </span>
+                <span aria-hidden="true">→</span>
+            </a>
+        </div>
+        {% endif %}
         <div class="panel-section">
             <h3>Обратная связь</h3>
             <button class="setting-toggle" type="button" data-open-report="general">

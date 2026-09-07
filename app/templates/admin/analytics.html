@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b0d10">
+    <title>type — Аналитика</title>
+    <script nonce="{{ csp_nonce }}">document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';</script>
+    <link rel="stylesheet" href="{{ style_url }}">
+    <link rel="stylesheet" href="{{ analytics_style_url }}">
+    <link rel="icon" href="{{ favicon_url }}" type="image/x-icon">
+</head>
+<body>
+    <header class="analytics-header">
+        <div>
+            <a class="back-link" href="{{ url_for('practice.index') }}">← В практику</a>
+            <h1>Аналитика</h1>
+            <p>{{ filters.start.strftime('%d.%m.%Y') }} — {{ filters.end.strftime('%d.%m.%Y') }}</p>
+        </div>
+        <a class="export-button" href="{{ url_for('admin.analytics_csv', **query) }}">Скачать CSV</a>
+    </header>
+
+    <main class="analytics-layout">
+        <form class="filter-card" method="get" action="{{ url_for('admin.analytics') }}">
+            <label>Период
+                <select name="period" data-period-select>
+                    {% for value, label in [('7', '7 дней'), ('30', '30 дней'), ('90', '90 дней'), ('365', 'Год'), ('custom', 'Свой период')] %}
+                    <option value="{{ value }}"{% if filters.period == value %} selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="custom-date">С
+                <input type="date" name="start" value="{{ filters.start }}">
+            </label>
+            <label class="custom-date">По
+                <input type="date" name="end" value="{{ filters.end }}">
+            </label>
+            <label>Пользователи
+                <select name="user_type">
+                    <option value="all">Все</option>
+                    <option value="registered"{% if filters.user_type == 'registered' %} selected{% endif %}>Авторизованные</option>
+                    <option value="anonymous"{% if filters.user_type == 'anonymous' %} selected{% endif %}>Анонимные</option>
+                </select>
+            </label>
+            <label>Тип задания
+                <select name="exercise_type">
+                    <option value="all">Все</option>
+                    <option value="spelling"{% if filters.exercise_type == 'spelling' %} selected{% endif %}>Орфография</option>
+                    <option value="paronym"{% if filters.exercise_type == 'paronym' %} selected{% endif %}>Паронимы</option>
+                </select>
+            </label>
+            <label>Задание ЕГЭ
+                <select name="task">
+                    <option value="">Все</option>
+                    {% for task, title in tasks.items() %}
+                    <option value="{{ task }}"{% if filters.task == task %} selected{% endif %}>{{ task }}. {{ title }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Категория
+                <select name="category">
+                    <option value="">Все</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}"{% if filters.category == category.id %} selected{% endif %}>{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <button type="submit">Применить</button>
+        </form>
+
+        <section aria-labelledby="overview-title">
+            <div class="section-heading">
+                <div><span>Обзор</span><h2 id="overview-title">Общая сводка</h2></div>
+                    <small>По ответам и пропускам · администраторы исключены</small>
+            </div>
+            <div class="metric-grid metric-grid--primary">
+                <article class="metric"><span>Пользователей</span><strong>{{ summary.total_users }}</strong><small>{{ summary.registered_users }} авторизованных · {{ summary.anonymous_users }} анонимных</small></article>
+                <article class="metric accent"><span>Активных за период</span><strong>{{ summary.active_users }}</strong><small>DAU {{ summary.dau }} · WAU {{ summary.wau }} · MAU {{ summary.mau }}</small></article>
+                <article class="metric"><span>Карточек пройдено</span><strong>{{ summary.cards }}</strong><small>{{ summary.cards_per_user }} на активного пользователя</small></article>
+                <article class="metric"><span>Точность</span><strong>{{ summary.accuracy }}%</strong><small>{{ summary.right }} верно · {{ summary.wrong }} ошибок · {{ summary.skips }} пропусков</small></article>
+            </div>
+            <div class="metric-grid">
+                <article class="metric"><span>Активное время</span><strong>{{ format_duration(summary.active_seconds) }}</strong><small>{{ format_duration(summary.avg_active_seconds) }} в среднем на пользователя</small></article>
+                <article class="metric"><span>Сессии</span><strong>{{ summary.sessions }}</strong><small>Средняя — {{ format_duration(summary.avg_session_seconds) }}</small></article>
+                <article class="metric"><span>Новые</span><strong>{{ summary.new_users }}</strong><small>{{ summary.returning_users }} вернувшихся пользователей</small></article>
+                <article class="metric"><span>Активные дни</span><strong>{{ summary.avg_active_days }}</strong><small>В среднем на активного пользователя</small></article>
+                <article class="metric"><span>Конверсия во вход</span><strong>{{ summary.conversion_rate }}%</strong><small>{{ summary.conversions }} новых профилей авторизовались</small></article>
+            </div>
+        </section>
+
+        <section aria-labelledby="trend-title">
+            <div class="section-heading"><div><span>Динамика</span><h2 id="trend-title">Активность по дням</h2></div></div>
+            <div class="chart-grid">
+                <article class="chart-card"><h3>Активные пользователи</h3><div class="chart" data-chart="active_users" data-color="#7c5cff"></div></article>
+                <article class="chart-card"><h3>Пройденные карточки</h3><div class="chart" data-chart="cards" data-color="#22c55e"></div></article>
+                <article class="chart-card"><h3>Точность, %</h3><div class="chart" data-chart="accuracy" data-color="#f59e0b"></div></article>
+            </div>
+        </section>
+
+        <section aria-labelledby="retention-title">
+            <div class="section-heading">
+                <div><span>Вовлечённость</span><h2 id="retention-title">Удержание</h2></div>
+                <small>Доля новых пользователей, вернувшихся к практике в указанный день</small>
+            </div>
+            <div class="retention-grid">
+                {% for key, label in [('d1', 'D1'), ('d7', 'D7'), ('d30', 'D30')] %}
+                {% set item = summary.retention[key] %}
+                <article class="retention-card">
+                    <div><span>{{ label }}</span><strong>{{ item.percent }}%</strong></div>
+                    <div class="retention-track"><i style="width: {{ item.percent }}%"></i></div>
+                    <small>{{ item.retained }} из {{ item.cohort }}</small>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section aria-labelledby="content-title">
+            <div class="section-heading">
+                <div><span>Контент</span><h2 id="content-title">Аналитика заданий</h2></div>
+                <small>Нажмите на конкретное задание для подробностей</small>
+            </div>
+            {% if content.breakdown %}
+            <div class="table-card">
+                <h3>По группам</h3>
+                <div class="table-scroll">
+                    <table class="responsive-table">
+                        <thead><tr><th>Тип</th><th>ЕГЭ</th><th>Категория</th><th>Пользователи</th><th>Карточки</th><th>Верно</th><th>Ошибки</th><th>Пропуски</th><th>Точность</th></tr></thead>
+                        <tbody>
+                        {% for row in content.breakdown %}
+                        <tr>
+                            <td data-label="Тип">{{ 'Орфография' if row.type == 'spelling' else 'Паронимы' }}</td>
+                            <td data-label="ЕГЭ">{{ row.task or '—' }}</td>
+                            <td data-label="Категория">{{ row.category }}</td>
+                            <td data-label="Пользователи">{{ row.unique_users }}</td>
+                            <td data-label="Карточки">{{ row.cards }}</td>
+                            <td data-label="Верно">{{ row.right }}</td>
+                            <td data-label="Ошибки">{{ row.wrong }}</td>
+                            <td data-label="Пропуски">{{ row.skips }}</td>
+                            <td data-label="Точность">{{ row.accuracy }}%</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="table-card item-table-card">
+                <div class="table-toolbar">
+                    <div>
+                        <h3>Упражнения</h3>
+                        <small>Показано {{ content['items']|length }} из {{ content.item_count }}</small>
+                    </div>
+                    {% if content['items'] %}<div class="sort-tabs" role="group" aria-label="Сортировка заданий">
+                        <a{% if filters.exercise_sort == 'accuracy' %} class="is-active"{% endif %} href="{{ url_for('admin.analytics', **sort_queries.accuracy) }}">Сложные</a>
+                        <a{% if filters.exercise_sort == 'wrong' %} class="is-active"{% endif %} href="{{ url_for('admin.analytics', **sort_queries.wrong) }}">По ошибкам</a>
+                        <a{% if filters.exercise_sort == 'skips' %} class="is-active"{% endif %} href="{{ url_for('admin.analytics', **sort_queries.skips) }}">По пропускам</a>
+                    </div>{% endif %}
+                </div>
+                <form class="exercise-search" method="get" action="{{ url_for('admin.analytics') }}">
+                    {% for key, value in search_reset_query.items() %}
+                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                    {% endfor %}
+                    <label for="exercise-query">Поиск по слову или предложению</label>
+                    <div>
+                        <input id="exercise-query" type="search" name="exercise_query" value="{{ exercise_query }}"
+                            maxlength="100" placeholder="Например, молоко">
+                        <button type="submit">Найти</button>
+                        {% if exercise_query %}<a href="{{ url_for('admin.analytics', **search_reset_query) }}">Сбросить</a>{% endif %}
+                    </div>
+                </form>
+                {% if content['items'] %}
+                <div class="table-scroll">
+                    <table class="responsive-table exercise-table">
+                        <thead><tr><th>Задание</th><th>Тип</th><th>Ответов</th><th>Ошибки</th><th>Пропуски</th><th>Точность</th></tr></thead>
+                        <tbody data-item-rows>
+                        {% for item in content['items'] %}
+                        <tr>
+                            <td data-label="Упражнение"><button class="item-link" type="button" data-item-id="{{ item.id }}">{{ item.title }}</button><small>{{ item.category }}{% if item.task %} · ЕГЭ {{ item.task }}{% endif %}</small></td>
+                            <td data-label="Тип">{{ 'Орфография' if item.type == 'spelling' else 'Паронимы' }}</td>
+                            <td data-label="Ответы">{{ item.answered }}</td>
+                            <td data-label="Ошибки">{{ item.wrong }}</td>
+                            <td data-label="Пропуски">{{ item.skips }}</td>
+                            <td data-label="Точность">{{ item.accuracy }}%</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="exercise-empty">По этому запросу упражнений не найдено.</div>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="empty-state">За выбранный период действий по заданиям пока нет.</div>
+            {% endif %}
+        </section>
+    </main>
+
+    <dialog class="detail-dialog" data-detail-dialog>
+        <button class="dialog-close" type="button" data-dialog-close aria-label="Закрыть">×</button>
+        <div data-detail-content><p>Загрузка…</p></div>
+    </dialog>
+
+    <script nonce="{{ csp_nonce }}">
+        window.analyticsBootstrap = {{ {
+            'daily': daily,
+            'itemUrl': url_for('admin_api.analytics_item', item_id=0),
+            'query': query
+        }|tojson }};
+    </script>
+    <script defer src="{{ analytics_script_url }}"></script>
+</body>
+</html>

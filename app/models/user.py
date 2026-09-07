@@ -1,9 +1,19 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from flask_login import UserMixin
-from sqlalchemy import BigInteger, Boolean, Integer, String, event, false
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    DateTime,
+    Integer,
+    String,
+    event,
+    false,
+    func,
+)
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,6 +43,16 @@ class User(UserMixin, db.Model):
     avatar_url: Mapped[str | None] = mapped_column(String(2048))
     is_admin: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=false()
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.now,
+        server_default=func.now(),
+        index=True,
+    )
+    identified_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, index=True
     )
 
     settings: Mapped[Settings] = relationship(

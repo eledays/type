@@ -5,6 +5,20 @@ from app.extensions import limiter
 from app.routes.admin import bp
 from app.security.decorators import admin_required
 from app.services.admin import delete_answer, update_explanation
+from app.services.analytics import build_item_detail, parse_filters
+
+
+@bp.get("/analytics/items/<int:item_id>")
+@admin_required
+def analytics_item(item_id: int):
+    """Return filtered analytics for one practice item."""
+    detail = build_item_detail(item_id, parse_filters(request.args))
+    if detail is None:
+        return jsonify({
+            "error": "item_not_found",
+            "message": "Practice item not found",
+        }), 404
+    return jsonify(detail)
 
 
 @bp.patch("/words/<int:word_id>/explanation")

@@ -1,3 +1,4 @@
+from datetime import datetime
 import hmac
 from typing import Any, cast
 from urllib.parse import urlsplit
@@ -135,6 +136,9 @@ def _merge_yandex_profile(profile: dict[str, Any], yandex_id: str) -> User:
             {Action.user_id: user.id}, synchronize_session=False
         )
         db.session.delete(current_account)
+
+    if user.identified_at is None:
+        user.identified_at = datetime.now()
 
     user.yandex_login = _profile_text(profile, "login", 255)
     user.first_name = _profile_text(profile, "first_name", 255)

@@ -64,6 +64,9 @@ class TestRouteMap(AppTestCase):
             ("/api/v1/reports", "POST"),
             ("/api/v1/admin/words/<int:word_id>/explanation", "PATCH"),
             ("/api/v1/admin/words/<int:word_id>/answers", "DELETE"),
+            ("/admin/analytics", "GET"),
+            ("/admin/analytics.csv", "GET"),
+            ("/api/v1/admin/analytics/items/<int:item_id>", "GET"),
         }
         assert expected <= routes
 
