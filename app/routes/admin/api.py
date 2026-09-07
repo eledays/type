@@ -8,15 +8,26 @@ from app.services.admin import delete_answer, update_explanation
 from app.services.analytics import (
     build_exercise_results,
     build_item_detail,
+    exercise_query_is_valid,
     parse_filters,
 )
 
 
 @bp.get("/analytics/exercises")
+@limiter.limit(
+    lambda: current_app.config["RATE_LIMIT_ANALYTICS_SEARCH"],
+    override_defaults=False,
+)
 @admin_required
 def analytics_exercises():
     """Return up to ten exercises for the live analytics search."""
-    return jsonify(build_exercise_results(parse_filters(request.args)))
+    filters = parse_filters(request.args)
+    if not exercise_query_is_valid(filters.exercise_query):
+        return jsonify({
+            "error": "query_too_short",
+            "message": "Use at least two letters or digits",
+        }), 400
+    return jsonify(build_exercise_results(filters))
 
 
 @bp.get("/analytics/items/<int:item_id>")

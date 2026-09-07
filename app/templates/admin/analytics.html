@@ -163,7 +163,7 @@
                     <label for="exercise-query">Поиск по слову или предложению</label>
                     <div>
                         <input id="exercise-query" type="search" name="exercise_query" value="{{ exercise_query }}"
-                            maxlength="100" placeholder="Например, молоко">
+                            minlength="2" maxlength="100" placeholder="Например, молоко">
                         <button type="submit">Найти</button>
                         <a data-search-reset href="{{ url_for('admin.analytics', **search_reset_query) }}"{% if not exercise_query %} hidden{% endif %}>Сбросить</a>
                     </div>

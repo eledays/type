@@ -47,6 +47,7 @@ class TestConfig(AppTestCase):
         assert exported["SECRET_KEY"] == TEST_SECRET
         assert exported["RATELIMIT_DEFAULT"] == "300 per minute"
         assert exported["RATELIMIT_APPLICATION"] == "3000 per hour"
+        assert exported["RATE_LIMIT_ANALYTICS_SEARCH"] == "60 per minute"
         assert exported["RATELIMIT_HEADERS_ENABLED"]
         assert exported["TRUSTED_PROXY_COUNT"] == 0
         assert exported["MAX_CONTENT_LENGTH"] == 65_536

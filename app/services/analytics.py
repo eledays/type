@@ -473,6 +473,11 @@ def _item_title(item: PracticeItem) -> str:
     return prompt if len(prompt) <= 90 else f"{prompt[:87]}…"
 
 
+def exercise_query_is_valid(value: str) -> bool:
+    """Accept empty searches or queries with at least two letters/digits."""
+    return not value.strip() or len(_compact_search(value)) >= 2
+
+
 def _compact_search(value: str, *, keep_placeholder: bool = False) -> str:
     normalized = value.casefold().replace("ё", "е")
     return "".join(
@@ -558,6 +563,7 @@ def _serialized_items(
         serialized.append({
             "id": item.id,
             "title": _item_title(item),
+            "full_title": item.get_prompt().strip(),
             "type": item.type,
             "task": item.task_number,
             "category": category,

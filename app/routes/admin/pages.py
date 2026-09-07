@@ -12,6 +12,7 @@ from app.security.decorators import admin_required
 from app.services.analytics import (
     build_dashboard,
     build_item_export,
+    exercise_query_is_valid,
     parse_filters,
 )
 
@@ -37,6 +38,12 @@ def _format_duration(seconds: int | float) -> str:
 def analytics():
     """Render the private product and learning analytics dashboard."""
     filters = parse_filters(request.args)
+    if not exercise_query_is_valid(filters.exercise_query):
+        filters = parse_filters({
+            key: value
+            for key, value in request.args.items()
+            if key != "exercise_query"
+        })
     dashboard = build_dashboard(filters)
     query = filters.as_query()
     return render_template(
@@ -86,10 +93,10 @@ def analytics_csv():
     for item in build_item_export(filters):
         writer.writerow([
             item["id"],
-            item["title"],
-            item["type"],
+            _csv_safe(item["full_title"]),
+            _csv_safe(item["type"]),
             item["task"] or "",
-            item["category"],
+            _csv_safe(item["category"]),
             item["unique_users"],
             item["cards"],
             item["right"],
@@ -103,3 +110,12 @@ def analytics_csv():
         mimetype="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+def _csv_safe(value: object) -> object:
+    """Prevent spreadsheet programs from evaluating exported text as formulas."""
+    if not isinstance(value, str) or not value:
+        return value
+    if value[0] in {"=", "+", "-", "@", "\t", "\r"}:
+        return f"'{value}"
+    return value

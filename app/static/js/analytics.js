@@ -227,7 +227,16 @@
 
     function scheduleSearch() {
         clearTimeout(searchTimer);
-        searchTimer = setTimeout(searchExercises, 280);
+        const value = searchInput.value.trim();
+        const searchable = value.normalize("NFKC").match(/[\p{L}\p{N}]/gu) || [];
+        if (value && searchable.length < 2) {
+            searchRequest?.abort();
+            searchReset.hidden = false;
+            searchStatus.textContent = "Введите минимум 2 буквы или цифры";
+            return;
+        }
+        searchStatus.textContent = value ? "Ищем…" : "";
+        searchTimer = setTimeout(searchExercises, 350);
     }
 
     searchInput?.addEventListener("input", scheduleSearch);

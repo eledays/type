@@ -1,4 +1,6 @@
+import csv
 from datetime import date, datetime, time, timedelta, timezone
+from io import StringIO
 
 from app.extensions import db
 from app.models import Action, User
@@ -197,6 +199,37 @@ class TestAnalytics(AppTestCase):
         assert response.status_code == 200
         assert response.get_json()["item_count"] == 1
         assert response.get_json()["items"][0]["title"] == "экз_менатор"
+
+    def test_live_search_rejects_short_or_punctuation_only_queries(self) -> None:
+        self._make_admin()
+        for query in ("а", "___", "!? "):
+            response = self.client.get(
+                "/api/v1/admin/analytics/exercises",
+                query_string={"period": "7", "exercise_query": query},
+            )
+            assert response.status_code == 400
+            assert response.get_json()["error"] == "query_too_short"
+
+    def test_csv_escapes_spreadsheet_formulas(self) -> None:
+        self._make_admin()
+        with self.app.app_context():
+            learner = self.make_user(yandex_id="csv-learner")
+            word = self.make_word(
+                word="+SUM(A1:A2)",
+                category_name="=HYPERLINK(\"https://example.com\")",
+            )
+            db.session.add(Action(
+                user_id=learner.id,
+                practice_item_id=word.id,
+                action=Action.RIGHT_ANSWER,
+            ))
+            db.session.commit()
+
+        response = self.client.get("/admin/analytics.csv?period=7")
+        rows = list(csv.reader(StringIO(response.data.decode("utf-8-sig"))))
+
+        assert rows[1][1] == "'+SUM(A1:A2)"
+        assert rows[1][4].startswith("'=HYPERLINK")
 
     def test_calendar_days_use_configured_timezone(self) -> None:
         with self.app.app_context():

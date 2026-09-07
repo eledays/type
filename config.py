@@ -136,6 +136,11 @@ class AppSettings(BaseSettings):
         validation_alias="RATE_LIMIT_REPORT",
         min_length=1,
     )
+    rate_limit_analytics_search: str = Field(
+        default="60 per minute",
+        validation_alias="RATE_LIMIT_ANALYTICS_SEARCH",
+        min_length=1,
+    )
     rate_limit_storage_uri: str = Field(
         default="memory://",
         validation_alias="RATE_LIMIT_STORAGE_URI",
@@ -298,6 +303,7 @@ class AppSettings(BaseSettings):
         "rate_limit_auth",
         "rate_limit_mutation",
         "rate_limit_report",
+        "rate_limit_analytics_search",
     )
     @classmethod
     def validate_rate_limit(cls, value: str) -> str:
@@ -360,6 +366,9 @@ class AppSettings(BaseSettings):
             "RATE_LIMIT_AUTH": self.rate_limit_auth,
             "RATE_LIMIT_MUTATION": self.rate_limit_mutation,
             "RATE_LIMIT_REPORT": self.rate_limit_report,
+            "RATE_LIMIT_ANALYTICS_SEARCH": (
+                self.rate_limit_analytics_search
+            ),
             "TRUSTED_PROXY_COUNT": self.trusted_proxy_count,
             "SESSION_COOKIE_SECURE": secure_cookies,
             "SESSION_COOKIE_HTTPONLY": True,
