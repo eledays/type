@@ -3,3 +3,4 @@
 beautifulsoup4==4.13.4
 soupsieve==2.9.0
 pytest>=8.0,<10
+selenium==4.47.0
