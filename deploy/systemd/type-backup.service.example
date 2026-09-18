@@ -1,5 +1,5 @@
 [Unit]
-Description=Create and verify a type PostgreSQL backup
+Description=Back up type PostgreSQL, verify restore, and enforce data retention
 Requires=docker.service
 After=docker.service
 

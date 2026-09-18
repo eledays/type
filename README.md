@@ -171,6 +171,18 @@ npm run check:static
 
 ## Проверки
 
+Прямые production-зависимости задаются в `requirements.in`, а полностью
+зафиксированный граф с хешами хранится в `requirements.txt`. При плановом
+обновлении установите `pip-tools==7.5.2`, измените `requirements.in` и
+пересоберите lock-файл:
+
+```bash
+pip-compile --generate-hashes --allow-unsafe --strip-extras \
+  --no-annotate --no-header --output-file requirements.txt requirements.in
+```
+
+Production-образ устанавливает зависимости с `--require-hashes`.
+
 Основной набор (SQLite и тест браузерной логики через Node.js):
 
 ```bash
@@ -221,7 +233,9 @@ python parsing_paronyms/parser_sentence.py sentence.txt --url TEST_URL
 ```
 
 Перед релизом отдельно примените миграции и запустите PostgreSQL-проверки на
-той же основной версии PostgreSQL, которая используется в production.
+той же основной версии PostgreSQL, которая используется в production. В
+production Compose миграции выполняет одноразовый сервис `migrate`, и `app`
+запускается только после его успешного завершения.
 
 ## Архитектура
 

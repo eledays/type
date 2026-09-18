@@ -1,5 +1,5 @@
 [Unit]
-Description=Run the type PostgreSQL backup every day
+Description=Run daily type backup, restore verification, and retention cleanup
 
 [Timer]
 OnCalendar=*-*-* 03:15:00

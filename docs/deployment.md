@@ -28,11 +28,13 @@ cp .env.production.example .env.production
 chmod 600 .env.production
 openssl rand -hex 32
 openssl rand -hex 32
+openssl rand -hex 32
 ```
 
 Set `DOMAIN` to the public hostname and `APP_BIND_IP` to the private/VPN
-address of the application server. Use different generated values for
-`SECRET_KEY` and `POSTGRES_PASSWORD`. Register this exact Yandex OAuth callback:
+address of the application server. Use three different generated values for
+`SECRET_KEY`, `POSTGRES_PASSWORD`, and `METRICS_TOKEN`. Register this exact
+Yandex OAuth callback:
 
 ```text
 https://<DOMAIN>/auth/yandex/callback
@@ -53,9 +55,16 @@ migration, backup, and restore checks before deployment.
 
 Python's direct dependencies are declared in `requirements.in`; the generated
 `requirements.txt` locks the complete dependency graph with package hashes.
-Regenerate it with `pip-compile --generate-hashes requirements.in` during a
-planned upgrade. The image build uses `--require-hashes` and fails if an
-artifact differs from the reviewed lock file.
+During a planned upgrade, install `pip-tools==7.5.2` in the maintenance
+environment and regenerate the lock file with:
+
+```bash
+pip-compile --generate-hashes --allow-unsafe --strip-extras \
+  --no-annotate --no-header --output-file requirements.txt requirements.in
+```
+
+The image build uses `--require-hashes` and fails if an artifact differs from
+the reviewed lock file.
 
 Allow `${APP_PORT}` through the application-server firewall only from the
 Apache server. The connection must use a trusted private network or VPN; do not
@@ -122,7 +131,8 @@ scripts/restore_test_postgres.sh
 ```
 
 Install the example systemd service and timer from `deploy/systemd/` for a
-daily backup followed by an automatic restore test.
+daily backup followed by an automatic restore test and cleanup of expired
+anonymous profiles. Cleanup runs only if both backup steps succeed.
 
 ## Deploying updates
 
@@ -137,9 +147,10 @@ scripts/compose_production.sh up --detach
 scripts/compose_production.sh ps
 ```
 
-The application entrypoint applies Alembic migrations before Gunicorn starts.
-Check container logs, the origin readiness endpoint, and the external HTTPS
-endpoint after every deployment.
+The separate one-shot `migrate` service applies Alembic migrations, and the
+`app` service starts Gunicorn only after that service succeeds. Check service
+logs, the origin readiness endpoint, and the external HTTPS endpoint after
+every deployment.
 
 Never run `docker compose down --volumes` in production. It removes PostgreSQL
 and Redis data volumes.

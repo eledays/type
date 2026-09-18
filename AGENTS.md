@@ -14,7 +14,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Copy `.env.example` to `.env`, set a secret of at least 16 characters, then use:
+Copy `.env.example` to `.env`, set a secret of at least 32 characters, then use:
 
 - `flask --app app db upgrade` — apply Alembic migrations.
 - `flask --app app csv_to_db fixtures/test_words.csv` — load development data.

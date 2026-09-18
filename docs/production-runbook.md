@@ -121,11 +121,12 @@ cp .env.production.example .env.production
 chmod 600 .env.production
 openssl rand -hex 32
 openssl rand -hex 32
+openssl rand -hex 32
 nano .env.production
 ```
 
-Два вызова OpenSSL должны дать разные значения для `SECRET_KEY` и
-`POSTGRES_PASSWORD`.
+Три вызова OpenSSL должны дать разные значения для `SECRET_KEY`,
+`POSTGRES_PASSWORD` и `METRICS_TOKEN`.
 
 Пример готового файла:
 
@@ -138,12 +139,17 @@ SECRET_KEY=вставьте-первый-сгенерированный-секр
 POSTGRES_DB=type
 POSTGRES_USER=type
 POSTGRES_PASSWORD=вставьте-второй-сгенерированный-секрет
+METRICS_TOKEN=вставьте-третий-сгенерированный-секрет
 
 YANDEX_CLIENT_ID=идентификатор-приложения
 YANDEX_CLIENT_SECRET=секрет-приложения
 
 LEGAL_OPERATOR_NAME=полное наименование организации или ФИО ИП/физлица
 LEGAL_CONTACT_EMAIL=privacy@example.com
+
+ANONYMOUS_RETENTION_DAYS=90
+BACKUP_RETENTION_DAYS=30
+BACKUP_MIRROR_DIR=/mnt/type-backups
 ```
 
 Правила:
@@ -151,6 +157,9 @@ LEGAL_CONTACT_EMAIL=privacy@example.com
 - `DOMAIN` — публичный домен без `https://` и пути;
 - `APP_BIND_IP` — приватный/VPN IP именно сервера приложения;
 - `APP_PORT` — порт, к которому будет подключаться Apache;
+- `METRICS_TOKEN` — отдельный случайный секрет для доступа к `/metrics`;
+- `BACKUP_MIRROR_DIR` — смонтированное и доступное на запись хранилище вне
+  сервера приложения;
 - `LEGAL_OPERATOR_NAME` и `LEGAL_CONTACT_EMAIL` —
   реальные публичные реквизиты оператора персональных данных; без них
   production-контейнер не запускается;
@@ -391,7 +400,8 @@ sudo chmod 755 /etc/letsencrypt/renewal-hooks/deploy/reload-apache.sh
 
 ## 11. Загрузить данные
 
-Миграции применяются автоматически перед запуском Gunicorn. Новая база будет
+Миграции применяет отдельный одноразовый сервис `migrate`; сервис `app` и
+Gunicorn запускаются только после его успешного завершения. Новая база будет
 пустой. Тестовый набор можно загрузить так:
 
 ```bash
@@ -535,9 +545,14 @@ hop (`TRUSTED_PROXY_COUNT=1`). Origin-порт нельзя открывать �
 - [ ] Порт origin доступен только с IP Apache.
 - [ ] PostgreSQL и Redis не публикуют порты.
 - [ ] `.env.production` имеет права `600` и не попал в Git.
+- [ ] Для `SECRET_KEY`, `POSTGRES_PASSWORD` и `METRICS_TOKEN` заданы разные
+  случайные значения.
 - [ ] Apache передаёт `Host`, `X-Forwarded-For` и `X-Forwarded-Proto`.
 - [ ] `/health/live` и `/health/ready` возвращают `200` через HTTPS.
+- [ ] `/metrics` без токена недоступен, а с `METRICS_TOKEN` возвращает метрики.
 - [ ] HTTP перенаправляется на HTTPS.
 - [ ] Callback Яндекс OAuth совпадает с production URL.
 - [ ] Certbot timer работает на Apache-сервере.
 - [ ] Backup хранится за пределами сервера приложения.
+- [ ] `type-backup.timer` активен; последний backup и restore-test успешны.
+- [ ] Очистка анонимных профилей запускается после успешной проверки backup.
