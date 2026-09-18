@@ -1,0 +1,13 @@
+[Unit]
+Description=Create and verify a type PostgreSQL backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=type
+Group=type
+WorkingDirectory=/opt/type
+EnvironmentFile=-/etc/type-backup.env
+ExecStart=/opt/type/scripts/backup_postgres.sh
+ExecStart=/opt/type/scripts/restore_test_postgres.sh

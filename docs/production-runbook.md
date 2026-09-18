@@ -419,8 +419,27 @@ scripts/compose_production.sh exec -T app \
   flask --app app cleanup_anonymous
 ```
 
-Dump появится в `backups/`. Регулярно копируйте его на другую машину или в
-объектное хранилище.
+Dump появится в `backups/`. Скрипт сначала проверяет его через
+`pg_restore --list`, публикует файл атомарно и удаляет локальные копии старше
+`BACKUP_RETENTION_DAYS` (по умолчанию 30 дней). `BACKUP_MIRROR_DIR` создаёт
+дополнительную копию на подключённом удалённом диске, а
+`BACKUP_AGE_RECIPIENT` включает шифрование через `age`.
+
+Проверить восстановление без остановки приложения:
+
+```bash
+scripts/restore_test_postgres.sh
+```
+
+Команда создаёт временную БД с уникальным именем, восстанавливает последний
+dump, проверяет таблицу Alembic и всегда удаляет тестовую БД. Для ежедневного
+запуска установите примеры `deploy/systemd/type-backup.{service,timer}.example`
+в `/etc/systemd/system/`, задайте `/etc/type-backup.env`, затем включите timer:
+
+```bash
+sudo systemctl enable --now type-backup.timer
+systemctl list-timers type-backup.timer
+```
 
 Никогда не выполняйте в production:
 

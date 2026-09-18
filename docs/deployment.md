@@ -102,19 +102,16 @@ Create a permission-restricted custom-format dump:
 scripts/backup_postgres.sh
 ```
 
-Copy backups outside the application server. Periodically test restoration in
-a dedicated database:
+The script validates the dump, rotates local copies after 30 days by default,
+and optionally mirrors it to `BACKUP_MIRROR_DIR` or encrypts it for an age
+recipient. Test restoration in a disposable dedicated database with:
 
 ```bash
-scripts/compose_production.sh exec -T postgres \
-  createdb -U type type_restore_test
-
-scripts/compose_production.sh exec -T postgres pg_restore \
-  -U type -d type_restore_test --no-owner --no-privileges \
-  < backups/<backup-file>.dump
+scripts/restore_test_postgres.sh
 ```
 
-Drop only the dedicated restore-test database after checking it.
+Install the example systemd service and timer from `deploy/systemd/` for a
+daily backup followed by an automatic restore test.
 
 ## Deploying updates
 

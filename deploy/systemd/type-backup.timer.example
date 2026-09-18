@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the type PostgreSQL backup every day
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+Persistent=true
+RandomizedDelaySec=20m
+Unit=type-backup.service
+
+[Install]
+WantedBy=timers.target
