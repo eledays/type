@@ -161,6 +161,7 @@ scripts/build_static.sh
 Основной набор (SQLite и тест браузерной логики через Node.js):
 
 ```bash
+pip install -r requirements-test.txt
 pytest
 ```
 
@@ -178,6 +179,13 @@ pytest -m postgres
 ```bash
 pip install -r requirements-audit.txt
 scripts/check_security.sh
+```
+
+Зависимости одноразовых скриптов сбора исходных данных устанавливаются
+отдельно и не входят в production-образ:
+
+```bash
+pip install -r requirements-scraping.txt
 ```
 
 Все эти проверки, включая применение миграций к PostgreSQL 17, также описаны

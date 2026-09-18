@@ -1,5 +1,4 @@
 alembic==1.15.2
-beautifulsoup4==4.13.4
 blinker==1.9.0
 certifi==2026.2.25
 charset-normalizer==3.4.2
@@ -26,14 +25,10 @@ pydantic-settings==2.15.0
 psycopg[binary]==3.2.10
 requests==2.33.0
 redis==7.4.1
-selenium==4.47.0
-soupsieve==2.8.4
 sqlalchemy==2.0.40
 urllib3==2.7.0
 werkzeug==3.1.6
 wrapt==2.3.0
 wtforms==3.2.1
 zipp==3.21.0
-tqdm~=4.67.1
 pymorphy3~=2.0.4
-pytest>=8.0,<10

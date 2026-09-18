@@ -37,7 +37,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: pip install -r requirements.txt -r requirements-audit.txt
+      - run: pip install -r requirements-test.txt -r requirements-audit.txt
       - run: flask --app app db upgrade
       - run: pytest
       - run: scripts/check_security.sh

@@ -1,0 +1,6 @@
+-r requirements.txt
+
+beautifulsoup4==4.13.4
+selenium==4.47.0
+soupsieve==2.9.0
+tqdm~=4.67.1
