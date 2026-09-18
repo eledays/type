@@ -40,7 +40,7 @@ jobs:
       - run: pip install -r requirements-test.txt -r requirements-audit.txt
       - run: flask --app app db upgrade
       - run: ruff check .
-      - run: mypy app
+      - run: mypy app parsing/parse.py parsing/to_csv.py parsing_paronyms/parser_sentence.py
       - run: coverage run -m pytest
       - run: coverage report
       - run: scripts/check_security.sh

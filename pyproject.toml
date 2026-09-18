@@ -1,7 +1,7 @@
 [tool.ruff]
 target-version = "py312"
 line-length = 88
-exclude = ["app/static/js/feed.min.js", "parsing", "parsing_paronyms"]
+exclude = ["app/static/js/feed.min.js"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
@@ -17,7 +17,7 @@ ignore_missing_imports = true
 no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
-exclude = ["migrations/", "parsing/", "parsing_paronyms/"]
+exclude = ["migrations/"]
 
 [[tool.mypy.overrides]]
 module = "app.models.*"

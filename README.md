@@ -171,7 +171,7 @@ pytest
 ```bash
 pip install -r requirements-audit.txt
 ruff check .
-mypy app
+mypy app parsing/parse.py parsing/to_csv.py parsing_paronyms/parser_sentence.py
 coverage run -m pytest
 coverage report
 ```
@@ -197,6 +197,15 @@ scripts/check_security.sh
 
 ```bash
 pip install -r requirements-scraping.txt
+```
+
+Скрипты сбора данных запускаются только вручную и требуют явных путей,
+поэтому импорт модулей не открывает браузер и не перезаписывает файлы:
+
+```bash
+python parsing/parse.py SOURCE.txt RESOLVED.txt ERRORS.txt
+python parsing/to_csv.py SOURCE_DIRECTORY words.csv
+python parsing_paronyms/parser_sentence.py sentence.txt --url TEST_URL
 ```
 
 Все эти проверки, включая применение миграций к PostgreSQL 17, также описаны
