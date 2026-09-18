@@ -81,13 +81,13 @@ class TestAnalytics(AppTestCase):
             dashboard = build_dashboard(filters)
 
         summary = dashboard["summary"]
-        assert summary["right"] == 3
-        assert summary["wrong"] == 1
-        assert summary["skips"] == 1
-        assert summary["accuracy"] == 75.0
-        assert summary["sessions"] == 4
-        assert summary["active_seconds"] == 1200
-        assert summary["retention"]["d1"]["retained"] == 1
+        assert summary["right"] == 2
+        assert summary["wrong"] == 0
+        assert summary["skips"] == 0
+        assert summary["accuracy"] == 100.0
+        assert summary["sessions"] == 2
+        assert summary["active_seconds"] == 0
+        assert summary["retention"]["d1"]["retained"] == 0
         assert summary["retention"]["d7"]["retained"] == 1
         assert summary["retention"]["d30"]["retained"] == 1
         assert summary["conversions"] == 1
@@ -115,6 +115,47 @@ class TestAnalytics(AppTestCase):
         assert dashboard["summary"]["audience_label"] == (
             "Авторизованные к концу периода"
         )
+
+    def test_user_type_is_evaluated_at_action_time(self) -> None:
+        with self.app.app_context():
+            learner = self.make_user(
+                yandex_id="identified-later",
+                created_at=datetime(2026, 1, 1, 10),
+                identified_at=datetime(2026, 1, 2, 10),
+            )
+            word = self.make_word()
+            db.session.add_all([
+                Action(
+                    user_id=learner.id,
+                    practice_item_id=word.id,
+                    action=Action.RIGHT_ANSWER,
+                    datetime=datetime(2026, 1, 1, 12),
+                ),
+                Action(
+                    user_id=learner.id,
+                    practice_item_id=word.id,
+                    action=Action.WRONG_ANSWER,
+                    datetime=datetime(2026, 1, 2, 12),
+                ),
+            ])
+            db.session.commit()
+            registered = build_dashboard(parse_filters({
+                "period": "custom",
+                "start": "2026-01-01",
+                "end": "2026-01-02",
+                "user_type": "registered",
+            }))
+            anonymous = build_dashboard(parse_filters({
+                "period": "custom",
+                "start": "2026-01-01",
+                "end": "2026-01-02",
+                "user_type": "anonymous",
+            }))
+
+        assert registered["summary"]["right"] == 0
+        assert registered["summary"]["wrong"] == 1
+        assert anonymous["summary"]["right"] == 1
+        assert anonymous["summary"]["wrong"] == 0
 
     def test_filters_item_detail_and_csv(self) -> None:
         self._make_admin()
@@ -262,6 +303,56 @@ class TestAnalytics(AppTestCase):
         )
         assert dashboard["daily"][0]["date"] == "2026-01-02"
         assert dashboard["daily"][0]["right"] == 1
+
+    def test_sqlite_calendar_days_follow_dst_per_timestamp(self) -> None:
+        self.app.config["ANALYTICS_TIMEZONE"] = "Europe/Berlin"
+        with self.app.app_context():
+            learner = self.make_user(yandex_id="dst-learner")
+            word = self.make_word()
+            db.session.add(Action(
+                user_id=learner.id,
+                practice_item_id=word.id,
+                action=Action.RIGHT_ANSWER,
+                datetime=datetime(2026, 3, 29, 22, 30, tzinfo=timezone.utc),
+            ))
+            db.session.commit()
+            dashboard = build_dashboard(parse_filters({
+                "period": "custom",
+                "start": "2026-03-29",
+                "end": "2026-03-30",
+            }))
+
+        assert dashboard["daily"][0]["right"] == 0
+        assert dashboard["daily"][1]["right"] == 1
+
+    def test_session_boundary_uses_previous_action(self) -> None:
+        with self.app.app_context():
+            learner = self.make_user(yandex_id="boundary-learner")
+            word = self.make_word()
+            db.session.add_all([
+                Action(
+                    user_id=learner.id,
+                    practice_item_id=word.id,
+                    action=Action.RIGHT_ANSWER,
+                    datetime=datetime(2026, 1, 1, 20, 50),
+                ),
+                Action(
+                    user_id=learner.id,
+                    practice_item_id=word.id,
+                    action=Action.RIGHT_ANSWER,
+                    datetime=datetime(2026, 1, 1, 21, 10),
+                ),
+            ])
+            db.session.commit()
+            summary = build_dashboard(parse_filters({
+                "period": "custom",
+                "start": "2026-01-02",
+                "end": "2026-01-02",
+            }))["summary"]
+
+        assert summary["cards"] == 1
+        assert summary["sessions"] == 0
+        assert summary["active_seconds"] == 1200
 
     def test_exercise_results_use_a_bounded_number_of_queries(self) -> None:
         with self.app.app_context():

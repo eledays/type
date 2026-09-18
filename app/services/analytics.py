@@ -6,7 +6,7 @@ from typing import Any, Mapping
 from zoneinfo import ZoneInfo
 
 from flask import current_app
-from sqlalchemy import String, and_, case, cast, func, or_, select
+from sqlalchemy import Date, String, and_, case, cast, func, or_, select
 
 from app.extensions import db
 from app.models import (
@@ -145,15 +145,32 @@ def _positive_int(value: Any) -> int | None:
     return parsed if parsed > 0 else None
 
 
-def _apply_user_filter(statement, filters: AnalyticsFilters):
+def _effective_identified_at():
+    """Return the historical identification time, including legacy users."""
+    return func.coalesce(
+        User.identified_at,
+        case(
+            (
+                (User.yandex_id.is_not(None))
+                | (User.telegram_id.is_not(None)),
+                User.created_at,
+            ),
+            else_=None,
+        ),
+    )
+
+
+def _apply_user_filter(statement, filters: AnalyticsFilters, at=None):
     statement = statement.where(User.is_admin.is_(False))
+    at = at if at is not None else filters.end_at
+    identified_at = _effective_identified_at()
     if filters.user_type == "registered":
         return statement.where(
-            (User.yandex_id.is_not(None)) | (User.telegram_id.is_not(None))
+            identified_at.is_not(None), identified_at < at
         )
     if filters.user_type == "anonymous":
         return statement.where(
-            User.yandex_id.is_(None), User.telegram_id.is_(None)
+            (identified_at.is_(None)) | (identified_at >= at)
         )
     return statement
 
@@ -174,6 +191,7 @@ def _filtered_actions(
     start_at: datetime | None = None,
     end_at: datetime | None = None,
     item_id: int | None = None,
+    include_before_start: bool = False,
 ):
     statement = (
         select(
@@ -187,11 +205,14 @@ def _filtered_actions(
         .join(PracticeItem, PracticeItem.id == Action.practice_item_id)
         .where(
             Action.action.in_(LEARNING_ACTIONS),
-            Action.datetime >= (start_at or filters.start_at),
             Action.datetime < (end_at or filters.end_at),
         )
     )
-    statement = _apply_user_filter(statement, filters)
+    if not include_before_start:
+        statement = statement.where(
+            Action.datetime >= (start_at or filters.start_at)
+        )
+    statement = _apply_user_filter(statement, filters, Action.datetime)
     statement = _apply_item_filter(statement, filters)
     if item_id is not None:
         statement = statement.where(Action.practice_item_id == item_id)
@@ -237,11 +258,25 @@ def _as_date(value: Any) -> date:
 def _local_day(timestamp, filters: AnalyticsFilters):
     if db.session.get_bind().dialect.name == "postgresql":
         return func.date(func.timezone(filters.timezone_name, timestamp))
-    zone = ZoneInfo(filters.timezone_name)
-    offset = filters.start_at.astimezone(zone).utcoffset() or timedelta()
-    minutes = round(offset.total_seconds() / 60)
-    modifier = f"{minutes:+d} minutes"
-    return func.date(func.datetime(timestamp, modifier))
+    raw_connection = db.session.connection().connection
+    driver_connection = getattr(
+        raw_connection, "driver_connection", raw_connection
+    )
+
+    def local_date(value: Any, timezone_name: str) -> str | None:
+        if value is None:
+            return None
+        parsed = (
+            value
+            if isinstance(value, datetime)
+            else datetime.fromisoformat(str(value))
+        )
+        return ensure_utc(parsed).astimezone(
+            ZoneInfo(timezone_name)
+        ).date().isoformat()
+
+    driver_connection.create_function("local_date", 2, local_date)
+    return func.local_date(timestamp, filters.timezone_name)
 
 
 def _daily_series(
@@ -285,15 +320,20 @@ def _daily_series(
 
 
 def _session_metrics(filters: AnalyticsFilters) -> dict[str, int | float]:
-    actions = _filtered_actions(filters).subquery()
+    actions = _filtered_actions(
+        filters, include_before_start=True
+    ).subquery()
     previous = func.lag(actions.c.datetime).over(
         partition_by=actions.c.user_id,
         order_by=(actions.c.datetime, actions.c.id),
     ).label("previous")
-    timed = select(
+    timed_history = select(
         actions.c.user_id,
         actions.c.datetime,
         previous,
+    ).subquery()
+    timed = select(timed_history).where(
+        timed_history.c.datetime >= filters.start_at
     ).subquery()
     if db.session.get_bind().dialect.name == "sqlite":
         gap = (
@@ -323,12 +363,15 @@ def _session_metrics(filters: AnalyticsFilters) -> dict[str, int | float]:
     sessions = int(totals[1] or 0)
     active_seconds = round(float(totals[2] or 0))
 
-    local_day = _local_day(actions.c.datetime, filters)
+    period_actions = select(actions).where(
+        actions.c.datetime >= filters.start_at
+    ).subquery()
+    local_day = _local_day(period_actions.c.datetime, filters)
     user_days = select(
-        actions.c.user_id,
+        period_actions.c.user_id,
         local_day.label("day"),
     ).group_by(
-        actions.c.user_id,
+        period_actions.c.user_id,
         local_day,
     ).subquery()
     days_per_user = select(
@@ -356,8 +399,9 @@ def _audience_counts(filters: AnalyticsFilters) -> dict[str, int | str]:
         User.is_admin.is_(False),
         User.created_at < filters.end_at,
     )
-    registered_condition = (
-        (User.yandex_id.is_not(None)) | (User.telegram_id.is_not(None))
+    identified_at = _effective_identified_at()
+    registered_condition = identified_at.is_not(None) & (
+        identified_at < filters.end_at
     )
     registered = int(db.session.scalar(
         select(func.count(User.id)).where(
@@ -368,8 +412,7 @@ def _audience_counts(filters: AnalyticsFilters) -> dict[str, int | str]:
     anonymous = int(db.session.scalar(
         select(func.count(User.id)).where(
             *base_conditions,
-            User.yandex_id.is_(None),
-            User.telegram_id.is_(None),
+            (identified_at.is_(None)) | (identified_at >= filters.end_at),
         )
     ) or 0)
     if filters.user_type == "registered":
@@ -390,17 +433,19 @@ def _audience_counts(filters: AnalyticsFilters) -> dict[str, int | str]:
 
 
 def _lifecycle_metrics(filters: AnalyticsFilters) -> dict[str, Any]:
-    users = _users_query(filters).subquery()
-    new_users = db.session.scalar(select(func.count()).select_from(users).where(
-        users.c.created_at >= filters.start_at,
-        users.c.created_at < filters.end_at,
-    )) or 0
-    conversions = db.session.scalar(select(func.count()).select_from(users).where(
-        users.c.created_at >= filters.start_at,
-        users.c.created_at < filters.end_at,
-        users.c.identified_at.is_not(None),
-        users.c.identified_at > users.c.created_at,
-        users.c.identified_at < filters.end_at,
+    new_user_conditions = (
+        User.is_admin.is_(False),
+        User.created_at >= filters.start_at,
+        User.created_at < filters.end_at,
+    )
+    new_users = db.session.scalar(
+        select(func.count(User.id)).where(*new_user_conditions)
+    ) or 0
+    conversions = db.session.scalar(select(func.count(User.id)).where(
+        *new_user_conditions,
+        User.identified_at.is_not(None),
+        User.identified_at > User.created_at,
+        User.identified_at < filters.end_at,
     )) or 0
 
     actions = _filtered_actions(filters).subquery()
@@ -409,49 +454,43 @@ def _lifecycle_metrics(filters: AnalyticsFilters) -> dict[str, Any]:
         .join(User, User.id == actions.c.user_id)
         .where(User.created_at < filters.start_at)
     ) or 0
-    action_days = {
-        (row.user_id, _as_date(row.day))
-        for row in db.session.execute(select(
-            actions.c.user_id,
-            _local_day(actions.c.datetime, filters).label("day"),
-        ).distinct()).all()
-    }
     earliest_cohort = filters.start_at - timedelta(days=30)
-    cohorts = db.session.execute(
-        _users_query(filters)
-        .with_only_columns(User.id, User.created_at)
-        .where(
-            User.created_at >= earliest_cohort,
-            User.created_at < filters.end_at,
-        )
-    ).all()
     retention = {}
+    cohort_day = _local_day(User.created_at, filters)
+    action_day = _local_day(actions.c.datetime, filters)
     for offset in (1, 7, 30):
-        eligible = [
-            row for row in cohorts
-            if filters.start <= (
-                ensure_utc(row.created_at)
-                .astimezone(ZoneInfo(filters.timezone_name))
-                .date()
-                + timedelta(days=offset)
-            ) <= filters.end
-        ]
-        retained = sum(
-            (
-                row.id,
-                ensure_utc(row.created_at)
-                .astimezone(ZoneInfo(filters.timezone_name))
-                .date()
-                + timedelta(days=offset),
+        if db.session.get_bind().dialect.name == "postgresql":
+            target_day = func.cast(cohort_day, Date) + offset
+        else:
+            target_day = func.date(cohort_day, f"+{offset} days")
+        eligible = (
+            select(User.id.label("user_id"), target_day.label("target_day"))
+            .where(
+                User.is_admin.is_(False),
+                User.created_at >= earliest_cohort,
+                User.created_at < filters.end_at,
+                target_day >= filters.start.isoformat(),
+                target_day <= filters.end.isoformat(),
             )
-            in action_days
-            for row in eligible
+            .subquery()
         )
+        cohort_size = int(db.session.scalar(
+            select(func.count()).select_from(eligible)
+        ) or 0)
+        retained = int(db.session.scalar(
+            select(func.count(func.distinct(eligible.c.user_id)))
+            .select_from(eligible)
+            .join(
+                actions,
+                (actions.c.user_id == eligible.c.user_id)
+                & (action_day == eligible.c.target_day),
+            )
+        ) or 0)
         retention[f"d{offset}"] = {
-            "percent": round(retained * 100 / len(eligible), 1)
-            if eligible else 0.0,
+            "percent": round(retained * 100 / cohort_size, 1)
+            if cohort_size else 0.0,
             "retained": retained,
-            "cohort": len(eligible),
+            "cohort": cohort_size,
         }
     return {
         "new_users": int(new_users),
