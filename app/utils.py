@@ -50,15 +50,24 @@ def add_action(
     return action_record, True
 
 
-def get_anonymous_actions_remaining(user: User) -> int | None:
+def get_anonymous_actions_remaining(
+    user: User,
+    *,
+    lock: bool = False,
+) -> int | None:
     """Возвращает остаток анонимной квоты.
 
     :param user: Пользователь, для которого рассчитывается квота.
+    :param lock: Блокировать строку агрегатов до завершения транзакции.
     :return: Остаток действий или ``None`` для зарегистрированного пользователя.
     """
     if not user.is_anonymous_account:
         return None
-    stats = db.session.get(UserPracticeStats, user.id)
+    stats = db.session.get(
+        UserPracticeStats,
+        user.id,
+        with_for_update=lock,
+    )
     used = (
         stats.right_count + stats.wrong_count + stats.skip_count
         if stats is not None

@@ -409,7 +409,7 @@ def check_answer(
     :return: Результат проверки, раскрытый текст и состояние серии.
     :raises PracticeError: Если карточка не найдена или исчерпана квота.
     """
-    anonymous_remaining = _ensure_quota(user)
+    anonymous_remaining = _ensure_quota(user, request_id=request_id)
     item = _get_typed_item(item_id, item_type)
     right_answer = item.get_correct_answer()
     blank = "_______" if item_type == "paronym" else "_"
@@ -488,7 +488,7 @@ def skip_card(
         требуется подтверждение сброса серии.
     """
     _get_typed_item(item_id, item_type)
-    anonymous_remaining = _ensure_quota(user)
+    anonymous_remaining = _ensure_quota(user, request_id=request_id)
     recent_item_ids = _recent_item_ids(user.id)
     if not confirmed and not _can_skip_without_confirmation(
         user, item_id, recent_item_ids
@@ -754,15 +754,21 @@ def _random_window(query, count: int, total: int | None = None) -> list[Any]:
     return query.offset(offset).limit(count).all()
 
 
-def _ensure_quota(user: User) -> int | None:
+def _ensure_quota(user: User, request_id: str | None = None) -> int | None:
     """Проверяет наличие доступного действия у анонимного пользователя.
 
     :param user: Пользователь, для которого проверяется квота.
     :return: Остаток квоты до действия или ``None`` для обычного пользователя.
     :raises PracticeError: Если лимит анонимных действий исчерпан.
     """
-    remaining = get_anonymous_actions_remaining(user)
-    if remaining == 0:
+    remaining = get_anonymous_actions_remaining(user, lock=True)
+    repeated_request = request_id is not None and db.session.scalar(
+        select(Action.id).where(
+            Action.user_id == user.id,
+            Action.request_id == request_id,
+        )
+    ) is not None
+    if remaining == 0 and not repeated_request:
         raise PracticeError(
             "anonymous_limit_reached",
             "Войдите через Яндекс, чтобы продолжить.",

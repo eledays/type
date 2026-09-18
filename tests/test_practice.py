@@ -360,6 +360,27 @@ class TestPracticeApi(AppTestCase):
             assert Action.query.count() == 1
             assert Action.query.one().request_id == "attempt-42"
 
+    def test_idempotent_retry_succeeds_after_quota_is_exhausted(self) -> None:
+        self.app.config["ANONYMOUS_ACTION_LIMIT"] = 1
+        with self.app.app_context():
+            word_id = self.make_word().id
+        payload = {
+            "card_id": word_id,
+            "answer": "о",
+            "card_type": "spelling",
+            "request_id": "last-allowed-attempt",
+        }
+
+        assert self.client.post(
+            "/api/v1/attempts", json=payload
+        ).status_code == 200
+        retry = self.client.post("/api/v1/attempts", json=payload)
+
+        assert retry.status_code == 200
+        assert retry.get_json()["anonymous_remaining"] == 0
+        with self.app.app_context():
+            assert Action.query.count() == 1
+
     def test_request_id_cannot_be_reused_for_another_attempt(self) -> None:
         with self.app.app_context():
             word_id = self.make_word().id
