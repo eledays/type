@@ -104,6 +104,7 @@ def create_attempt():
     card_id = payload.get("card_id")
     answer = payload.get("answer")
     card_type = payload.get("card_type")
+    request_id = payload.get("request_id")
     if not isinstance(card_id, int) or not isinstance(answer, str):
         return jsonify({"error": "invalid_attempt", "message": "Invalid id or answer"}), 400
     if card_type not in {"spelling", "paronym"}:
@@ -111,9 +112,18 @@ def create_attempt():
             "error": "invalid_card_type",
             "message": "Invalid card type",
         }), 400
+    if request_id is not None and (
+        not isinstance(request_id, str) or not 1 <= len(request_id) <= 64
+    ):
+        return jsonify({
+            "error": "invalid_request_id",
+            "message": "Request id must contain between 1 and 64 characters",
+        }), 400
     try:
         user = cast(User, current_user._get_current_object())
-        result = check_answer(user, card_id, answer, card_type)
+        result = check_answer(
+            user, card_id, answer, card_type, request_id=request_id
+        )
     except PracticeError as error:
         return error_response(error)
     return jsonify(result)
@@ -145,11 +155,20 @@ def skip_attempt():
             "message": "Invalid card id",
         }), 400
     card_type = request_payload.get("card_type")
+    request_id = request_payload.get("request_id")
     if card_type not in {"spelling", "paronym"}:
         return jsonify({
             "status": "error",
             "error": "invalid_card_type",
             "message": "Invalid card type",
+        }), 400
+    if request_id is not None and (
+        not isinstance(request_id, str) or not 1 <= len(request_id) <= 64
+    ):
+        return jsonify({
+            "status": "error",
+            "error": "invalid_request_id",
+            "message": "Request id must contain between 1 and 64 characters",
         }), 400
     confirmed = request_payload.get("confirmed", False)
     if not isinstance(confirmed, bool):
@@ -165,6 +184,7 @@ def skip_attempt():
             card_id,
             card_type,
             confirmed=confirmed,
+            request_id=request_id,
         )
     except PracticeError as error:
         payload: dict[str, Any] = {

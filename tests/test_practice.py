@@ -338,6 +338,49 @@ class TestPracticeApi(AppTestCase):
                 action.action for action in Action.query.order_by(Action.id)
             ] == [Action.RIGHT_ANSWER, Action.WRONG_ANSWER]
 
+    def test_repeated_request_id_records_attempt_once(self) -> None:
+        with self.app.app_context():
+            word_id = self.make_word().id
+        payload = {
+            "card_id": word_id,
+            "answer": "о",
+            "card_type": "spelling",
+            "request_id": "attempt-42",
+        }
+
+        first = self.client.post("/api/v1/attempts", json=payload)
+        second = self.client.post("/api/v1/attempts", json=payload)
+
+        assert first.status_code == 200
+        assert second.status_code == 200
+        assert first.get_json()["anonymous_remaining"] == 2
+        assert second.get_json()["anonymous_remaining"] == 2
+        assert second.get_json()["strike"]["n"] == 1
+        with self.app.app_context():
+            assert Action.query.count() == 1
+            assert Action.query.one().request_id == "attempt-42"
+
+    def test_request_id_cannot_be_reused_for_another_attempt(self) -> None:
+        with self.app.app_context():
+            word_id = self.make_word().id
+        base = {
+            "card_id": word_id,
+            "card_type": "spelling",
+            "request_id": "attempt-conflict",
+        }
+        assert self.client.post(
+            "/api/v1/attempts", json=base | {"answer": "о"}
+        ).status_code == 200
+
+        conflict = self.client.post(
+            "/api/v1/attempts", json=base | {"answer": "и"}
+        )
+
+        assert conflict.status_code == 409
+        assert conflict.get_json()["error"] == "idempotency_conflict"
+        with self.app.app_context():
+            assert Action.query.count() == 1
+
     def test_strike_is_counted_when_its_display_is_disabled(self) -> None:
         user_id = self.current_user_id()
         with self.app.app_context():

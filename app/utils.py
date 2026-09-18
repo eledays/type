@@ -1,4 +1,6 @@
 from flask import current_app, session
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.models import Action, User, UserPracticeStats
@@ -8,21 +10,44 @@ def add_action(
     user_id: int,
     action: int,
     practice_item_id: int,
-) -> Action:
+    request_id: str | None = None,
+) -> tuple[Action, bool]:
     """Создаёт действие пользователя над карточкой практики.
 
     :param user_id: Идентификатор пользователя.
     :param action: Код выполненного действия.
     :param practice_item_id: Единый идентификатор карточки практики.
-    :return: Сохранённая запись действия.
+    :param request_id: Идентификатор логического клиентского запроса.
+    :return: Сохранённая запись и признак создания новой строки.
     """
+    if request_id is not None:
+        existing = db.session.scalar(select(Action).where(
+            Action.user_id == user_id,
+            Action.request_id == request_id,
+        ))
+        if existing is not None:
+            return existing, False
+
     action_record = Action()
     action_record.user_id = user_id
     action_record.practice_item_id = practice_item_id
     action_record.action = action
+    action_record.request_id = request_id
     db.session.add(action_record)
-    db.session.commit()
-    return action_record
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        if request_id is None:
+            raise
+        existing = db.session.scalar(select(Action).where(
+            Action.user_id == user_id,
+            Action.request_id == request_id,
+        ))
+        if existing is None:
+            raise
+        return existing, False
+    return action_record, True
 
 
 def get_anonymous_actions_remaining(user: User) -> int | None:

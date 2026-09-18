@@ -352,7 +352,11 @@
             return new Promise((resolve) => setTimeout(resolve, ANIMATION_MS));
         }
 
-        async recordSkip(card, confirmed = false) {
+        requestId() {
+            return window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+        }
+
+        async recordSkip(card, confirmed = false, requestId = this.requestId()) {
             try {
                 const response = await fetch(this.routes.skipAttempt, {
                     method: "POST",
@@ -364,6 +368,7 @@
                         card_id: card.id,
                         card_type: card.type,
                         confirmed,
+                        request_id: requestId,
                     }),
                 });
                 const payload = await response.json();
@@ -375,7 +380,7 @@
                     if (!window.confirm("Если перелистнуть, серия обнулится. Перелистываем?")) {
                         return false;
                     }
-                    return this.recordSkip(card, true);
+                    return this.recordSkip(card, true, requestId);
                 }
                 if (!response.ok) throw new Error(payload.message);
                 this.updateStrike({n: payload.strike, levels: this.strikeLevels});
@@ -403,6 +408,7 @@
                         card_id: this.current.card.id,
                         card_type: this.current.card.type,
                         answer: button.dataset.answer,
+                        request_id: this.requestId(),
                     }),
                 });
                 const payload = await response.json();

@@ -3,7 +3,16 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, case, event
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+    case,
+    event,
+)
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
@@ -18,6 +27,9 @@ if TYPE_CHECKING:
 class Action(db.Model):
     __tablename__ = "action"
     __table_args__ = (
+        UniqueConstraint(
+            "user_id", "request_id", name="uq_action_user_request"
+        ),
         Index("ix_action_user_item", "user_id", "practice_item_id"),
         Index("ix_action_user_datetime", "user_id", "datetime"),
         Index("ix_action_user_action", "user_id", "action"),
@@ -40,6 +52,7 @@ class Action(db.Model):
         ForeignKey("practice_item.id", ondelete="CASCADE"), nullable=False
     )
     action: Mapped[int] = mapped_column(Integer, nullable=False)
+    request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     datetime: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utc_now
     )

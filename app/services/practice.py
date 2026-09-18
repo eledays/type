@@ -398,6 +398,7 @@ def check_answer(
     item_id: int,
     answer: str,
     item_type: str,
+    request_id: str | None = None,
 ) -> dict[str, Any]:
     """Проверяет ответ и сохраняет действие пользователя.
 
@@ -415,12 +416,25 @@ def check_answer(
     full_item = item.get_prompt().replace(blank, right_answer)
     correct = answer == right_answer
     explanation = item.explanation if item_type == "spelling" else None
-    session["strike"] = get_cached_strike(user.id) + 1 if correct else 0
-    add_action(
+    previous_strike = get_cached_strike(user.id)
+    action_record, created = add_action(
         user_id=user.id,
         action=Action.RIGHT_ANSWER if correct else Action.WRONG_ANSWER,
         practice_item_id=item_id,
+        request_id=request_id,
     )
+    expected_action = Action.RIGHT_ANSWER if correct else Action.WRONG_ANSWER
+    if (
+        action_record.practice_item_id != item_id
+        or action_record.action != expected_action
+    ):
+        raise PracticeError(
+            "idempotency_conflict",
+            "Request id was already used for another action",
+            409,
+        )
+    if created:
+        session["strike"] = previous_strike + 1 if correct else 0
     return {
         "correct": correct,
         "full_word": full_item,
@@ -432,7 +446,7 @@ def check_answer(
         "anonymous_remaining": (
             None
             if anonymous_remaining is None
-            else anonymous_remaining - 1
+            else anonymous_remaining - int(created)
         ),
     }
 
@@ -461,6 +475,7 @@ def skip_card(
     item_type: str,
     *,
     confirmed: bool = False,
+    request_id: str | None = None,
 ) -> tuple[int, int | None]:
     """Пропускает карточку и применяет правила серии и квоты.
 
@@ -486,13 +501,20 @@ def skip_card(
     if item_id in recent_item_ids:
         return get_cached_strike(user.id), anonymous_remaining
     session["strike"] = 0
-    add_action(
+    action_record, created = add_action(
         user_id=user.id,
         action=Action.SKIP,
         practice_item_id=item_id,
+        request_id=request_id,
     )
+    if action_record.practice_item_id != item_id or action_record.action != Action.SKIP:
+        raise PracticeError(
+            "idempotency_conflict",
+            "Request id was already used for another action",
+            409,
+        )
     return 0, (
-        None if anonymous_remaining is None else anonymous_remaining - 1
+        None if anonymous_remaining is None else anonymous_remaining - int(created)
     )
 
 
