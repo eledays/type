@@ -110,6 +110,8 @@ class TestConfig(AppTestCase):
         assert exported["TRUSTED_PROXY_COUNT"] == 0
         assert exported["MAX_CONTENT_LENGTH"] == 65_536
         assert exported["ANALYTICS_TIMEZONE"] == "Europe/Moscow"
+        assert exported["LOG_FORMAT"] == "json"
+        assert exported["METRICS_TOKEN"] is None
         assert exported["LEGAL_OPERATOR_NAME"] == "Test operator"
         assert exported["LEGAL_CONSENT_REQUIRED"]
         assert exported["TRUSTED_HOSTS"] == ["type.eleday.ru"]
@@ -183,6 +185,7 @@ class TestConfig(AppTestCase):
                 "LEGAL_OPERATOR_NAME": None,
                 "LEGAL_CONTACT_EMAIL": None,
             },
+            {"SECRET_KEY": TEST_SECRET, "METRICS_TOKEN": "too-short"},
         ):
             with pytest.raises(ValidationError):
                 AppSettings(**values)

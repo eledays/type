@@ -18,8 +18,9 @@ AddOutputFilterByType DEFLATE \
 
 Use multiple Gunicorn workers for concurrent requests and a shared Redis
 backend for rate limits. SQLite is suitable for development and light traffic;
-use PostgreSQL when concurrent writes become regular. Track route p50/p95
-latency and database query duration before changing worker counts.
+use PostgreSQL when concurrent writes become regular. Route throughput,
+status codes and latency histograms are exported at the token-protected
+`/metrics` endpoint; compare p50/p95 before changing worker counts.
 
 The production analytics dashboard caches complete filtered responses in
 Redis for `ANALYTICS_CACHE_SECONDS` (60 seconds by default). Set the value to

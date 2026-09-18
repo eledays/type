@@ -82,6 +82,12 @@ class AppSettings(BaseSettings):
         ge=0,
         le=3600,
     )
+    log_format: Literal["json", "text"] = Field(
+        default="json", validation_alias="LOG_FORMAT"
+    )
+    metrics_token: SecretStr | None = Field(
+        default=None, validation_alias="METRICS_TOKEN"
+    )
 
     # Public legal details. Production must identify the real operator.
     legal_operator_name: str | None = Field(
@@ -215,6 +221,16 @@ class AppSettings(BaseSettings):
             raise ValueError("SECRET_KEY must contain at least 32 characters")
         if any(marker in normalized for marker in ("replace-with", "changeme")):
             raise ValueError("SECRET_KEY must not be a placeholder")
+        return value
+
+    @field_validator("metrics_token")
+    @classmethod
+    def validate_metrics_token(
+        cls, value: SecretStr | None
+    ) -> SecretStr | None:
+        """Require an operator metrics token with enough entropy."""
+        if value is not None and len(value.get_secret_value()) < 24:
+            raise ValueError("METRICS_TOKEN must contain at least 24 characters")
         return value
 
     @field_validator("analytics_timezone")
@@ -389,6 +405,12 @@ class AppSettings(BaseSettings):
             "URL": self.url,
             "ANALYTICS_TIMEZONE": self.analytics_timezone,
             "ANALYTICS_CACHE_SECONDS": self.analytics_cache_seconds,
+            "LOG_FORMAT": self.log_format,
+            "METRICS_TOKEN": (
+                self.metrics_token.get_secret_value()
+                if self.metrics_token is not None
+                else None
+            ),
             "LEGAL_OPERATOR_NAME": (
                 self.legal_operator_name or "Разработчик сервиса type"
             ),

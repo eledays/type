@@ -40,6 +40,10 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     login_manager.login_view = "auth.login"
     login_manager.login_message = None
 
+    from app.observability import configure_observability
+
+    configure_observability(app)
+
     from app.cli import register_commands
     from app.routes import register_blueprints
     from app.security.api_errors import register_api_errors

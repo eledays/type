@@ -1,5 +1,6 @@
 import re
 from unittest.mock import patch
+from uuid import UUID
 
 from app.extensions import db
 from app.models import Action, Category, SpellingExercise, User
@@ -43,6 +44,38 @@ class TestRouteMap(AppTestCase):
         assert response.status_code == 503
         assert response.get_json() == {"status": "unavailable"}
 
+    def test_request_id_is_validated_and_echoed(self) -> None:
+        supplied = self.client.get(
+            "/health/live", headers={"X-Request-ID": "edge-request_42"}
+        )
+        generated = self.client.get(
+            "/health/live", headers={"X-Request-ID": "invalid request id"}
+        )
+
+        assert supplied.headers["X-Request-ID"] == "edge-request_42"
+        UUID(generated.headers["X-Request-ID"])
+
+    def test_metrics_require_token_and_export_operational_data(self) -> None:
+        self.app.config["METRICS_TOKEN"] = "metrics-test-token-at-least-24-chars"
+        assert self.client.get("/metrics").status_code == 401
+
+        with patch("app.routes.system.Redis.from_url"):
+            self.client.get("/health/ready")
+        response = self.client.get(
+            "/metrics",
+            headers={
+                "Authorization": (
+                    "Bearer metrics-test-token-at-least-24-chars"
+                )
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.mimetype == "text/plain"
+        assert b"type_http_requests_total" in response.data
+        assert b'type_dependency_up{dependency="database"} 1.0' in response.data
+        assert b'type_dependency_up{dependency="redis"} 1.0' in response.data
+
     def test_canonical_routes_and_methods_are_registered(self) -> None:
         routes = {
             (rule.rule, method)
@@ -50,6 +83,7 @@ class TestRouteMap(AppTestCase):
             for method in rule.methods - {"HEAD", "OPTIONS"}
         }
         expected = {
+            ("/metrics", "GET"),
             ("/", "GET"),
             ("/profile", "GET"),
             ("/auth", "GET"),

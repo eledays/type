@@ -135,6 +135,7 @@ def require_current_legal_acceptance() -> ResponseReturnValue | None:
         "static",
         "system.liveness",
         "system.readiness",
+        "system.metrics",
         "system.favicon",
         "legal.terms",
         "legal.privacy",

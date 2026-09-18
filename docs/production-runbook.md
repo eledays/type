@@ -352,6 +352,23 @@ cd /opt/type
 scripts/compose_production.sh logs --tail=200 app postgres redis
 ```
 
+Логи приложения выводятся по одному JSON-объекту на строку и содержат
+`request_id`, endpoint, статус и длительность. Тот же `request_id` возвращается
+в заголовке `X-Request-ID`, поэтому запрос можно связать с записью в логах.
+
+Prometheus-метрики доступны только с операторским токеном:
+
+```bash
+curl --fail --show-error \
+  --header "Authorization: Bearer $METRICS_TOKEN" \
+  http://10.0.0.20:8000/metrics
+```
+
+Минимальные оповещения: `type_dependency_up == 0`, рост доли ответов 5xx и
+p95 `type_http_request_duration_seconds` выше пользовательского SLO. Каталог
+`PROMETHEUS_MULTIPROC_DIR` очищается entrypoint перед запуском Gunicorn, чтобы
+метрики завершившихся процессов не оставались в выдаче.
+
 ## 10. Продление сертификата
 
 Сертификат и Certbot находятся только на Apache-сервере. Пакет обычно включает
