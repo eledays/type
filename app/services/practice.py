@@ -2,7 +2,7 @@ import random
 from dataclasses import dataclass
 from typing import Any
 
-from flask import current_app, session
+from flask import current_app
 from sqlalchemy import and_, select
 from sqlalchemy.orm import joinedload
 
@@ -19,22 +19,12 @@ from app.models import (
     User,
     UserPracticeStats,
 )
-from app.utils import add_action, get_anonymous_actions_remaining, get_cached_strike
+from app.services import practice_attempts
+from app.services.practice_errors import PracticeError
 
-
-class PracticeError(ValueError):
-    def __init__(self, code: str, message: str, status: int = 400) -> None:
-        """Создаёт доменную ошибку практики.
-
-        :param code: Стабильный машинный код ошибки.
-        :param message: Сообщение для клиента или журнала.
-        :param status: HTTP-статус, соответствующий ошибке.
-        :return: Новый экземпляр ошибки.
-        """
-        super().__init__(message)
-        self.code = code
-        self.message = message
-        self.status = status
+# Public compatibility surface; implementations live with mutation concerns.
+check_answer = practice_attempts.check_answer
+skip_card = practice_attempts.skip_card
 
 
 @dataclass
@@ -377,147 +367,6 @@ def select_card(
     )[0]
 
 
-def _get_typed_item(item_id: int, item_type: str) -> PracticeItem:
-    """Находит карточку и проверяет заявленный клиентом тип.
-
-    :param item_id: Единый идентификатор карточки.
-    :param item_type: Ожидаемый API-тип карточки.
-    :return: Карточка с совпадающим типом.
-    :raises PracticeError: Если тип неизвестен или карточка не найдена.
-    """
-    if item_type not in {"spelling", "paronym"}:
-        raise PracticeError("invalid_card_type", "Invalid card type", 400)
-    item = db.session.get(PracticeItem, item_id)
-    if item is None or item.type != item_type:
-        raise PracticeError("item_not_found", "Practice item not found", 404)
-    return item
-
-
-def check_answer(
-    user: User,
-    item_id: int,
-    answer: str,
-    item_type: str,
-    request_id: str,
-) -> dict[str, Any]:
-    """Проверяет ответ и сохраняет действие пользователя.
-
-    :param user: Пользователь, отправивший ответ.
-    :param item_id: Единый идентификатор карточки практики.
-    :param answer: Выбранный пользователем вариант ответа.
-    :param item_type: Тип карточки: ``spelling`` или ``paronym``.
-    :return: Результат проверки, раскрытый текст и состояние серии.
-    :raises PracticeError: Если карточка не найдена или исчерпана квота.
-    """
-    anonymous_remaining = _ensure_quota(user, request_id=request_id)
-    item = _get_typed_item(item_id, item_type)
-    right_answer = item.get_correct_answer()
-    blank = "_______" if item_type == "paronym" else "_"
-    full_item = item.get_prompt().replace(blank, right_answer)
-    correct = answer == right_answer
-    explanation = item.explanation if item_type == "spelling" else None
-    previous_strike = get_cached_strike(user.id)
-    action_record, created = add_action(
-        user_id=user.id,
-        action=Action.RIGHT_ANSWER if correct else Action.WRONG_ANSWER,
-        practice_item_id=item_id,
-        request_id=request_id,
-    )
-    expected_action = Action.RIGHT_ANSWER if correct else Action.WRONG_ANSWER
-    if (
-        action_record.practice_item_id != item_id
-        or action_record.action != expected_action
-    ):
-        raise PracticeError(
-            "idempotency_conflict",
-            "Request id was already used for another action",
-            409,
-        )
-    if created:
-        session["strike"] = previous_strike + 1 if correct else 0
-    return {
-        "correct": correct,
-        "full_word": full_item,
-        "explanation": explanation,
-        "strike": {
-            "n": session.get("strike"),
-            "levels": current_app.config["STRIKE_LEVELS"],
-        },
-        "anonymous_remaining": (
-            None
-            if anonymous_remaining is None
-            else anonymous_remaining - int(created)
-        ),
-    }
-
-
-def _can_skip_without_confirmation(
-    user: User,
-    item_id: int,
-    recent_item_ids: list[int],
-) -> bool:
-    """Проверяет, можно ли пропустить карточку без подтверждения.
-
-    :param user: Пользователь, выполняющий свайп.
-    :param item_id: Единый идентификатор карточки.
-    :return: ``True``, если отдельное подтверждение не требуется.
-    """
-    grace_strike = int(current_app.config["PRACTICE_SWIPE_GRACE_STRIKE"])
-    return (
-        item_id in recent_item_ids
-        or get_cached_strike(user.id) <= grace_strike
-    )
-
-
-def skip_card(
-    user: User,
-    item_id: int,
-    item_type: str,
-    *,
-    confirmed: bool = False,
-    request_id: str,
-) -> tuple[int, int | None]:
-    """Пропускает карточку и применяет правила серии и квоты.
-
-    :param user: Пользователь, выполняющий пропуск.
-    :param item_id: Единый идентификатор карточки практики.
-    :param item_type: Тип карточки: ``spelling`` или ``paronym``.
-    :param confirmed: Подтверждён ли пользователем сброс длинной серии.
-    :return: Актуальная серия и остаток анонимной квоты.
-    :raises PracticeError: Если карточка не найдена, исчерпана квота или
-        требуется подтверждение сброса серии.
-    """
-    _get_typed_item(item_id, item_type)
-    anonymous_remaining = _ensure_quota(user, request_id=request_id)
-    recent_item_ids = _recent_item_ids(user.id)
-    if not confirmed and not _can_skip_without_confirmation(
-        user, item_id, recent_item_ids
-    ):
-        raise PracticeError(
-            "strike_reset_confirmation_required",
-            "Skipping this card will reset the strike",
-            409,
-        )
-    if item_id in recent_item_ids:
-        return get_cached_strike(user.id), anonymous_remaining
-    session["strike"] = 0
-    action_record, created = add_action(
-        user_id=user.id,
-        action=Action.SKIP,
-        practice_item_id=item_id,
-        request_id=request_id,
-    )
-    if action_record.practice_item_id != item_id or action_record.action != Action.SKIP:
-        raise PracticeError(
-            "idempotency_conflict",
-            "Request id was already used for another action",
-            409,
-        )
-    return 0, (
-        None if anonymous_remaining is None else anonymous_remaining - int(created)
-    )
-
-
 def _recent_progress_actions(user_id: int) -> list[Action]:
     """Возвращает последние учебные действия для адаптивной оценки."""
     return list(db.session.scalars(
@@ -721,21 +570,6 @@ def _selection_reason(pool_name: str) -> str:
     }[pool_name]
 
 
-def _recent_item_ids(user_id: int, limit: int = 3) -> list[int]:
-    """Возвращает последние идентификаторы карточек пользователя.
-
-    :param user_id: Идентификатор пользователя.
-    :param limit: Максимальное количество идентификаторов.
-    :return: Идентификаторы от нового действия к старому.
-    """
-    return list(db.session.scalars(
-        select(Action.practice_item_id)
-        .where(Action.user_id == user_id)
-        .order_by(Action.datetime.desc())
-        .limit(limit)
-    ))
-
-
 def _random_window(query, count: int, total: int | None = None) -> list[Any]:
     """Выбирает случайное окно без сортировки всей таблицы.
 
@@ -752,31 +586,3 @@ def _random_window(query, count: int, total: int | None = None) -> list[Any]:
     if row_count > count:
         offset = random.randrange(row_count - count + 1)  # nosec B311
     return query.offset(offset).limit(count).all()
-
-
-def _ensure_quota(user: User, request_id: str) -> int | None:
-    """Проверяет наличие доступного действия у анонимного пользователя.
-
-    :param user: Пользователь, для которого проверяется квота.
-    :return: Остаток квоты до действия или ``None`` для обычного пользователя.
-    :raises PracticeError: Если лимит анонимных действий исчерпан.
-    """
-    if user.is_anonymous_account:
-        db.session.scalar(
-            select(User.id).where(User.id == user.id).with_for_update()
-        )
-        db.session.refresh(user)
-    remaining = get_anonymous_actions_remaining(user, lock=True)
-    repeated_request = db.session.scalar(
-        select(Action.id).where(
-            Action.user_id == user.id,
-            Action.request_id == request_id,
-        )
-    ) is not None
-    if remaining == 0 and not repeated_request:
-        raise PracticeError(
-            "anonymous_limit_reached",
-            "Войдите через Яндекс, чтобы продолжить.",
-            403,
-        )
-    return remaining

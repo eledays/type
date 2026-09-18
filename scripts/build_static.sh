@@ -13,6 +13,7 @@ fi
 
 "$terser_binary" \
     "$project_root/app/static/js/feed-helpers.js" \
+    "$project_root/app/static/js/feed-api.js" \
     "$project_root/app/static/js/feed.js" \
     --compress \
     --mangle \

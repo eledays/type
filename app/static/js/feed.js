@@ -1,7 +1,8 @@
 (() => {
     "use strict";
 
-    const {RequestRegistry, uniqueIntegerIds} = window.feedHelpers;
+    const {uniqueIntegerIds} = window.feedHelpers;
+    const {FeedApi} = window.feedApi;
     const ANIMATION_MS = 300;
     class FeedController {
         constructor(bootstrap, routes) {
@@ -41,7 +42,7 @@
             this.reportItemId = null;
             this.profileStatsLoaded = false;
             this.profileStatsLoading = null;
-            this.requestRegistry = new RequestRegistry(() => this.requestId());
+            this.api = new FeedApi(routes, () => this.requestId());
 
             this.feed = document.getElementById("feed");
             this.status = document.getElementById("feed-status");
@@ -359,43 +360,32 @@
         }
 
         requestIdFor(key) {
-            return this.requestRegistry.acquire(key);
+            return this.api.requestIdFor(key);
         }
 
         async recordSkip(card, confirmed = false, requestId = null) {
             const requestKey = `skip:${card.id}`;
             const stableRequestId = requestId || this.requestIdFor(requestKey);
             try {
-                const response = await fetch(this.routes.skipAttempt, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRFToken": this.routes.csrfToken,
-                    },
-                    body: JSON.stringify({
-                        card_id: card.id,
-                        card_type: card.type,
-                        confirmed,
-                        request_id: stableRequestId,
-                    }),
-                });
-                const payload = await response.json();
+                const {response, payload} = await this.api.skip(
+                    card, confirmed, stableRequestId,
+                );
                 if (response.status === 403 && payload.login_url) {
                     window.location.href = payload.login_url;
                     return false;
                 }
                 if (response.status === 409 && payload.status === "confirmation_required") {
                     if (!window.confirm("Если перелистнуть, серия обнулится. Перелистываем?")) {
-                        this.requestRegistry.release(requestKey);
+                        this.api.releaseRequestId(requestKey);
                         return false;
                     }
                     return this.recordSkip(card, true, stableRequestId);
                 }
                 if (!response.ok) {
-                    this.requestRegistry.release(requestKey);
+                    this.api.releaseRequestId(requestKey);
                     throw new Error(payload.message);
                 }
-                this.requestRegistry.release(requestKey);
+                this.api.releaseRequestId(requestKey);
                 this.updateStrike({n: payload.strike, levels: this.strikeLevels});
                 this.updateAnonymousRemaining(payload.anonymous_remaining);
                 return true;
@@ -413,29 +403,18 @@
             const requestKey = `answer:${this.current.card.id}:${button.dataset.answer}`;
             const requestId = this.requestIdFor(requestKey);
             try {
-                const response = await fetch(this.routes.createAttempt, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRFToken": this.routes.csrfToken,
-                    },
-                    body: JSON.stringify({
-                        card_id: this.current.card.id,
-                        card_type: this.current.card.type,
-                        answer: button.dataset.answer,
-                        request_id: requestId,
-                    }),
-                });
-                const payload = await response.json();
+                const {response, payload} = await this.api.answer(
+                    this.current.card, button.dataset.answer, requestId,
+                );
                 if (response.status === 403 && payload.login_url) {
                     window.location.href = payload.login_url;
                     return;
                 }
                 if (!response.ok) {
-                    this.requestRegistry.release(requestKey);
+                    this.api.releaseRequestId(requestKey);
                     throw new Error(payload.message);
                 }
-                this.requestRegistry.release(requestKey);
+                this.api.releaseRequestId(requestKey);
                 this.updateAnonymousRemaining(payload.anonymous_remaining);
                 this.updateStrike(payload.strike, {reveal: true});
                 this.revealAnswer(payload.full_word);
@@ -726,18 +705,9 @@
             submit.disabled = true;
             feedback.textContent = "Отправляем…";
             try {
-                const response = await fetch(this.routes.createReport, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRFToken": this.routes.csrfToken,
-                    },
-                    body: JSON.stringify({
-                        message,
-                        practice_item_id: this.reportItemId,
-                    }),
-                });
-                const payload = await response.json();
+                const {response, payload} = await this.api.createReport(
+                    message, this.reportItemId,
+                );
                 if (!response.ok) throw new Error(payload.message);
                 form.reset();
                 this.closePanel();
@@ -841,14 +811,7 @@
                 const enabled = strikeToggle.getAttribute("aria-pressed") !== "true";
                 strikeToggle.disabled = true;
                 try {
-                    const response = await fetch(this.routes.updateSettings, {
-                        method: "PATCH",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRFToken": this.routes.csrfToken,
-                        },
-                        body: JSON.stringify({strike: enabled}),
-                    });
+                    const response = await this.api.updateSettings({strike: enabled});
                     if (!response.ok) throw new Error();
                     strikeToggle.setAttribute("aria-pressed", String(enabled));
                     this.showStrike = enabled;
