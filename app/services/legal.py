@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from flask import current_app
-from sqlalchemy import delete
+from sqlalchemy import case, delete, func, select
 
 from app.extensions import db
 from app.models import (
     Action,
     ErrorReport,
+    GlobalPracticeStats,
     LegalAcceptance,
     PracticeProgress,
     Settings,
@@ -72,8 +73,55 @@ def revoke_legal_consent(user: User) -> None:
     ):
         acceptance.revoked_at = revoked_at
 
+    affected_item_ids = list(db.session.scalars(
+        select(Action.practice_item_id)
+        .where(Action.user_id == user.id)
+        .distinct()
+    ))
+    global_stats = {
+        stats.practice_item_id: stats
+        for stats in db.session.scalars(
+            select(GlobalPracticeStats)
+            .where(GlobalPracticeStats.practice_item_id.in_(affected_item_ids))
+            .with_for_update()
+        )
+    }
+
     for model in (Action, ErrorReport, PracticeProgress, UserPracticeStats):
         db.session.execute(delete(model).where(model.user_id == user.id))
+
+    if affected_item_ids:
+        remaining = {
+            row.practice_item_id: row
+            for row in db.session.execute(
+                select(
+                    Action.practice_item_id,
+                    func.sum(case(
+                        (Action.action == Action.RIGHT_ANSWER, 1), else_=0
+                    )).label("right_count"),
+                    func.sum(case(
+                        (Action.action == Action.WRONG_ANSWER, 1), else_=0
+                    )).label("wrong_count"),
+                    func.sum(case(
+                        (Action.action == Action.SKIP, 1), else_=0
+                    )).label("skip_count"),
+                )
+                .where(
+                    Action.practice_item_id.in_(affected_item_ids),
+                    Action.action.in_((
+                        Action.RIGHT_ANSWER,
+                        Action.WRONG_ANSWER,
+                        Action.SKIP,
+                    )),
+                )
+                .group_by(Action.practice_item_id)
+            )
+        }
+        for item_id, stats in global_stats.items():
+            counts = remaining.get(item_id)
+            stats.right_count = int(counts.right_count or 0) if counts else 0
+            stats.wrong_count = int(counts.wrong_count or 0) if counts else 0
+            stats.skip_count = int(counts.skip_count or 0) if counts else 0
 
     user.settings = None
     user.telegram_id = None

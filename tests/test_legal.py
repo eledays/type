@@ -1,7 +1,13 @@
 from tests.base import AppTestCase
 
 from app.extensions import db
-from app.models import Action, LegalAcceptance, User, UserPracticeStats
+from app.models import (
+    Action,
+    GlobalPracticeStats,
+    LegalAcceptance,
+    User,
+    UserPracticeStats,
+)
 from app.services.legal import (
     PERSONAL_DATA_CONSENT_VERSION,
     PRIVACY_VERSION,
@@ -174,12 +180,19 @@ class TestLegalConsent(AppTestCase):
             word = self.make_word()
             user.yandex_id = "revoked-yandex-id"
             user.first_name = "Иван"
+            other_user = self.make_user(yandex_id="remaining-user")
             db.session.add(Action(
                 user_id=user_id,
                 practice_item_id=word.id,
                 action=Action.RIGHT_ANSWER,
             ))
+            db.session.add(Action(
+                user_id=other_user.id,
+                practice_item_id=word.id,
+                action=Action.WRONG_ANSWER,
+            ))
             db.session.commit()
+            word_id = word.id
 
         response = self.client.post(
             "/legal/revoke",
@@ -197,6 +210,10 @@ class TestLegalConsent(AppTestCase):
             assert user.settings is None
             assert Action.query.filter_by(user_id=user_id).count() == 0
             assert db.session.get(UserPracticeStats, user_id) is None
+            global_stats = db.session.get(GlobalPracticeStats, word_id)
+            assert global_stats.right_count == 0
+            assert global_stats.wrong_count == 1
+            assert global_stats.skip_count == 0
             acceptance = LegalAcceptance.query.filter_by(
                 user_id=user_id
             ).one()
