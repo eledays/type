@@ -414,3 +414,15 @@ class TestAnalytics(AppTestCase):
         assert result["item_count"] == 250
         assert len(result["items"]) == 10
         assert len(statements) <= 3
+
+        with self.app.app_context():
+            statements.clear()
+            engine = db.session.get_bind()
+            event.listen(engine, "before_cursor_execute", count_query)
+            try:
+                dashboard = build_dashboard(filters)
+            finally:
+                event.remove(engine, "before_cursor_execute", count_query)
+
+        assert dashboard["content"]["item_count"] == 250
+        assert len(statements) <= 15

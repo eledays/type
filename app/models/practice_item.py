@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, ForeignKey, Integer, String
+from sqlalchemy import CheckConstraint, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
@@ -35,6 +35,9 @@ class PracticeItem(db.Model):
         ForeignKey("category.id"), index=True
     )
     explanation: Mapped[str | None] = mapped_column(String(2048))
+    search_text: Mapped[str] = mapped_column(
+        Text, nullable=False, default="", server_default=""
+    )
 
     category: Mapped[Category | None] = relationship(back_populates="items")
     actions: Mapped[list[Action]] = relationship(

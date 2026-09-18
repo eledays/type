@@ -6,9 +6,10 @@ from typing import TYPE_CHECKING
 
 from pymorphy3 import MorphAnalyzer
 from sqlalchemy import ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.models.practice_item import PracticeItem
+from app.search import normalize_exercise_search
 
 if TYPE_CHECKING:
     from app.models.paronym import Paronym
@@ -48,6 +49,12 @@ class ParonymExercise(PracticeItem):
     paronym: Mapped[Paronym] = relationship(back_populates="exercises")
 
     __mapper_args__ = {"polymorphic_identity": "paronym"}
+
+    @validates("sentence")
+    def normalize_sentence_search(self, key: str, value: str) -> str:
+        """Keep the denormalized search value synchronized with the sentence."""
+        self.search_text = normalize_exercise_search(value)
+        return value
 
     def _inflect(self, word: str) -> str:
         """Склоняет пароним в форму, требуемую предложением.

@@ -6,6 +6,7 @@ from sqlalchemy import JSON, CheckConstraint, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, validates
 
 from app.models.practice_item import PracticeItem
+from app.search import normalize_exercise_search
 
 
 class SpellingExercise(PracticeItem):
@@ -27,6 +28,12 @@ class SpellingExercise(PracticeItem):
     correct_answer: Mapped[str] = mapped_column(String(128), nullable=False)
 
     __mapper_args__ = {"polymorphic_identity": "spelling"}
+
+    @validates("word")
+    def normalize_word_search(self, key: str, value: str) -> str:
+        """Keep the denormalized search value synchronized with the word."""
+        self.search_text = normalize_exercise_search(value)
+        return value
 
     @validates("answers")
     def validate_answers(self, key: str, value: list[str]) -> list[str]:

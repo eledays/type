@@ -76,6 +76,12 @@ class AppSettings(BaseSettings):
         validation_alias="ANALYTICS_TIMEZONE",
         min_length=1,
     )
+    analytics_cache_seconds: int = Field(
+        default=60,
+        validation_alias="ANALYTICS_CACHE_SECONDS",
+        ge=0,
+        le=3600,
+    )
 
     # Public legal details. Production must identify the real operator.
     legal_operator_name: str | None = Field(
@@ -382,6 +388,7 @@ class AppSettings(BaseSettings):
             "TASKS": self.tasks,
             "URL": self.url,
             "ANALYTICS_TIMEZONE": self.analytics_timezone,
+            "ANALYTICS_CACHE_SECONDS": self.analytics_cache_seconds,
             "LEGAL_OPERATOR_NAME": (
                 self.legal_operator_name or "Разработчик сервиса type"
             ),

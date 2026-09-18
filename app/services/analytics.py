@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, replace
 from datetime import date, datetime, time, timedelta
 from typing import Any, Mapping
 from zoneinfo import ZoneInfo
 
 from flask import current_app
+from redis import Redis
+from redis.exceptions import RedisError
 from sqlalchemy import Date, String, and_, case, cast, func, or_, select
 
 from app.extensions import db
@@ -17,6 +21,7 @@ from app.models import (
     SpellingExercise,
     User,
 )
+from app.search import normalize_exercise_search
 from app.time_utils import UTC, ensure_utc
 
 LEARNING_ACTIONS = (
@@ -402,18 +407,15 @@ def _audience_counts(filters: AnalyticsFilters) -> dict[str, int | str]:
     registered_condition = identified_at.is_not(None) & (
         identified_at < filters.end_at
     )
-    registered = int(db.session.scalar(
-        select(func.count(User.id)).where(
-            *base_conditions,
-            registered_condition,
-        )
-    ) or 0)
-    anonymous = int(db.session.scalar(
-        select(func.count(User.id)).where(
-            *base_conditions,
-            (identified_at.is_(None)) | (identified_at >= filters.end_at),
-        )
-    ) or 0)
+    anonymous_condition = identified_at.is_(None) | (
+        identified_at >= filters.end_at
+    )
+    registered, anonymous = db.session.execute(select(
+        func.sum(case((registered_condition, 1), else_=0)),
+        func.sum(case((anonymous_condition, 1), else_=0)),
+    ).where(*base_conditions)).one()
+    registered = int(registered or 0)
+    anonymous = int(anonymous or 0)
     if filters.user_type == "registered":
         total = registered
         label = "Авторизованные к концу периода"
@@ -457,6 +459,7 @@ def _lifecycle_metrics(filters: AnalyticsFilters) -> dict[str, Any]:
     retention = {}
     cohort_day = _local_day(User.created_at, filters)
     action_day = _local_day(actions.c.datetime, filters)
+    retention_columns: list[Any] = []
     for offset in (1, 7, 30):
         if db.session.get_bind().dialect.name == "postgresql":
             target_day = func.cast(cohort_day, Date) + offset
@@ -473,10 +476,11 @@ def _lifecycle_metrics(filters: AnalyticsFilters) -> dict[str, Any]:
             )
             .subquery()
         )
-        cohort_size = int(db.session.scalar(
-            select(func.count()).select_from(eligible)
-        ) or 0)
-        retained = int(db.session.scalar(
+        retention_columns.extend((
+            select(func.count())
+            .select_from(eligible)
+            .scalar_subquery()
+            .label(f"d{offset}_cohort"),
             select(func.count(func.distinct(eligible.c.user_id)))
             .select_from(eligible)
             .join(
@@ -484,7 +488,13 @@ def _lifecycle_metrics(filters: AnalyticsFilters) -> dict[str, Any]:
                 (actions.c.user_id == eligible.c.user_id)
                 & (action_day == eligible.c.target_day),
             )
-        ) or 0)
+            .scalar_subquery()
+            .label(f"d{offset}_retained"),
+        ))
+    retention_row = db.session.execute(select(*retention_columns)).one()
+    for offset in (1, 7, 30):
+        cohort_size = int(getattr(retention_row, f"d{offset}_cohort") or 0)
+        retained = int(getattr(retention_row, f"d{offset}_retained") or 0)
         retention[f"d{offset}"] = {
             "percent": round(retained * 100 / cohort_size, 1)
             if cohort_size else 0.0,
@@ -501,17 +511,28 @@ def _lifecycle_metrics(filters: AnalyticsFilters) -> dict[str, Any]:
     }
 
 
-def _period_active_count(filters: AnalyticsFilters, days: int) -> int:
+def _period_active_counts(filters: AnalyticsFilters) -> dict[str, int]:
+    """Calculate selected-period, daily, weekly, and monthly actives once."""
     end_at = filters.end_at
-    start_at = end_at - timedelta(days=days)
+    starts = {
+        "active_users": filters.start_at,
+        "dau": end_at - timedelta(days=1),
+        "wau": end_at - timedelta(days=7),
+        "mau": end_at - timedelta(days=30),
+    }
     actions = _filtered_actions(
         filters,
-        start_at=start_at,
+        start_at=min(starts.values()),
         end_at=end_at,
     ).subquery()
-    return int(db.session.scalar(
-        select(func.count(func.distinct(actions.c.user_id)))
-    ) or 0)
+    row = db.session.execute(select(*(
+        func.count(func.distinct(case(
+            (actions.c.datetime >= start_at, actions.c.user_id),
+            else_=None,
+        ))).label(name)
+        for name, start_at in starts.items()
+    ))).one()
+    return {name: int(getattr(row, name) or 0) for name in starts}
 
 
 def _item_title(item: PracticeItem) -> str:
@@ -525,48 +546,14 @@ def exercise_query_is_valid(value: str) -> bool:
 
 
 def _compact_search(value: str, *, keep_placeholder: bool = False) -> str:
-    normalized = value.casefold().replace("ё", "е")
-    return "".join(
-        character
-        for character in normalized
-        if character.isalnum() or (keep_placeholder and character == "_")
+    return normalize_exercise_search(
+        value,
+        keep_blank=keep_placeholder,
     )
 
 
-def _template_contains(query: str, value: str) -> bool:
-    """Match a partial query while treating an exercise blank as one letter."""
+def _exercise_search_condition(search_text, category, item_type, task, query: str):
     needle = _compact_search(query)
-    candidate = _compact_search(value, keep_placeholder=True)
-    if not needle:
-        return True
-    if needle in candidate.replace("_", ""):
-        return True
-    if len(needle) > len(candidate):
-        return False
-    return any(
-        all(
-            candidate[start + offset] in {"_", character}
-            for offset, character in enumerate(needle)
-        )
-        for start in range(len(candidate) - len(needle) + 1)
-    )
-
-
-def _sql_compact(expression, *, keep_placeholder: bool = False):
-    """Build a portable compact search expression for SQLite/PostgreSQL."""
-    compact = func.lower(func.replace(expression, "ё", "е"))
-    ignored = " -.,!?;:'\"()[]{}\t\r\n/\\"
-    if not keep_placeholder:
-        ignored += "_"
-    for character in ignored:
-        compact = func.replace(compact, character, "")
-    return compact
-
-
-def _exercise_search_condition(prompt, category, item_type, task, query: str):
-    needle = _compact_search(query)
-    prompt_without_blank = _sql_compact(prompt)
-    prompt_with_blank = _sql_compact(prompt, keep_placeholder=True)
     blank_variants = [
         needle[:index] + "_" + needle[index + 1:]
         for index in range(len(needle))
@@ -579,13 +566,11 @@ def _exercise_search_condition(prompt, category, item_type, task, query: str):
         "е",
     ))
     return or_(
-        prompt_without_blank.contains(needle),
+        search_text.contains(needle),
+        func.replace(search_text, "_", "").contains(needle),
         and_(
-            prompt_with_blank.contains("_", autoescape=True),
-            or_(*(
-                prompt_with_blank.contains(variant)
-                for variant in blank_variants
-            )),
+            search_text.contains("_", autoescape=True),
+            or_(*(search_text.contains(variant) for variant in blank_variants)),
         ),
         metadata.contains(query.casefold().replace("ё", "е")),
     )
@@ -603,12 +588,8 @@ def _item_aggregate_rows(filters: AnalyticsFilters, item_id: int | None = None):
     ).group_by(actions.c.practice_item_id)).all()
 
 
-def _serialized_items(
-    filters: AnalyticsFilters,
-    *,
-    limit: int | None = 10,
-    offset: int = 0,
-) -> tuple[list[dict[str, Any]], int]:
+def _item_statement(filters: AnalyticsFilters):
+    """Build the ordered per-exercise aggregate statement."""
     actions = _filtered_actions(filters).subquery()
     right, wrong, skips = _count_expressions(actions)
     aggregates = select(
@@ -656,7 +637,7 @@ def _serialized_items(
     )
     if filters.exercise_query:
         statement = statement.where(_exercise_search_condition(
-            prompt,
+            item.c.search_text,
             category.c.name,
             item.c.type,
             item.c.task_number,
@@ -667,27 +648,39 @@ def _serialized_items(
         "wrong": (aggregates.c.wrong_count.desc(), accuracy.asc(), item.c.id.asc()),
         "skips": (aggregates.c.skip_count.desc(), accuracy.asc(), item.c.id.asc()),
     }[filters.exercise_sort]
-    statement = statement.order_by(*order)
+    return statement.order_by(*order)
+
+
+def _serialize_item_row(row) -> dict[str, Any]:
+    title = (row.prompt or "").strip()
+    return {
+        "id": row.id,
+        "title": title if len(title) <= 90 else f"{title[:87]}…",
+        "full_title": title,
+        "type": row.type,
+        "task": row.task_number,
+        "category": row.category,
+        "unique_users": int(row.unique_users),
+        **_counts(row.right_count, row.wrong_count, row.skip_count),
+    }
+
+
+def _serialized_items(
+    filters: AnalyticsFilters,
+    *,
+    limit: int | None = 10,
+    offset: int = 0,
+) -> tuple[list[dict[str, Any]], int]:
+    statement = _item_statement(filters)
     total = int(db.session.scalar(
         select(func.count()).select_from(statement.order_by(None).subquery())
     ) or 0)
     if limit is not None:
         statement = statement.limit(limit).offset(offset)
-    rows = db.session.execute(statement).all()
-    serialized = []
-    for row in rows:
-        title = (row.prompt or "").strip()
-        serialized.append({
-            "id": row.id,
-            "title": title if len(title) <= 90 else f"{title[:87]}…",
-            "full_title": title,
-            "type": row.type,
-            "task": row.task_number,
-            "category": row.category,
-            "unique_users": int(row.unique_users),
-            **_counts(row.right_count, row.wrong_count, row.skip_count),
-        })
-    return serialized, total
+    return [
+        _serialize_item_row(row)
+        for row in db.session.execute(statement)
+    ], total
 
 
 def _content_breakdown(filters: AnalyticsFilters) -> list[dict[str, Any]]:
@@ -725,28 +718,72 @@ def _content_breakdown(filters: AnalyticsFilters) -> list[dict[str, Any]]:
     return result
 
 
-def build_dashboard(filters: AnalyticsFilters) -> dict[str, Any]:
-    """Calculate all metrics displayed on the admin dashboard."""
-    counts = _summary_counts(filters)
-    active_users = _period_active_count(
-        filters,
-        (filters.end - filters.start).days + 1,
+def _dashboard_cache_key(filters: AnalyticsFilters) -> str:
+    payload = json.dumps(
+        filters.as_query() | {"timezone": filters.timezone_name},
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
     )
+    digest = hashlib.sha256(payload.encode()).hexdigest()
+    return f"type:analytics:dashboard:{digest}"
+
+
+def _load_dashboard_cache(filters: AnalyticsFilters) -> dict[str, Any] | None:
+    ttl = int(current_app.config.get("ANALYTICS_CACHE_SECONDS", 0))
+    storage_uri = current_app.config.get("RATELIMIT_STORAGE_URI", "")
+    if ttl <= 0 or not storage_uri.startswith(("redis://", "rediss://")):
+        return None
+    try:
+        cached = Redis.from_url(storage_uri).get(_dashboard_cache_key(filters))
+        if not isinstance(cached, (str, bytes, bytearray)):
+            return None
+        return json.loads(cached)
+    except (RedisError, ValueError, TypeError):
+        current_app.logger.warning("Analytics cache read failed", exc_info=True)
+        return None
+
+
+def _store_dashboard_cache(
+    filters: AnalyticsFilters,
+    dashboard: dict[str, Any],
+) -> None:
+    ttl = int(current_app.config.get("ANALYTICS_CACHE_SECONDS", 0))
+    storage_uri = current_app.config.get("RATELIMIT_STORAGE_URI", "")
+    if ttl <= 0 or not storage_uri.startswith(("redis://", "rediss://")):
+        return
+    try:
+        Redis.from_url(storage_uri).setex(
+            _dashboard_cache_key(filters),
+            ttl,
+            json.dumps(dashboard, ensure_ascii=False, separators=(",", ":")),
+        )
+    except (RedisError, TypeError, ValueError):
+        current_app.logger.warning("Analytics cache write failed", exc_info=True)
+
+
+def build_dashboard(filters: AnalyticsFilters) -> dict[str, Any]:
+    """Calculate or retrieve all metrics displayed on the dashboard."""
+    cached = _load_dashboard_cache(filters)
+    if cached is not None:
+        return {"filters": filters, **cached}
+    counts = _summary_counts(filters)
+    active_counts = _period_active_counts(filters)
+    active_users = active_counts["active_users"]
     items, item_count = _serialized_items(filters)
     summary = {
         **_audience_counts(filters),
         "active_users": active_users,
-        "dau": _period_active_count(filters, 1),
-        "wau": _period_active_count(filters, 7),
-        "mau": _period_active_count(filters, 30),
+        "dau": active_counts["dau"],
+        "wau": active_counts["wau"],
+        "mau": active_counts["mau"],
         "cards_per_user": round(counts["cards"] / active_users, 1)
         if active_users else 0.0,
         **counts,
         **_session_metrics(filters),
         **_lifecycle_metrics(filters),
     }
-    return {
-        "filters": filters,
+    dashboard = {
         "summary": summary,
         "daily": _daily_series(filters),
         "content": {
@@ -755,6 +792,8 @@ def build_dashboard(filters: AnalyticsFilters) -> dict[str, Any]:
             "item_count": item_count,
         },
     }
+    _store_dashboard_cache(filters, dashboard)
+    return {"filters": filters, **dashboard}
 
 
 def build_item_detail(
@@ -810,16 +849,10 @@ def build_exercise_results(filters: AnalyticsFilters) -> dict[str, Any]:
 
 
 def build_item_export(filters: AnalyticsFilters):
-    """Yield per-item aggregates in bounded database pages."""
-    page_size = 500
-    offset = 0
-    while True:
-        items, total = _serialized_items(
-            filters,
-            limit=page_size,
-            offset=offset,
-        )
-        yield from items
-        offset += len(items)
-        if not items or offset >= total:
-            break
+    """Yield per-item aggregates from a server-side streaming result."""
+    statement = _item_statement(filters).execution_options(
+        stream_results=True,
+        yield_per=500,
+    )
+    for row in db.session.execute(statement):
+        yield _serialize_item_row(row)
