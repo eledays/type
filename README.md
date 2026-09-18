@@ -175,7 +175,7 @@ pip install -r requirements-test.txt
 pytest
 ```
 
-Локальные quality gates, совпадающие с CI:
+Полный набор локальных quality gates:
 
 ```bash
 pip install -r requirements-audit.txt
@@ -217,8 +217,8 @@ python parsing/to_csv.py SOURCE_DIRECTORY words.csv
 python parsing_paronyms/parser_sentence.py sentence.txt --url TEST_URL
 ```
 
-Все эти проверки, включая применение миграций к PostgreSQL 17, также описаны
-в workflow GitHub Actions.
+Перед релизом отдельно примените миграции и запустите PostgreSQL-проверки на
+той же основной версии PostgreSQL, которая используется в production.
 
 ## Архитектура
 
