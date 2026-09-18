@@ -761,6 +761,11 @@ def _ensure_quota(user: User, request_id: str | None = None) -> int | None:
     :return: Остаток квоты до действия или ``None`` для обычного пользователя.
     :raises PracticeError: Если лимит анонимных действий исчерпан.
     """
+    if user.is_anonymous_account:
+        db.session.scalar(
+            select(User.id).where(User.id == user.id).with_for_update()
+        )
+        db.session.refresh(user)
     remaining = get_anonymous_actions_remaining(user, lock=True)
     repeated_request = request_id is not None and db.session.scalar(
         select(Action.id).where(

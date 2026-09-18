@@ -5,6 +5,8 @@ from urllib.parse import urlsplit
 import requests
 from flask import current_app
 from flask_login import current_user
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.models import Settings, User
@@ -104,7 +106,14 @@ def authenticate_yandex(code: str, redirect_uri: str) -> User:
     yandex_id = profile.get("id")
     if not isinstance(yandex_id, (str, int)) or not str(yandex_id):
         raise OAuthError("Yandex profile response has no user id")
-    return _merge_yandex_profile(profile, str(yandex_id))
+    normalized_yandex_id = str(yandex_id)
+    try:
+        return _merge_yandex_profile(profile, normalized_yandex_id)
+    except IntegrityError:
+        # Another callback may have created the same external identity while
+        # this transaction was in flight. Retry once against the winner.
+        db.session.rollback()
+        return _merge_yandex_profile(profile, normalized_yandex_id)
 
 
 def _merge_yandex_profile(profile: dict[str, Any], yandex_id: str) -> User:
@@ -114,12 +123,24 @@ def _merge_yandex_profile(profile: dict[str, Any], yandex_id: str) -> User:
     :param yandex_id: Нормализованный идентификатор Яндекса.
     :return: Сохранённый пользователь приложения.
     """
-    current_account = (
-        cast(User, current_user._get_current_object())
+    current_account_id = (
+        cast(User, current_user._get_current_object()).id
         if current_user.is_authenticated
         else None
     )
-    user = User.query.filter_by(yandex_id=yandex_id).first()
+    current_account = (
+        db.session.scalar(
+            select(User)
+            .where(User.id == current_account_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if current_account_id is not None
+        else None
+    )
+    user = db.session.scalar(
+        select(User).where(User.yandex_id == yandex_id).with_for_update()
+    )
     if user is None:
         if current_account is not None and current_account.yandex_id is None:
             user = current_account

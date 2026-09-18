@@ -187,3 +187,45 @@ class TestAuth(AppTestCase):
                 user_id=registered_id,
                 terms_version=TERMS_VERSION,
             ).count() == 1
+
+    def test_failed_yandex_merge_rolls_back_all_changes(self) -> None:
+        guest_id = self.current_user_id()
+        with self.app.app_context():
+            word = self.make_word()
+            target = self.make_user(yandex_id="ya-rollback")
+            target_id = target.id
+            db.session.add(Action(
+                user_id=guest_id,
+                practice_item_id=word.id,
+                action=Action.RIGHT_ANSWER,
+            ))
+            db.session.commit()
+
+        self.app.config.update(
+            YANDEX_CLIENT_ID="client", YANDEX_CLIENT_SECRET="secret"
+        )
+        token_response = Mock()
+        token_response.raise_for_status.return_value = None
+        token_response.json.return_value = {"access_token": "token"}
+        profile_response = Mock()
+        profile_response.raise_for_status.return_value = None
+        profile_response.json.return_value = {"id": "ya-rollback"}
+        with self.app.test_request_context(), patch(
+            "app.services.auth.requests.post", return_value=token_response
+        ), patch(
+            "app.services.auth.requests.get", return_value=profile_response
+        ), patch(
+            "app.services.auth.merge_user_progress",
+            side_effect=RuntimeError("merge failed"),
+        ):
+            from flask_login import login_user
+
+            login_user(db.session.get(User, guest_id))
+            with pytest.raises(RuntimeError, match="merge failed"):
+                authenticate_yandex("code", "https://callback")
+            db.session.rollback()
+
+        with self.app.app_context():
+            assert db.session.get(User, guest_id) is not None
+            assert db.session.get(User, target_id) is not None
+            assert Action.query.one().user_id == guest_id
