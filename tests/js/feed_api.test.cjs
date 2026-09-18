@@ -1,3 +1,5 @@
+"use strict";
+
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
@@ -9,22 +11,26 @@ function response(payload = {ok: true}) {
 
 test("attempt client sends stable ids, card type and CSRF token", async () => {
     const calls = [];
+    let fetchReceiver = "not-called";
+    async function fetchStub(...args) {
+        fetchReceiver = this;
+        calls.push(args);
+        return response();
+    }
     const api = new FeedApi(
         {
             createAttempt: "/attempts",
             csrfToken: "csrf-42",
         },
         () => "request-42",
-        async (...args) => {
-            calls.push(args);
-            return response();
-        },
+        fetchStub,
     );
     const requestId = api.requestIdFor("answer:7:о");
 
     await api.answer({id: 7, type: "spelling"}, "о", requestId);
 
     const [url, options] = calls[0];
+    assert.equal(fetchReceiver, undefined);
     assert.equal(url, "/attempts");
     assert.equal(options.headers["X-CSRFToken"], "csrf-42");
     assert.deepEqual(JSON.parse(options.body), {

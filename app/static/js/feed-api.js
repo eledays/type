@@ -11,7 +11,7 @@
     class FeedApi {
         constructor(routes, createRequestId, fetchImplementation = fetch) {
             this.routes = routes;
-            this.fetch = fetchImplementation;
+            this.fetch = (...args) => fetchImplementation(...args);
             this.requestIds = new helpers.RequestRegistry(createRequestId);
         }
 
