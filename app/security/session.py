@@ -29,17 +29,19 @@ def ensure_authenticated_user() -> None:
 
     :return: ``None``.
     """
-    sessionless_endpoints = {
-        "static",
-        "system.liveness",
-        "system.readiness",
-        "legal.terms",
-        "legal.privacy",
-        "legal.personal_data_consent",
-        "legal.consent",
+    guest_endpoints = {
+        "practice.index",
+        "practice_api.get_cards",
+        "practice_api.create_attempt",
+        "practice_api.skip_attempt",
+        "practice_api.create_report",
+        "profile.index",
+        "profile_api.background",
+        "profile_api.stats",
+        "profile_api.patch_settings",
     }
     if (
-        request.endpoint in sessionless_endpoints
+        request.endpoint not in guest_endpoints
         or current_user.is_authenticated
     ):
         return

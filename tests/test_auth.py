@@ -6,7 +6,7 @@ import pytest
 from tests.base import AppTestCase
 
 from app.extensions import db
-from app.models import Action, LegalAcceptance, User
+from app.models import Action, LegalAcceptance, Settings, User, UserPracticeStats
 from app.services.legal import (
     PERSONAL_DATA_CONSENT_VERSION,
     PRIVACY_VERSION,
@@ -50,6 +50,21 @@ class TestAuth(AppTestCase):
         )
         assert "Expires=" in remember_cookie
         assert "HttpOnly" in remember_cookie
+
+    def test_irrelevant_requests_do_not_create_guest_profiles(self) -> None:
+        for path in (
+            "/missing-page",
+            "/favicon.ico",
+            "/health/live",
+            "/health/ready",
+            "/admin/analytics",
+        ):
+            self.client.get(path)
+
+        with self.app.app_context():
+            assert User.query.count() == 0
+            assert Settings.query.count() == 0
+            assert UserPracticeStats.query.count() == 0
 
     def test_yandex_login_builds_authorization_redirect_and_stores_state(self) -> None:
         self.app.config.update(
