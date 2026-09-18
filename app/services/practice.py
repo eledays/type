@@ -398,7 +398,7 @@ def check_answer(
     item_id: int,
     answer: str,
     item_type: str,
-    request_id: str | None = None,
+    request_id: str,
 ) -> dict[str, Any]:
     """Проверяет ответ и сохраняет действие пользователя.
 
@@ -475,7 +475,7 @@ def skip_card(
     item_type: str,
     *,
     confirmed: bool = False,
-    request_id: str | None = None,
+    request_id: str,
 ) -> tuple[int, int | None]:
     """Пропускает карточку и применяет правила серии и квоты.
 
@@ -754,7 +754,7 @@ def _random_window(query, count: int, total: int | None = None) -> list[Any]:
     return query.offset(offset).limit(count).all()
 
 
-def _ensure_quota(user: User, request_id: str | None = None) -> int | None:
+def _ensure_quota(user: User, request_id: str) -> int | None:
     """Проверяет наличие доступного действия у анонимного пользователя.
 
     :param user: Пользователь, для которого проверяется квота.
@@ -767,7 +767,7 @@ def _ensure_quota(user: User, request_id: str | None = None) -> int | None:
         )
         db.session.refresh(user)
     remaining = get_anonymous_actions_remaining(user, lock=True)
-    repeated_request = request_id is not None and db.session.scalar(
+    repeated_request = db.session.scalar(
         select(Action.id).where(
             Action.user_id == user.id,
             Action.request_id == request_id,

@@ -63,6 +63,11 @@ def test_feed_answer_flow_in_mobile_browser(tmp_path: Path) -> None:
         assert driver.execute_script(
             "return document.documentElement.scrollWidth <= window.innerWidth"
         )
+        assert driver.execute_script(
+            "const controller = window.feedController;"
+            "return controller.requestIdFor('retry-test') === "
+            "controller.requestIdFor('retry-test');"
+        )
         answer.click()
         wait.until(lambda current: "is-correct" in current.find_element(
             By.ID, "answer-flash"

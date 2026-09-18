@@ -115,9 +115,7 @@ def create_attempt():
             "error": "invalid_card_type",
             "message": "Invalid card type",
         }), 400
-    if request_id is not None and (
-        not isinstance(request_id, str) or not 1 <= len(request_id) <= 64
-    ):
+    if not isinstance(request_id, str) or not 1 <= len(request_id) <= 64:
         return jsonify({
             "error": "invalid_request_id",
             "message": "Request id must contain between 1 and 64 characters",
@@ -165,9 +163,7 @@ def skip_attempt():
             "error": "invalid_card_type",
             "message": "Invalid card type",
         }), 400
-    if request_id is not None and (
-        not isinstance(request_id, str) or not 1 <= len(request_id) <= 64
-    ):
+    if not isinstance(request_id, str) or not 1 <= len(request_id) <= 64:
         return jsonify({
             "status": "error",
             "error": "invalid_request_id",

@@ -10,7 +10,7 @@ def add_action(
     user_id: int,
     action: int,
     practice_item_id: int,
-    request_id: str | None = None,
+    request_id: str,
 ) -> tuple[Action, bool]:
     """Создаёт действие пользователя над карточкой практики.
 
@@ -20,13 +20,12 @@ def add_action(
     :param request_id: Идентификатор логического клиентского запроса.
     :return: Сохранённая запись и признак создания новой строки.
     """
-    if request_id is not None:
-        existing = db.session.scalar(select(Action).where(
-            Action.user_id == user_id,
-            Action.request_id == request_id,
-        ))
-        if existing is not None:
-            return existing, False
+    existing = db.session.scalar(select(Action).where(
+        Action.user_id == user_id,
+        Action.request_id == request_id,
+    ))
+    if existing is not None:
+        return existing, False
 
     action_record = Action()
     action_record.user_id = user_id
@@ -38,8 +37,6 @@ def add_action(
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        if request_id is None:
-            raise
         existing = db.session.scalar(select(Action).where(
             Action.user_id == user_id,
             Action.request_id == request_id,

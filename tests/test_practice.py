@@ -232,6 +232,7 @@ class TestPracticeApi(AppTestCase):
             "card_id": word_id,
             "card_type": "spelling",
             "answer": "длинныйответ",
+            "request_id": "long-answer",
         })
         assert response.status_code == 200
         assert response.get_json()["correct"]
@@ -260,6 +261,7 @@ class TestPracticeApi(AppTestCase):
             "card_id": sentence_id,
             "card_type": "paronym",
             "answer": "эффективный",
+            "request_id": "paronym-answer",
         })
 
         assert response.status_code == 200
@@ -284,7 +286,11 @@ class TestPracticeApi(AppTestCase):
             db.session.commit()
             sentence_id = sentence.id
 
-        payload = {"card_id": sentence_id, "card_type": "paronym"}
+        payload = {
+            "card_id": sentence_id,
+            "card_type": "paronym",
+            "request_id": "paronym-skip",
+        }
         first = self.client.post("/api/v1/attempts/skip", json=payload)
         second = self.client.post("/api/v1/attempts/skip", json=payload)
 
@@ -300,8 +306,9 @@ class TestPracticeApi(AppTestCase):
         cases = [
             ({}, "invalid_attempt", 400),
             ({"card_id": "1", "answer": "о", "card_type": "spelling"}, "invalid_attempt", 400),
-            ({"card_id": 999, "answer": "о", "card_type": "spelling"}, "item_not_found", 404),
-            ({"card_id": 1, "answer": "о"}, "invalid_card_type", 400),
+            ({"card_id": 1, "answer": "о", "card_type": "spelling"}, "invalid_request_id", 400),
+            ({"card_id": 999, "answer": "о", "card_type": "spelling", "request_id": "unknown"}, "item_not_found", 404),
+            ({"card_id": 1, "answer": "о", "request_id": "bad-type"}, "invalid_card_type", 400),
         ]
         for payload, error, status in cases:
             response = self.client.post("/api/v1/attempts", json=payload)
@@ -320,11 +327,11 @@ class TestPracticeApi(AppTestCase):
 
         right = self.client.post(
             "/api/v1/attempts",
-            json={"card_id": word_id, "answer": "о", "card_type": "spelling"},
+            json={"card_id": word_id, "answer": "о", "card_type": "spelling", "request_id": "right"},
         ).get_json()
         wrong = self.client.post(
             "/api/v1/attempts",
-            json={"card_id": word_id, "answer": "и", "card_type": "spelling"},
+            json={"card_id": word_id, "answer": "и", "card_type": "spelling", "request_id": "wrong"},
         ).get_json()
 
         assert right["correct"]
@@ -411,7 +418,7 @@ class TestPracticeApi(AppTestCase):
 
         response = self.client.post(
             "/api/v1/attempts",
-            json={"card_id": word_id, "answer": "о", "card_type": "spelling"},
+            json={"card_id": word_id, "answer": "о", "card_type": "spelling", "request_id": "hidden-strike"},
         )
 
         assert response.status_code == 200
@@ -421,16 +428,16 @@ class TestPracticeApi(AppTestCase):
         with self.app.app_context():
             word_id = self.make_word().id
 
-        for _ in range(3):
+        for index in range(3):
             response = self.client.post(
                 "/api/v1/attempts",
-                json={"card_id": word_id, "answer": "о", "card_type": "spelling"},
+                json={"card_id": word_id, "answer": "о", "card_type": "spelling", "request_id": f"quota-{index}"},
             )
             assert response.status_code == 200
 
         blocked = self.client.post(
             "/api/v1/attempts",
-            json={"card_id": word_id, "answer": "о", "card_type": "spelling"},
+            json={"card_id": word_id, "answer": "о", "card_type": "spelling", "request_id": "quota-blocked"},
             headers={"Referer": "/?task=4"},
         )
         assert blocked.status_code == 403
@@ -439,7 +446,7 @@ class TestPracticeApi(AppTestCase):
 
         blocked_skip = self.client.post(
             "/api/v1/attempts/skip",
-            json={"card_id": word_id, "card_type": "spelling"},
+            json={"card_id": word_id, "card_type": "spelling", "request_id": "quota-skip"},
         )
         assert blocked_skip.status_code == 403
 
@@ -451,10 +458,10 @@ class TestPracticeApi(AppTestCase):
             word_id = self.make_word().id
             db.session.commit()
 
-        for _ in range(5):
+        for index in range(5):
             response = self.client.post(
                 "/api/v1/attempts",
-                json={"card_id": word_id, "answer": "о", "card_type": "spelling"},
+                json={"card_id": word_id, "answer": "о", "card_type": "spelling", "request_id": f"registered-{index}"},
             )
             assert response.status_code == 200
             assert response.get_json()["anonymous_remaining"] is None
@@ -465,11 +472,11 @@ class TestPracticeApi(AppTestCase):
 
         first = self.client.post(
             "/api/v1/attempts/skip",
-            json={"card_id": word_id, "card_type": "spelling"},
+            json={"card_id": word_id, "card_type": "spelling", "request_id": "duplicate-skip"},
         )
         second = self.client.post(
             "/api/v1/attempts/skip",
-            json={"card_id": word_id, "card_type": "spelling"},
+            json={"card_id": word_id, "card_type": "spelling", "request_id": "duplicate-skip"},
         )
         assert first.status_code == 200
         assert second.status_code == 200
@@ -477,16 +484,24 @@ class TestPracticeApi(AppTestCase):
             assert Action.query.filter_by(action=Action.SKIP).count() == 1
 
     def test_skip_validates_card_id(self) -> None:
+        with self.app.app_context():
+            word_id = self.make_word().id
         bad_skip = self.client.post(
             "/api/v1/attempts/skip",
             json={"card_id": "1", "card_type": "spelling"},
         )
         unknown_skip = self.client.post(
             "/api/v1/attempts/skip",
-            json={"card_id": 999, "card_type": "spelling"},
+            json={"card_id": 999, "card_type": "spelling", "request_id": "unknown-skip"},
+        )
+        missing_request_id = self.client.post(
+            "/api/v1/attempts/skip",
+            json={"card_id": word_id, "card_type": "spelling"},
         )
         assert bad_skip.status_code == 400
         assert unknown_skip.status_code == 404
+        assert missing_request_id.status_code == 400
+        assert missing_request_id.get_json()["error"] == "invalid_request_id"
 
     def test_swipe_is_blocked_during_a_long_streak_for_a_new_word(self) -> None:
         user_id = self.current_user_id()
@@ -511,18 +526,21 @@ class TestPracticeApi(AppTestCase):
         confirmation = self.client.post("/api/v1/attempts/skip", json={
             "card_id": target_id,
             "card_type": "spelling",
+            "request_id": "target-skip",
         })
         assert confirmation.status_code == 409
         assert confirmation.get_json()["status"] == "confirmation_required"
         allowed_recent = self.client.post("/api/v1/attempts/skip", json={
             "card_id": previous_ids[-1],
             "card_type": "spelling",
+            "request_id": "recent-skip",
         })
         assert allowed_recent.status_code == 200
         confirmed = self.client.post("/api/v1/attempts/skip", json={
             "card_id": target_id,
             "card_type": "spelling",
             "confirmed": True,
+            "request_id": "target-skip",
         })
         assert confirmed.status_code == 200
 
@@ -536,6 +554,7 @@ class TestPracticeApi(AppTestCase):
         response = self.client.post("/api/v1/attempts/skip", json={
             "card_id": word_id,
             "card_type": "spelling",
+            "request_id": "threshold-skip",
         })
 
         assert response.status_code == 409

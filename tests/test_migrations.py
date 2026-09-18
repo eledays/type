@@ -42,14 +42,23 @@ def test_latest_migration_round_trip_preserves_existing_actions(
 
         downgrade(directory="migrations", revision="-1")
         columns = {
-            row[1] for row in db.session.execute(text("PRAGMA table_info(action)"))
+            row[1]: row
+            for row in db.session.execute(text("PRAGMA table_info(action)"))
         }
-        assert "request_id" not in columns
+        assert columns["request_id"][3] == 0
+        db.session.execute(text(
+            "UPDATE action SET request_id = NULL WHERE id = :action_id"
+        ), {"action_id": db.session.scalar(text("SELECT id FROM action"))})
+        db.session.commit()
         assert db.session.scalar(text("SELECT COUNT(*) FROM action")) == 1
 
         upgrade(directory="migrations")
         columns = {
-            row[1] for row in db.session.execute(text("PRAGMA table_info(action)"))
+            row[1]: row
+            for row in db.session.execute(text("PRAGMA table_info(action)"))
         }
-        assert "request_id" in columns
+        assert columns["request_id"][3] == 1
+        assert db.session.scalar(text(
+            "SELECT request_id FROM action"
+        )).startswith("legacy-")
         assert db.session.scalar(text("SELECT COUNT(*) FROM action")) == 1

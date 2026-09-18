@@ -40,6 +40,7 @@
             this.reportItemId = null;
             this.profileStatsLoaded = false;
             this.profileStatsLoading = null;
+            this.pendingRequestIds = new Map();
 
             this.feed = document.getElementById("feed");
             this.status = document.getElementById("feed-status");
@@ -356,7 +357,16 @@
             return window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
         }
 
-        async recordSkip(card, confirmed = false, requestId = this.requestId()) {
+        requestIdFor(key) {
+            if (!this.pendingRequestIds.has(key)) {
+                this.pendingRequestIds.set(key, this.requestId());
+            }
+            return this.pendingRequestIds.get(key);
+        }
+
+        async recordSkip(card, confirmed = false, requestId = null) {
+            const requestKey = `skip:${card.id}`;
+            const stableRequestId = requestId || this.requestIdFor(requestKey);
             try {
                 const response = await fetch(this.routes.skipAttempt, {
                     method: "POST",
@@ -368,7 +378,7 @@
                         card_id: card.id,
                         card_type: card.type,
                         confirmed,
-                        request_id: requestId,
+                        request_id: stableRequestId,
                     }),
                 });
                 const payload = await response.json();
@@ -378,11 +388,16 @@
                 }
                 if (response.status === 409 && payload.status === "confirmation_required") {
                     if (!window.confirm("Если перелистнуть, серия обнулится. Перелистываем?")) {
+                        this.pendingRequestIds.delete(requestKey);
                         return false;
                     }
-                    return this.recordSkip(card, true, requestId);
+                    return this.recordSkip(card, true, stableRequestId);
                 }
-                if (!response.ok) throw new Error(payload.message);
+                if (!response.ok) {
+                    this.pendingRequestIds.delete(requestKey);
+                    throw new Error(payload.message);
+                }
+                this.pendingRequestIds.delete(requestKey);
                 this.updateStrike({n: payload.strike, levels: this.strikeLevels});
                 this.updateAnonymousRemaining(payload.anonymous_remaining);
                 return true;
@@ -397,6 +412,8 @@
             this.answerPending = true;
             const buttons = this.current.element.querySelectorAll(".answers button");
             buttons.forEach((item) => { item.disabled = true; });
+            const requestKey = `answer:${this.current.card.id}:${button.dataset.answer}`;
+            const requestId = this.requestIdFor(requestKey);
             try {
                 const response = await fetch(this.routes.createAttempt, {
                     method: "POST",
@@ -408,7 +425,7 @@
                         card_id: this.current.card.id,
                         card_type: this.current.card.type,
                         answer: button.dataset.answer,
-                        request_id: this.requestId(),
+                        request_id: requestId,
                     }),
                 });
                 const payload = await response.json();
@@ -416,7 +433,11 @@
                     window.location.href = payload.login_url;
                     return;
                 }
-                if (!response.ok) throw new Error(payload.message);
+                if (!response.ok) {
+                    this.pendingRequestIds.delete(requestKey);
+                    throw new Error(payload.message);
+                }
+                this.pendingRequestIds.delete(requestKey);
                 this.updateAnonymousRemaining(payload.anonymous_remaining);
                 this.updateStrike(payload.strike, {reveal: true});
                 this.revealAnswer(payload.full_word);
