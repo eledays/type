@@ -2,7 +2,11 @@ from datetime import timedelta
 
 import pytest
 from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
 
+from app.extensions import db
+from app.models import Action, LegalAcceptance, UserPracticeStats
+from app.time_utils import utc_now
 from config import AppSettings
 from tests.base import AppTestCase
 
@@ -31,6 +35,61 @@ class TestModel(AppTestCase):
                 answers=["а", "и"],
                 correct_answer="о",
             )
+
+    def test_database_rejects_unknown_action_type(self) -> None:
+        user_id = self.current_user_id()
+        with self.app.app_context():
+            word = self.make_word()
+            db.session.add(Action(
+                user_id=user_id,
+                practice_item_id=word.id,
+                action=999,
+            ))
+            with pytest.raises(IntegrityError):
+                db.session.commit()
+            db.session.rollback()
+
+    def test_database_rejects_invalid_aggregate_values(self) -> None:
+        user_id = self.current_user_id()
+        with self.app.app_context():
+            stats = db.session.get(UserPracticeStats, user_id)
+            stats.current_streak = 2
+            stats.best_streak = 1
+            with pytest.raises(IntegrityError):
+                db.session.commit()
+            db.session.rollback()
+
+            stats = db.session.get(UserPracticeStats, user_id)
+            stats.right_count = -1
+            with pytest.raises(IntegrityError):
+                db.session.commit()
+            db.session.rollback()
+
+    def test_only_one_active_acceptance_exists_per_document_set(self) -> None:
+        user_id = self.current_user_id()
+        versions = {
+            "terms_version": "v1",
+            "privacy_version": "v1",
+            "personal_data_consent_version": "v1",
+        }
+        with self.app.app_context():
+            db.session.add_all([
+                LegalAcceptance(user_id=user_id, **versions),
+                LegalAcceptance(user_id=user_id, **versions),
+            ])
+            with pytest.raises(IntegrityError):
+                db.session.commit()
+            db.session.rollback()
+
+            revoked = LegalAcceptance(
+                user_id=user_id,
+                revoked_at=utc_now(),
+                **versions,
+            )
+            active = LegalAcceptance(user_id=user_id, **versions)
+            db.session.add_all([revoked, active])
+            db.session.commit()
+            assert LegalAcceptance.query.count() == 2
 
 
 class TestConfig(AppTestCase):

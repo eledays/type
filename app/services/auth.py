@@ -153,7 +153,23 @@ def _merge_yandex_profile(profile: dict[str, Any], yandex_id: str) -> User:
         and current_account.is_anonymous_account
     ):
         merge_user_progress(current_account.id, user.id)
+        active_versions = {
+            (
+                acceptance.terms_version,
+                acceptance.privacy_version,
+                acceptance.personal_data_consent_version,
+            )
+            for acceptance in user.legal_acceptances
+            if acceptance.revoked_at is None
+        }
         for acceptance in list(current_account.legal_acceptances):
+            versions = (
+                acceptance.terms_version,
+                acceptance.privacy_version,
+                acceptance.personal_data_consent_version,
+            )
+            if acceptance.revoked_at is None and versions in active_versions:
+                acceptance.revoked_at = utc_now()
             acceptance.user = user
         db.session.delete(current_account)
 

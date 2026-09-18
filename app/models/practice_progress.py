@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.extensions import db
@@ -13,6 +20,14 @@ class PracticeProgress(db.Model):
 
     __tablename__ = "practice_progress"
     __table_args__ = (
+        CheckConstraint(
+            "right_count >= 0 AND wrong_count >= 0 AND skip_count >= 0",
+            name="ck_practice_progress_nonnegative_counts",
+        ),
+        CheckConstraint(
+            "latest_action IN (100, 101, 102)",
+            name="ck_practice_progress_latest_action",
+        ),
         Index("ix_practice_progress_item", "practice_item_id"),
     )
 
@@ -45,6 +60,12 @@ class GlobalPracticeStats(db.Model):
     """Глобальные агрегаты ответов по одной карточке."""
 
     __tablename__ = "global_practice_stats"
+    __table_args__ = (
+        CheckConstraint(
+            "right_count >= 0 AND wrong_count >= 0 AND skip_count >= 0",
+            name="ck_global_practice_stats_nonnegative_counts",
+        ),
+    )
 
     practice_item_id: Mapped[int] = mapped_column(
         Integer,
@@ -66,6 +87,20 @@ class UserPracticeStats(db.Model):
     """Сводные показатели практики одного пользователя."""
 
     __tablename__ = "user_practice_stats"
+    __table_args__ = (
+        CheckConstraint(
+            "right_count >= 0 AND wrong_count >= 0 AND skip_count >= 0",
+            name="ck_user_practice_stats_nonnegative_counts",
+        ),
+        CheckConstraint(
+            "current_streak >= 0 AND best_streak >= current_streak",
+            name="ck_user_practice_stats_valid_streaks",
+        ),
+        CheckConstraint(
+            "active_seconds >= 0 AND timed_intervals >= 0",
+            name="ck_user_practice_stats_nonnegative_timing",
+        ),
+    )
 
     user_id: Mapped[int] = mapped_column(
         Integer,

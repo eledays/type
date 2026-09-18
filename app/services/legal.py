@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from flask import current_app
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.models import (
@@ -60,8 +61,22 @@ def record_legal_acceptance(user: User) -> LegalAcceptance:
         personal_data_consent_version=PERSONAL_DATA_CONSENT_VERSION,
     )
     db.session.add(acceptance)
-    db.session.commit()
-    return acceptance
+    try:
+        db.session.commit()
+        return acceptance
+    except IntegrityError:
+        # A concurrent request may have committed the same active versions.
+        db.session.rollback()
+        winner = LegalAcceptance.query.filter_by(
+            user_id=user.id,
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            personal_data_consent_version=PERSONAL_DATA_CONSENT_VERSION,
+            revoked_at=None,
+        ).one_or_none()
+        if winner is None:
+            raise
+        return winner
 
 
 def revoke_legal_consent(user: User) -> None:

@@ -6,9 +6,11 @@ from typing import TYPE_CHECKING
 from sqlalchemy import (
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,6 +25,18 @@ class LegalAcceptance(db.Model):
     """Audit record proving acceptance of a specific document set."""
 
     __tablename__ = "legal_acceptance"
+    __table_args__ = (
+        Index(
+            "uq_legal_acceptance_active_versions",
+            "user_id",
+            "terms_version",
+            "privacy_version",
+            "personal_data_consent_version",
+            unique=True,
+            postgresql_where=text("revoked_at IS NULL"),
+            sqlite_where=text("revoked_at IS NULL"),
+        ),
+    )
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(
         ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True

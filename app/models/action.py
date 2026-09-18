@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, ClassVar
 from uuid import uuid4
 
 from sqlalchemy import (
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
@@ -28,6 +29,10 @@ if TYPE_CHECKING:
 class Action(db.Model):
     __tablename__ = "action"
     __table_args__ = (
+        CheckConstraint(
+            "action IN (100, 101, 102, 103)",
+            name="ck_action_known_type",
+        ),
         UniqueConstraint(
             "user_id", "request_id", name="uq_action_user_request"
         ),
