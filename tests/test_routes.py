@@ -72,6 +72,8 @@ class TestRouteMap(AppTestCase):
             ("/api/v1/admin/words/<int:word_id>/answers", "DELETE"),
             ("/admin/analytics", "GET"),
             ("/admin/analytics.csv", "GET"),
+            ("/admin/reports", "GET"),
+            ("/admin/reports/<int:report_id>", "POST"),
             ("/api/v1/admin/analytics/items/<int:item_id>", "GET"),
             ("/api/v1/admin/analytics/exercises", "GET"),
         }
@@ -278,7 +280,12 @@ class TestRouteMap(AppTestCase):
 
         attempt_response = self.client.post(
             "/api/v1/attempts",
-            json={"card_id": word_id, "answer": "о", "card_type": "spelling"},
+            json={
+                "card_id": word_id,
+                "answer": "о",
+                "card_type": "spelling",
+                "request_id": "11111111-1111-4111-8111-111111111111",
+            },
         )
         assert attempt_response.status_code == 200
         attempt = attempt_response.get_json()
@@ -305,7 +312,11 @@ class TestRouteMap(AppTestCase):
 
         response = self.client.post(
             "/api/v1/attempts/skip",
-            json={"card_id": word_id, "card_type": "spelling"},
+            json={
+                "card_id": word_id,
+                "card_type": "spelling",
+                "request_id": "22222222-2222-4222-8222-222222222222",
+            },
         )
         assert response.status_code == 200
         payload = response.get_json()

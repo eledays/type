@@ -1,17 +1,8 @@
-let strikeItem = document.getElementById('strike');
-let notificationItem = document.getElementById('notifications');
-let notificationInput = document.getElementById('notification-time');
-
-// notificationInput.value = '{{ settings.notification_time.strftime("%H:%M") }}';
-
 function handleClick(id) {
     let item = document.querySelector(`.setting-item#${id}`);
     let child = document.querySelector(`.time-control#${id}`);
     let valueElement = item.querySelector('.setting-value');
     let value = !(valueElement.classList.contains('on'));
-
-    console.log(child);
-    
 
     fetch(window.routeConfig.updateSettings, {
         method: 'PATCH',
@@ -35,24 +26,9 @@ function handleClick(id) {
     });
 }
 
-function handleTimeInput(id) {
-    let item = document.querySelector(`[data-setting-time="${id}"]`);
-    fetch(window.routeConfig.updateSettings, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': window.routeConfig.csrfToken,
-        },
-        body: JSON.stringify({[id + '_time']: item.value})
-    });
-}
-
 addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-setting-toggle]').forEach((item) => {
         item.addEventListener('click', () => handleClick(item.dataset.settingToggle));
-    });
-    document.querySelectorAll('[data-setting-time]').forEach((input) => {
-        input.addEventListener('change', () => handleTimeInput(input.dataset.settingTime));
     });
     const reportForm = document.getElementById('general-report-form');
     reportForm?.addEventListener('submit', async (event) => {

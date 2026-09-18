@@ -1,3 +1,6 @@
+from sqlalchemy import func, select
+from sqlalchemy.orm import joinedload
+
 from app.extensions import db
 from app.models import ErrorReport, PracticeItem, User
 
@@ -10,6 +13,59 @@ class InvalidReport(ValueError):
         self.code = code
         self.message = message
         self.status = status
+
+
+def list_error_reports(
+    status: str,
+    *,
+    page: int,
+    page_size: int = 50,
+) -> tuple[list[ErrorReport], int]:
+    """Return one newest-first page of reports and the matching total."""
+    conditions = []
+    if status != "all":
+        if status not in ErrorReport.STATUSES:
+            raise InvalidReport("invalid_status", "Unknown report status")
+        conditions.append(ErrorReport.status == status)
+    total = int(db.session.scalar(
+        select(func.count(ErrorReport.id)).where(*conditions)
+    ) or 0)
+    reports = list(db.session.scalars(
+        select(ErrorReport)
+        .options(
+            joinedload(ErrorReport.user),
+            joinedload(ErrorReport.practice_item),
+        )
+        .where(*conditions)
+        .order_by(ErrorReport.created_at.desc(), ErrorReport.id.desc())
+        .limit(page_size)
+        .offset((page - 1) * page_size)
+    ).unique())
+    return reports, total
+
+
+def update_error_report(
+    report_id: int,
+    *,
+    status: str,
+    admin_note: str,
+) -> ErrorReport | None:
+    """Update workflow state and an internal administrator note."""
+    if status not in ErrorReport.STATUSES:
+        raise InvalidReport("invalid_status", "Unknown report status")
+    normalized_note = admin_note.strip()
+    if len(normalized_note) > 2000:
+        raise InvalidReport(
+            "admin_note_too_long",
+            "Заметка не должна быть длиннее 2000 символов",
+        )
+    report = db.session.get(ErrorReport, report_id)
+    if report is None:
+        return None
+    report.status = status
+    report.admin_note = normalized_note or None
+    db.session.commit()
+    return report
 
 
 def create_error_report(

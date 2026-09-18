@@ -66,6 +66,7 @@ td small {
 .back-link:hover { color: var(--main-color); }
 
 .export-button,
+.secondary-button,
 .filter-card > button {
     padding: 11px 16px;
     border-radius: 10px;
@@ -74,6 +75,9 @@ td small {
     text-decoration: none;
     font-weight: 700;
 }
+
+.header-actions { display: flex; gap: 10px; }
+.secondary-button { background: var(--raised-color); color: var(--main-color); }
 
 .analytics-layout {
     display: grid;
@@ -103,7 +107,8 @@ td small {
 }
 
 select,
-input {
+input,
+textarea {
     width: 100%;
     min-height: 40px;
     padding: 8px 10px;
@@ -116,10 +121,12 @@ input {
 }
 
 :root[data-theme="light"] select,
-:root[data-theme="light"] input { color-scheme: light; }
+:root[data-theme="light"] input,
+:root[data-theme="light"] textarea { color-scheme: light; }
 
 select:focus,
-input:focus { border-color: var(--accent-color); }
+input:focus,
+textarea:focus { border-color: var(--accent-color); }
 
 .filter-card > button { min-height: 40px; }
 
@@ -301,6 +308,33 @@ td small { display: block; margin-top: 4px; }
 .detail-metrics strong { font-size: 1.2rem; }
 .detail-chart { height: 210px; margin-top: 26px; }
 
+.reports-layout { gap: 20px; }
+.report-filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.report-filters a,
+.report-pagination a {
+    padding: 9px 13px;
+    border-radius: 9px;
+    background: var(--raised-color);
+    color: var(--muted-color);
+    text-decoration: none;
+}
+.report-filters a.active { background: var(--accent-color); color: #fff; }
+.report-list { display: grid; gap: 12px; }
+.report-card {
+    padding: 20px;
+    border: 1px solid var(--line-color);
+    border-radius: 16px;
+    background: var(--frame-background-color);
+}
+.report-card__meta { display: flex; flex-wrap: wrap; gap: 7px 16px; color: var(--muted-color); font-size: .8rem; }
+.report-card__meta strong { color: var(--main-color); }
+.report-message { margin: 18px 0; line-height: 1.55; white-space: pre-wrap; }
+.report-card form { display: grid; grid-template-columns: minmax(150px, 220px) minmax(240px, 1fr) auto; gap: 12px; align-items: end; }
+.report-card label { display: grid; gap: 7px; color: var(--muted-color); font-size: .78rem; }
+.report-card textarea { min-height: 68px; resize: vertical; }
+.report-card button { min-height: 40px; padding: 9px 16px; border-radius: 9px; background: var(--accent-color); color: #fff; font-weight: 700; }
+.report-pagination { display: flex; align-items: center; justify-content: center; gap: 14px; color: var(--muted-color); }
+
 @media (max-width: 1100px) {
     .filter-card { grid-template-columns: repeat(4, 1fr); }
     .metric-grid { grid-template-columns: repeat(3, 1fr); }
@@ -321,6 +355,7 @@ td small { display: block; margin-top: 4px; }
     .table-toolbar { align-items: flex-start; flex-direction: column; }
     .detail-metrics { grid-template-columns: repeat(2, 1fr); }
     .chart { height: 195px; }
+    .report-card form { grid-template-columns: 1fr; }
 
     .responsive-table,
     .responsive-table tbody,
@@ -370,7 +405,9 @@ td small { display: block; margin-top: 4px; }
 
 @media (max-width: 520px) {
     .analytics-header { flex-direction: column; gap: 18px; }
-    .analytics-header .export-button { width: 100%; text-align: center; }
+    .header-actions { width: 100%; }
+    .analytics-header .export-button,
+    .analytics-header .secondary-button { flex: 1; text-align: center; }
     .filter-card { grid-template-columns: 1fr; }
     .filter-card > button { grid-column: auto; }
     .exercise-search > div { flex-wrap: wrap; }

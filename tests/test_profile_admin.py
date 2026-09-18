@@ -5,36 +5,28 @@ import pytest
 from sqlalchemy import event
 
 from app.extensions import db
-from app.models import Action, SpellingExercise, User
+from app.models import Action, ErrorReport, SpellingExercise, User
 from app.utils import get_strike, get_user_stats
 from tests.base import AppTestCase
 
 
 class TestProfile(AppTestCase):
-    def test_settings_accept_boolean_and_time_values(self) -> None:
+    def test_settings_accept_strike_value(self) -> None:
         response = self.client.patch(
             "/api/v1/profile/settings",
-            json={
-                "strike": False,
-                "notification": True,
-                "notification_time": "08:45",
-                "day_results_time": "21:10",
-            },
+            json={"strike": False},
         )
         assert response.status_code == 200
         user_id = self.current_user_id()
         with self.app.app_context():
             settings = db.session.get(User, user_id).settings
             assert not settings.strike
-            assert settings.notification
-            assert settings.notification_time.strftime("%H:%M") == "08:45"
-            assert settings.day_results_time.strftime("%H:%M") == "21:10"
 
-    def test_settings_reject_unknown_fields_wrong_types_and_bad_times(self) -> None:
+    def test_settings_reject_removed_unknown_fields_and_wrong_types(self) -> None:
         cases = [
             ({"unknown": True}, "Unknown settings"),
+            ({"notification": True}, "Unknown settings"),
             ({"strike": 1}, "strike must be boolean"),
-            ({"notification_time": "25:00"}, "HH:MM"),
             ([], "Invalid JSON"),
         ]
         for payload, message in cases:
@@ -187,3 +179,51 @@ class TestAdminApi(AppTestCase):
         assert invalid.status_code == 400
         assert absent_word.status_code == 404
         assert absent_answer.status_code == 404
+
+    def test_admin_can_review_and_update_error_reports(self) -> None:
+        with self.app.app_context():
+            user = db.session.get(User, self.user_id)
+            user.is_admin = True
+            report = ErrorReport(
+                user_id=self.user_id,
+                practice_item_id=self.word_id,
+                message="Неверный ответ в карточке",
+            )
+            db.session.add(report)
+            db.session.commit()
+            report_id = report.id
+
+        page = self.client.get("/admin/reports")
+        assert page.status_code == 200
+        assert "Неверный ответ в карточке".encode() in page.data
+
+        updated = self.client.post(
+            f"/admin/reports/{report_id}",
+            data={
+                "status": ErrorReport.RESOLVED,
+                "admin_note": "Исправлено в словаре",
+                "return_status": "all",
+            },
+        )
+        assert updated.status_code == 302
+        assert updated.location.endswith("/admin/reports?status=all")
+        with self.app.app_context():
+            report = db.session.get(ErrorReport, report_id)
+            assert report.status == ErrorReport.RESOLVED
+            assert report.admin_note == "Исправлено в словаре"
+
+    def test_report_queue_requires_admin_and_validates_updates(self) -> None:
+        assert self.client.get("/admin/reports").status_code == 403
+        with self.app.app_context():
+            db.session.get(User, self.user_id).is_admin = True
+            db.session.commit()
+
+        assert self.client.get("/admin/reports?status=missing").status_code == 400
+        invalid = self.client.post(
+            "/admin/reports/999", data={"status": "missing"}
+        )
+        assert invalid.status_code == 400
+        missing = self.client.post(
+            "/admin/reports/999", data={"status": ErrorReport.OPEN}
+        )
+        assert missing.status_code == 404

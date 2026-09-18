@@ -50,30 +50,6 @@
                         <span class="setting-value off">Выключен</span>
                     {% endif %}
                 </div>
-                <div class="setting-item" id="notification" data-setting-toggle="notification">
-                    <span class="setting-name">Уведомления</span>
-                    {% if settings.notification %}
-                        <span class="setting-value on">Включены</span>
-                    {% else %}
-                        <span class="setting-value off">Выключены</span>
-                    {% endif %}
-                </div>
-                <div class="time-control" id="notification" style="margin-top: {% if settings.notification %}-4px{% else %}-52px{% endif %}">
-                    <label for="notification-time" class="time-label">Время:</label>
-                    <input type="time" id="notification-time" class="time-input" data-setting-time="notification" value="{{ settings.notification_time.strftime('%H:%M') }}">
-                </div>
-                <div class="setting-item" id="day_results" data-setting-toggle="day_results">
-                    <span class="setting-name">Итоги дня</span>
-                    {% if settings.day_results %}
-                        <span class="setting-value on">Включены</span>
-                    {% else %}
-                        <span class="setting-value off">Выключены</span>
-                    {% endif %}
-                </div>
-                <div class="time-control" id="day_results" style="margin-top: {% if settings.day_results %}-4px{% else %}-52px{% endif %}">
-                    <label for="day-results-time" class="reminder-label">Время:</label>
-                    <input type="time" id="day-results-time" class="time-input" data-setting-time="day_results" value="{{ settings.day_results_time.strftime('%H:%M') }}">
-                </div>
                 {% if admin %}
                 <div class="setting-item" id="admin" data-setting-toggle="admin">
                     <span class="setting-name">Админка</span>

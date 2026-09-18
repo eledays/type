@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b0d10">
+    <title>type — Репорты</title>
+    <script nonce="{{ csp_nonce }}">document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';</script>
+    <link rel="stylesheet" href="{{ style_url }}">
+    <link rel="stylesheet" href="{{ analytics_style_url }}">
+    <link rel="icon" href="{{ favicon_url }}" type="image/x-icon">
+</head>
+<body>
+    <header class="analytics-header">
+        <div>
+            <a class="back-link" href="{{ url_for('admin.analytics') }}">← В аналитику</a>
+            <h1>Репорты</h1>
+            <p>{{ total }} сообщений в выбранном статусе</p>
+        </div>
+    </header>
+
+    <main class="analytics-layout reports-layout">
+        <nav class="report-filters" aria-label="Фильтр репортов">
+            <a class="{% if status == 'all' %}active{% endif %}" href="{{ url_for('admin.reports', status='all') }}">Все</a>
+            {% for value, label in statuses.items() %}
+            <a class="{% if status == value %}active{% endif %}" href="{{ url_for('admin.reports', status=value) }}">{{ label }}</a>
+            {% endfor %}
+        </nav>
+
+        <section class="report-list" aria-label="Пользовательские репорты">
+            {% for report in reports %}
+            <article class="report-card">
+                <div class="report-card__meta">
+                    <strong>#{{ report.id }}</strong>
+                    <span>{{ report.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                    <span>Пользователь {{ report.user_id }}</span>
+                    {% if report.practice_item %}
+                    <span>Задание {{ report.practice_item_id }}: {{ report.practice_item.get_prompt() }}</span>
+                    {% else %}
+                    <span>Общее сообщение</span>
+                    {% endif %}
+                </div>
+                <p class="report-message">{{ report.message }}</p>
+                <form method="post" action="{{ url_for('admin.update_report', report_id=report.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="return_status" value="{{ status }}">
+                    <label>Статус
+                        <select name="status">
+                            {% for value, label in statuses.items() %}
+                            <option value="{{ value }}"{% if report.status == value %} selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>Внутренняя заметка
+                        <textarea name="admin_note" maxlength="2000" placeholder="Что проверено и что нужно сделать">{{ report.admin_note or '' }}</textarea>
+                    </label>
+                    <button type="submit">Сохранить</button>
+                </form>
+            </article>
+            {% else %}
+            <div class="empty-state">В этом статусе репортов нет.</div>
+            {% endfor %}
+        </section>
+
+        <nav class="report-pagination" aria-label="Страницы репортов">
+            {% if has_previous %}<a href="{{ url_for('admin.reports', status=status, page=page - 1) }}">← Новее</a>{% endif %}
+            <span>Страница {{ page }}</span>
+            {% if has_next %}<a href="{{ url_for('admin.reports', status=status, page=page + 1) }}">Старее →</a>{% endif %}
+        </nav>
+    </main>
+</body>
+</html>

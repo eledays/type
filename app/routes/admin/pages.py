@@ -7,12 +7,15 @@ from pathlib import Path
 
 from flask import (
     Response,
+    abort,
     current_app,
+    redirect,
     render_template,
     request,
     stream_with_context,
     url_for,
 )
+from flask_login import current_user
 
 from app.extensions import limiter
 from app.models import Category
@@ -23,6 +26,11 @@ from app.services.analytics import (
     build_item_export,
     exercise_query_is_valid,
     parse_filters,
+)
+from app.services.reports import (
+    InvalidReport,
+    list_error_reports,
+    update_error_report,
 )
 
 
@@ -78,6 +86,66 @@ def analytics():
         analytics_script_url=_static_url("js/analytics.js"),
         favicon_url=_static_url("img/fav.ico"),
     )
+
+
+@pages_bp.get("/reports")
+@admin_required
+def reports():
+    """Render the administrator queue of user-submitted error reports."""
+    status = request.args.get("status", "open")
+    try:
+        page = max(1, int(request.args.get("page", "1")))
+        report_items, total = list_error_reports(status, page=page)
+    except (ValueError, InvalidReport):
+        abort(400, description="Invalid report filters")
+    return render_template(
+        "admin/reports.html",
+        reports=report_items,
+        total=total,
+        status=status,
+        page=page,
+        has_previous=page > 1,
+        has_next=page * 50 < total,
+        statuses={
+            "open": "Открыт",
+            "in_progress": "В работе",
+            "resolved": "Решён",
+            "rejected": "Отклонён",
+        },
+        style_url=_static_url("css/style.css"),
+        analytics_style_url=_static_url("css/analytics.css"),
+        favicon_url=_static_url("img/fav.ico"),
+    )
+
+
+@pages_bp.post("/reports/<int:report_id>")
+@limiter.limit(
+    lambda: current_app.config["RATE_LIMIT_MUTATION"],
+    override_defaults=False,
+)
+@admin_required
+def update_report(report_id: int):
+    """Update report status and internal note from the admin queue."""
+    try:
+        report = update_error_report(
+            report_id,
+            status=request.form.get("status", ""),
+            admin_note=request.form.get("admin_note", ""),
+        )
+    except InvalidReport as error:
+        abort(error.status, description=error.message)
+    if report is None:
+        abort(404, description="Report not found")
+    current_app.logger.info(
+        "admin_action=update_report user_id=%s report_id=%s status=%s",
+        current_user.get_id(),
+        report.id,
+        report.status,
+    )
+    return redirect(url_for(
+        "admin.reports",
+        status=request.form.get("return_status", "open"),
+    ))
 
 
 @pages_bp.get("/analytics.csv")

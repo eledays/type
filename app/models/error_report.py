@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
-from sqlalchemy import DateTime, ForeignKey, Index, String
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
@@ -19,8 +19,24 @@ class ErrorReport(db.Model):
 
     __tablename__ = "error_report"
     __table_args__ = (
+        CheckConstraint(
+            "status IN ('open', 'in_progress', 'resolved', 'rejected')",
+            name="ck_error_report_status",
+        ),
         Index("ix_error_report_item_created", "practice_item_id", "created_at"),
         Index("ix_error_report_user_created", "user_id", "created_at"),
+        Index("ix_error_report_status_created", "status", "created_at"),
+    )
+
+    OPEN: ClassVar[str] = "open"
+    IN_PROGRESS: ClassVar[str] = "in_progress"
+    RESOLVED: ClassVar[str] = "resolved"
+    REJECTED: ClassVar[str] = "rejected"
+    STATUSES: ClassVar[tuple[str, ...]] = (
+        OPEN,
+        IN_PROGRESS,
+        RESOLVED,
+        REJECTED,
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -31,8 +47,19 @@ class ErrorReport(db.Model):
         ForeignKey("practice_item.id", ondelete="SET NULL")
     )
     message: Mapped[str] = mapped_column(String(2000), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=OPEN, server_default=OPEN
+    )
+    admin_note: Mapped[str | None] = mapped_column(String(2000))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utc_now
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        onupdate=utc_now,
+        server_default=func.now(),
     )
 
     user: Mapped[User] = relationship(back_populates="error_reports")

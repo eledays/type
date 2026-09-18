@@ -17,7 +17,10 @@
             <h1>Аналитика</h1>
             <p>{{ filters.start.strftime('%d.%m.%Y') }} — {{ filters.end.strftime('%d.%m.%Y') }}</p>
         </div>
-        <a class="export-button" href="{{ url_for('admin.analytics_csv', **query) }}">Скачать CSV</a>
+        <div class="header-actions">
+            <a class="secondary-button" href="{{ url_for('admin.reports') }}">Репорты</a>
+            <a class="export-button" href="{{ url_for('admin.analytics_csv', **query) }}">Скачать CSV</a>
+        </div>
     </header>
 
     <main class="analytics-layout">
