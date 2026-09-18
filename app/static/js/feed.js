@@ -1,6 +1,7 @@
 (() => {
     "use strict";
 
+    const {RequestRegistry, uniqueIntegerIds} = window.feedHelpers;
     const ANIMATION_MS = 300;
     class FeedController {
         constructor(bootstrap, routes) {
@@ -40,7 +41,7 @@
             this.reportItemId = null;
             this.profileStatsLoaded = false;
             this.profileStatsLoading = null;
-            this.pendingRequestIds = new Map();
+            this.requestRegistry = new RequestRegistry(() => this.requestId());
 
             this.feed = document.getElementById("feed");
             this.status = document.getElementById("feed-status");
@@ -197,10 +198,10 @@
         }
 
         activeIds() {
-            return [...new Set([
+            return uniqueIntegerIds([
                 ...this.slots.map((slot) => slot.card?.id),
                 ...this.queue.map((card) => card.id),
-            ].filter(Number.isInteger))];
+            ]);
         }
 
         async refill() {
@@ -358,10 +359,7 @@
         }
 
         requestIdFor(key) {
-            if (!this.pendingRequestIds.has(key)) {
-                this.pendingRequestIds.set(key, this.requestId());
-            }
-            return this.pendingRequestIds.get(key);
+            return this.requestRegistry.acquire(key);
         }
 
         async recordSkip(card, confirmed = false, requestId = null) {
@@ -388,16 +386,16 @@
                 }
                 if (response.status === 409 && payload.status === "confirmation_required") {
                     if (!window.confirm("Если перелистнуть, серия обнулится. Перелистываем?")) {
-                        this.pendingRequestIds.delete(requestKey);
+                        this.requestRegistry.release(requestKey);
                         return false;
                     }
                     return this.recordSkip(card, true, stableRequestId);
                 }
                 if (!response.ok) {
-                    this.pendingRequestIds.delete(requestKey);
+                    this.requestRegistry.release(requestKey);
                     throw new Error(payload.message);
                 }
-                this.pendingRequestIds.delete(requestKey);
+                this.requestRegistry.release(requestKey);
                 this.updateStrike({n: payload.strike, levels: this.strikeLevels});
                 this.updateAnonymousRemaining(payload.anonymous_remaining);
                 return true;
@@ -434,10 +432,10 @@
                     return;
                 }
                 if (!response.ok) {
-                    this.pendingRequestIds.delete(requestKey);
+                    this.requestRegistry.release(requestKey);
                     throw new Error(payload.message);
                 }
-                this.pendingRequestIds.delete(requestKey);
+                this.requestRegistry.release(requestKey);
                 this.updateAnonymousRemaining(payload.anonymous_remaining);
                 this.updateStrike(payload.strike, {reveal: true});
                 this.revealAnswer(payload.full_word);

@@ -163,7 +163,10 @@ flask --app app cleanup_anonymous
 После изменения клиентского кода обновите минифицированную сборку:
 
 ```bash
-scripts/build_static.sh
+npm ci
+npm test
+npm run build
+npm run check:static
 ```
 
 ## Проверки

@@ -1,0 +1,13 @@
+{
+  "name": "type-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "scripts/build_static.sh",
+    "check:static": "scripts/check_static.sh",
+    "test": "node --test tests/js/*.test.cjs"
+  },
+  "devDependencies": {
+    "terser": "5.19.2"
+  }
+}
