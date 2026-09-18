@@ -6,10 +6,17 @@ from typing import Any, Mapping
 from zoneinfo import ZoneInfo
 
 from flask import current_app
-from sqlalchemy import case, func, select
+from sqlalchemy import String, and_, case, cast, func, or_, select
 
 from app.extensions import db
-from app.models import Action, Category, PracticeItem, User
+from app.models import (
+    Action,
+    Category,
+    ParonymExercise,
+    PracticeItem,
+    SpellingExercise,
+    User,
+)
 from app.time_utils import UTC, ensure_utc
 
 
@@ -507,16 +514,42 @@ def _template_contains(query: str, value: str) -> bool:
     )
 
 
-def _exercise_matches(
-    item: PracticeItem,
-    category: str,
-    query: str,
-) -> bool:
-    if _template_contains(query, item.get_prompt()):
-        return True
-    metadata = " ".join((category, item.type, str(item.task_number or "")))
-    return query.casefold().replace("ё", "е") in metadata.casefold().replace(
-        "ё", "е"
+def _sql_compact(expression, *, keep_placeholder: bool = False):
+    """Build a portable compact search expression for SQLite/PostgreSQL."""
+    compact = func.lower(func.replace(expression, "ё", "е"))
+    ignored = " -.,!?;:'\"()[]{}\t\r\n/\\"
+    if not keep_placeholder:
+        ignored += "_"
+    for character in ignored:
+        compact = func.replace(compact, character, "")
+    return compact
+
+
+def _exercise_search_condition(prompt, category, item_type, task, query: str):
+    needle = _compact_search(query)
+    prompt_without_blank = _sql_compact(prompt)
+    prompt_with_blank = _sql_compact(prompt, keep_placeholder=True)
+    blank_variants = [
+        needle[:index] + "_" + needle[index + 1:]
+        for index in range(len(needle))
+    ]
+    metadata = func.lower(func.replace(
+        func.coalesce(category, "") + " "
+        + item_type + " "
+        + func.coalesce(cast(task, String), ""),
+        "ё",
+        "е",
+    ))
+    return or_(
+        prompt_without_blank.contains(needle),
+        and_(
+            prompt_with_blank.contains("_", autoescape=True),
+            or_(*(
+                prompt_with_blank.contains(variant)
+                for variant in blank_variants
+            )),
+        ),
+        metadata.contains(query.casefold().replace("ё", "е")),
     )
 
 
@@ -537,48 +570,85 @@ def _serialized_items(
     *,
     limit: int | None = 10,
 ) -> tuple[list[dict[str, Any]], int]:
-    rows = _item_aggregate_rows(filters)
-    if not rows:
-        return [], 0
-    item_ids = [row[0] for row in rows]
-    items = {
-        item.id: item
-        for item in db.session.execute(
-            select(PracticeItem).where(PracticeItem.id.in_(item_ids))
-        ).scalars().all()
-    }
-    categories = {
-        category.id: category.name
-        for category in db.session.execute(select(Category)).scalars()
-    }
+    actions = _filtered_actions(filters).subquery()
+    right, wrong, skips = _count_expressions(actions)
+    aggregates = select(
+        actions.c.practice_item_id.label("item_id"),
+        func.count(func.distinct(actions.c.user_id)).label("unique_users"),
+        right.label("right_count"),
+        wrong.label("wrong_count"),
+        skips.label("skip_count"),
+    ).group_by(actions.c.practice_item_id).subquery()
+
+    item = PracticeItem.__table__
+    spelling = SpellingExercise.__table__
+    paronym = ParonymExercise.__table__
+    category = Category.__table__
+    prompt = case(
+        (item.c.type == "spelling", spelling.c.word),
+        else_=paronym.c.sentence,
+    ).label("prompt")
+    category_name = func.coalesce(category.c.name, "—").label("category")
+    answered = aggregates.c.right_count + aggregates.c.wrong_count
+    cards = answered + aggregates.c.skip_count
+    accuracy = case(
+        (answered > 0, aggregates.c.right_count * 100.0 / answered),
+        else_=0.0,
+    )
+    statement = (
+        select(
+            item.c.id,
+            prompt,
+            item.c.type,
+            item.c.task_number,
+            category_name,
+            aggregates.c.unique_users,
+            aggregates.c.right_count,
+            aggregates.c.wrong_count,
+            aggregates.c.skip_count,
+        )
+        .select_from(
+            aggregates
+            .join(item, item.c.id == aggregates.c.item_id)
+            .outerjoin(spelling, spelling.c.id == item.c.id)
+            .outerjoin(paronym, paronym.c.id == item.c.id)
+            .outerjoin(category, category.c.id == item.c.category_id)
+        )
+    )
+    if filters.exercise_query:
+        statement = statement.where(_exercise_search_condition(
+            prompt,
+            category.c.name,
+            item.c.type,
+            item.c.task_number,
+            filters.exercise_query,
+        ))
+    order = {
+        "accuracy": (accuracy.asc(), cards.desc(), item.c.id.asc()),
+        "wrong": (aggregates.c.wrong_count.desc(), accuracy.asc(), item.c.id.asc()),
+        "skips": (aggregates.c.skip_count.desc(), accuracy.asc(), item.c.id.asc()),
+    }[filters.exercise_sort]
+    statement = statement.order_by(*order)
+    total = int(db.session.scalar(
+        select(func.count()).select_from(statement.order_by(None).subquery())
+    ) or 0)
+    if limit is not None:
+        statement = statement.limit(limit)
+    rows = db.session.execute(statement).all()
     serialized = []
     for row in rows:
-        item = items.get(row[0])
-        if item is None:
-            continue
-        category = categories.get(item.category_id, "—")
-        if filters.exercise_query and not _exercise_matches(
-            item, category, filters.exercise_query
-        ):
-            continue
+        title = (row.prompt or "").strip()
         serialized.append({
-            "id": item.id,
-            "title": _item_title(item),
-            "full_title": item.get_prompt().strip(),
-            "type": item.type,
-            "task": item.task_number,
-            "category": category,
-            "unique_users": int(row[1]),
-            **_counts(row[2], row[3], row[4]),
+            "id": row.id,
+            "title": title if len(title) <= 90 else f"{title[:87]}…",
+            "full_title": title,
+            "type": row.type,
+            "task": row.task_number,
+            "category": row.category,
+            "unique_users": int(row.unique_users),
+            **_counts(row.right_count, row.wrong_count, row.skip_count),
         })
-    sort_keys = {
-        "accuracy": lambda value: (value["accuracy"], -value["cards"]),
-        "wrong": lambda value: (-value["wrong"], value["accuracy"]),
-        "skips": lambda value: (-value["skips"], value["accuracy"]),
-    }
-    serialized.sort(key=sort_keys[filters.exercise_sort])
-    total = len(serialized)
-    return (serialized if limit is None else serialized[:limit]), total
+    return serialized, total
 
 
 def _content_breakdown(filters: AnalyticsFilters) -> list[dict[str, Any]]:
