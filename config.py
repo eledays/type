@@ -101,6 +101,11 @@ class AppSettings(BaseSettings):
     anonymous_action_limit: int = Field(
         default=30, validation_alias="ANONYMOUS_ACTION_LIMIT", ge=1
     )
+    anonymous_retention_days: int = Field(
+        default=90,
+        validation_alias="ANONYMOUS_RETENTION_DAYS",
+        ge=1,
+    )
     practice_card_batch_size: int = Field(
         default=3,
         validation_alias="PRACTICE_CARD_BATCH_SIZE",
@@ -283,6 +288,10 @@ class AppSettings(BaseSettings):
                 "PRACTICE_CARD_BATCH_SIZE must not exceed "
                 "PRACTICE_CARD_BATCH_MAX"
             )
+        if self.anonymous_retention_days <= self.remember_cookie_days:
+            raise ValueError(
+                "ANONYMOUS_RETENTION_DAYS must exceed REMEMBER_COOKIE_DAYS"
+            )
         public_url = urlsplit(self.url)
         if (
             not public_url.hostname
@@ -388,6 +397,7 @@ class AppSettings(BaseSettings):
             ),
             "YANDEX_REDIRECT_URI": self.yandex_redirect_uri,
             "ANONYMOUS_ACTION_LIMIT": self.anonymous_action_limit,
+            "ANONYMOUS_RETENTION_DAYS": self.anonymous_retention_days,
             "PRACTICE_CARD_BATCH_SIZE": self.practice_card_batch_size,
             "PRACTICE_CARD_BATCH_MAX": self.practice_card_batch_max,
             "PRACTICE_DIFFICULT_CANDIDATE_LIMIT": (

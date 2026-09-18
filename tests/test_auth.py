@@ -1,3 +1,4 @@
+from datetime import timedelta
 from unittest.mock import Mock, patch
 from urllib.parse import parse_qs, urlsplit
 
@@ -16,6 +17,7 @@ from app.services.legal import (
     PRIVACY_VERSION,
     TERMS_VERSION,
 )
+from app.time_utils import ensure_utc, utc_now
 from tests.base import AppTestCase
 
 
@@ -54,6 +56,21 @@ class TestAuth(AppTestCase):
         )
         assert "Expires=" in remember_cookie
         assert "HttpOnly" in remember_cookie
+
+    def test_guest_activity_refreshes_retention_timestamp(self) -> None:
+        user_id = self.current_user_id()
+        old_timestamp = utc_now() - timedelta(days=2)
+        with self.app.app_context():
+            db.session.get(User, user_id).last_seen_at = old_timestamp
+            db.session.commit()
+
+        response = self.client.get("/")
+
+        assert response.status_code == 200
+        with self.app.app_context():
+            assert ensure_utc(
+                db.session.get(User, user_id).last_seen_at
+            ) > old_timestamp
 
     def test_irrelevant_requests_do_not_create_guest_profiles(self) -> None:
         for path in (

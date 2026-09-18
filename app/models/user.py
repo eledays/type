@@ -56,6 +56,13 @@ class User(UserMixin, db.Model):
     identified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
     )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now(),
+        index=True,
+    )
 
     settings: Mapped[Settings] = relationship(
         back_populates="user",

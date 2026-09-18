@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 from flask import current_app, jsonify, redirect, request, session, url_for
 from flask.typing import ResponseReturnValue
 from flask_login import current_user, login_user
+from sqlalchemy import update
 
 from app.extensions import db
 from app.models import Settings, User
@@ -9,6 +12,9 @@ from app.services.legal import (
     create_anonymous_user,
     has_current_legal_acceptance,
 )
+from app.time_utils import ensure_utc, utc_now
+
+ANONYMOUS_ACTIVITY_WRITE_INTERVAL = timedelta(days=1)
 
 
 def load_user(user_id: str) -> User | None:
@@ -95,6 +101,30 @@ def authenticate_browser_user() -> User:
         db.session.commit()
     login_user(user, remember=not user.is_anonymous_account)
     return user
+
+
+def record_anonymous_activity(response):
+    """Persist anonymous activity at most once per day."""
+    if (
+        response.status_code >= 500
+        or not current_user.is_authenticated
+        or not current_user.is_anonymous_account
+    ):
+        return response
+    user = current_user._get_current_object()
+    now = utc_now()
+    if (
+        user.last_seen_at is not None
+        and now - ensure_utc(user.last_seen_at) < ANONYMOUS_ACTIVITY_WRITE_INTERVAL
+    ):
+        return response
+    with db.engine.begin() as connection:
+        connection.execute(
+            update(User)
+            .where(User.id == user.id)
+            .values(last_seen_at=now)
+        )
+    return response
 
 
 def require_current_legal_acceptance() -> ResponseReturnValue | None:

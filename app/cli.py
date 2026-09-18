@@ -1,9 +1,10 @@
 import csv
 import re
+from datetime import timedelta
 from pathlib import Path
 
 import click
-from flask import Flask
+from flask import Flask, current_app
 from flask.cli import with_appcontext
 from pymorphy3 import MorphAnalyzer
 from sqlalchemy.exc import SQLAlchemyError
@@ -20,6 +21,11 @@ from app.services.database_transfer import (
     DatabaseTransferError,
     import_sqlite_database,
 )
+from app.services.retention import (
+    cleanup_inactive_anonymous_users,
+    count_inactive_anonymous_users,
+)
+from app.time_utils import utc_now
 
 
 def _ensure_paronym_group(
@@ -456,6 +462,32 @@ def sqlite_to_postgres(sqlite_path: Path) -> None:
     click.echo(f"Перенесено строк: {total}. {details}")
 
 
+@click.command("cleanup_anonymous")
+@click.option("--days", type=click.IntRange(min=1), default=None)
+@click.option("--batch-size", type=click.IntRange(min=1), default=500)
+@click.option("--dry-run", is_flag=True)
+@with_appcontext
+def cleanup_anonymous(
+    days: int | None,
+    batch_size: int,
+    dry_run: bool,
+) -> None:
+    """Delete anonymous profiles inactive beyond the retention period."""
+    retention_days = days or int(
+        current_app.config["ANONYMOUS_RETENTION_DAYS"]
+    )
+    cutoff = utc_now() - timedelta(days=retention_days)
+    if dry_run:
+        count = count_inactive_anonymous_users(cutoff)
+        click.echo(f"К удалению анонимных профилей: {count}.")
+        return
+    count = cleanup_inactive_anonymous_users(
+        cutoff,
+        batch_size=batch_size,
+    )
+    click.echo(f"Удалено анонимных профилей: {count}.")
+
+
 def register_commands(app: Flask) -> None:
     """Регистрирует команды импорта в Flask CLI.
 
@@ -466,3 +498,4 @@ def register_commands(app: Flask) -> None:
     app.cli.add_command(txt_to_db)
     app.cli.add_command(sentence_to_db)
     app.cli.add_command(sqlite_to_postgres)
+    app.cli.add_command(cleanup_anonymous)

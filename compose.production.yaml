@@ -33,6 +33,7 @@ services:
       HSTS_ENABLED: "true"
       LEGAL_OPERATOR_NAME: ${LEGAL_OPERATOR_NAME:?Set the legal operator name}
       LEGAL_CONTACT_EMAIL: ${LEGAL_CONTACT_EMAIL:?Set the legal contact email}
+      ANONYMOUS_RETENTION_DAYS: ${ANONYMOUS_RETENTION_DAYS:-90}
     ports:
       - "${APP_BIND_IP:?Set APP_BIND_IP to the private application-server IP}:${APP_PORT:-8000}:8000"
     read_only: true

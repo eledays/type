@@ -410,6 +410,15 @@ cd /opt/type
 scripts/backup_postgres.sh
 ```
 
+После резервной копии очистите анонимные профили, срок хранения которых истёк:
+
+```bash
+scripts/compose_production.sh exec -T app \
+  flask --app app cleanup_anonymous --dry-run
+scripts/compose_production.sh exec -T app \
+  flask --app app cleanup_anonymous
+```
+
 Dump появится в `backups/`. Регулярно копируйте его на другую машину или в
 объектное хранилище.
 

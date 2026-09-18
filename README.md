@@ -128,6 +128,7 @@ docker compose exec -T postgres psql -U type -d type < type-backup.sql
     LEGAL_OPERATOR_NAME=ФИО или наименование оператора
     LEGAL_CONTACT_EMAIL=privacy@example.com
     ANONYMOUS_ACTION_LIMIT=30
+    ANONYMOUS_RETENTION_DAYS=90
     PRACTICE_CARD_BATCH_SIZE=3
     PRACTICE_CARD_BATCH_MAX=12
     PRACTICE_DIFFICULT_CANDIDATE_LIMIT=50
@@ -142,8 +143,15 @@ docker compose exec -T postgres psql -U type -d type < type-backup.sql
    ```
 6. Заполните базу небольшим набором слов для разработки:
    ```bash
-   flask --app app csv_to_db fixtures/test_words.csv
-   ```
+flask --app app csv_to_db fixtures/test_words.csv
+```
+
+Проверить и удалить анонимные профили, неактивные дольше настроенного срока:
+
+```bash
+flask --app app cleanup_anonymous --dry-run
+flask --app app cleanup_anonymous
+```
 
 ## Нативный запуск
 1. Запустите проект:

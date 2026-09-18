@@ -49,6 +49,7 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     from app.security.session import (
         ensure_authenticated_user,
         load_user,
+        record_anonymous_activity,
         require_current_legal_acceptance,
         unauthorized,
     )
@@ -58,6 +59,7 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     limiter.init_app(app)
     app.before_request(ensure_authenticated_user)
     app.before_request(require_current_legal_acceptance)
+    app.after_request(record_anonymous_activity)
     register_csrf(app)
     register_security_headers(app)
     register_rate_limit_errors(app)

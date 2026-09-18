@@ -1,14 +1,20 @@
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
 
+from app.extensions import db
 from app.models import (
+    Action,
     Category,
+    GlobalPracticeStats,
     Paronym,
     ParonymExercise,
     ParonymGroup,
     SpellingExercise,
+    User,
 )
+from app.time_utils import utc_now
 from tests.base import AppTestCase
 
 
@@ -155,3 +161,49 @@ class TestImportCommands(AppTestCase):
 
         assert result.exit_code != 0
         assert "Target DATABASE_URL must point to PostgreSQL" in result.output
+
+    def test_cleanup_anonymous_removes_only_expired_profiles(self) -> None:
+        with self.app.app_context():
+            old_user = self.make_user()
+            active_user = self.make_user()
+            registered_user = self.make_user(yandex_id="retained-user")
+            cutoff_time = utc_now() - timedelta(days=120)
+            old_user.last_seen_at = cutoff_time
+            registered_user.last_seen_at = cutoff_time
+            word = self.make_word()
+            db.session.add_all([
+                Action(
+                    user_id=old_user.id,
+                    practice_item_id=word.id,
+                    action=Action.RIGHT_ANSWER,
+                ),
+                Action(
+                    user_id=active_user.id,
+                    practice_item_id=word.id,
+                    action=Action.WRONG_ANSWER,
+                ),
+            ])
+            db.session.commit()
+            old_user_id = old_user.id
+            active_user_id = active_user.id
+            registered_user_id = registered_user.id
+            word_id = word.id
+
+        dry_run = self.runner.invoke(args=[
+            "cleanup_anonymous", "--days", "90", "--dry-run",
+        ])
+        cleanup = self.runner.invoke(args=[
+            "cleanup_anonymous", "--days", "90", "--batch-size", "1",
+        ])
+
+        assert dry_run.exit_code == 0, dry_run.output
+        assert "профилей: 1" in dry_run.output
+        assert cleanup.exit_code == 0, cleanup.output
+        assert "профилей: 1" in cleanup.output
+        with self.app.app_context():
+            assert db.session.get(User, old_user_id) is None
+            assert db.session.get(User, active_user_id) is not None
+            assert db.session.get(User, registered_user_id) is not None
+            stats = db.session.get(GlobalPracticeStats, word_id)
+            assert stats.right_count == 0
+            assert stats.wrong_count == 1
