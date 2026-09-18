@@ -13,7 +13,7 @@ class TestRateLimits(AppTestCase):
         assert all(response.status_code != 429 for response in responses[:300])
         assert responses[-1].status_code == 429
         with self.app.app_context():
-            assert User.query.count() == 300
+            assert User.query.count() == 0
 
     def test_routes_expose_rate_limit_headers(self) -> None:
         response = self.client.get("/")

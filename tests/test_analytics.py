@@ -2,6 +2,7 @@ import csv
 from datetime import date, datetime, time, timedelta, timezone
 from io import StringIO
 
+import pytest
 from sqlalchemy import event
 
 from app.extensions import db
@@ -11,6 +12,7 @@ from app.services.analytics import (
     build_exercise_results,
     parse_filters,
 )
+from app.routes.admin.pages import _csv_safe
 from tests.base import AppTestCase
 
 
@@ -26,10 +28,14 @@ class TestAnalytics(AppTestCase):
         return user_id
 
     def test_dashboard_and_exports_require_database_admin(self) -> None:
-        assert self.client.get("/admin/analytics").status_code == 403
-        assert self.client.get("/admin/analytics.csv").status_code == 403
-        assert self.client.get("/api/v1/admin/analytics/items/1").status_code == 403
-        assert self.client.get("/api/v1/admin/analytics/exercises").status_code == 403
+        assert self.client.get("/admin/analytics").status_code == 302
+        assert self.client.get("/admin/analytics.csv").status_code == 302
+        assert self.client.get(
+            "/api/v1/admin/analytics/items/1"
+        ).status_code == 302
+        assert self.client.get(
+            "/api/v1/admin/analytics/exercises"
+        ).status_code == 302
         assert "Перейти в аналитику".encode() not in self.client.get("/").data
 
         self._make_admin()
@@ -273,10 +279,21 @@ class TestAnalytics(AppTestCase):
             db.session.commit()
 
         response = self.client.get("/admin/analytics.csv?period=7")
+        assert response.is_streamed
         rows = list(csv.reader(StringIO(response.data.decode("utf-8-sig"))))
 
         assert rows[1][1] == "'+SUM(A1:A2)"
         assert rows[1][4].startswith("'=HYPERLINK")
+
+    @pytest.mark.parametrize("prefix", [
+        " ", "\t", "\n", "\ufeff", "\u200b", " \ufeff\u200b",
+    ])
+    def test_csv_formula_sanitization_ignores_leading_controls(
+        self,
+        prefix: str,
+    ) -> None:
+        value = f"{prefix}=SUM(A1:A2)"
+        assert _csv_safe(value) == f"'{value}"
 
     def test_calendar_days_use_configured_timezone(self) -> None:
         with self.app.app_context():

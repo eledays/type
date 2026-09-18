@@ -608,6 +608,7 @@ def _serialized_items(
     filters: AnalyticsFilters,
     *,
     limit: int | None = 10,
+    offset: int = 0,
 ) -> tuple[list[dict[str, Any]], int]:
     actions = _filtered_actions(filters).subquery()
     right, wrong, skips = _count_expressions(actions)
@@ -672,7 +673,7 @@ def _serialized_items(
         select(func.count()).select_from(statement.order_by(None).subquery())
     ) or 0)
     if limit is not None:
-        statement = statement.limit(limit)
+        statement = statement.limit(limit).offset(offset)
     rows = db.session.execute(statement).all()
     serialized = []
     for row in rows:
@@ -809,7 +810,17 @@ def build_exercise_results(filters: AnalyticsFilters) -> dict[str, Any]:
     return {"items": items, "item_count": item_count}
 
 
-def build_item_export(filters: AnalyticsFilters) -> list[dict[str, Any]]:
-    """Return every per-item aggregate matching the export filters."""
-    items, _ = _serialized_items(filters, limit=None)
-    return items
+def build_item_export(filters: AnalyticsFilters):
+    """Yield per-item aggregates in bounded database pages."""
+    page_size = 500
+    offset = 0
+    while True:
+        items, total = _serialized_items(
+            filters,
+            limit=page_size,
+            offset=offset,
+        )
+        yield from items
+        offset += len(items)
+        if not items or offset >= total:
+            break

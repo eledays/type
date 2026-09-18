@@ -3,9 +3,18 @@ from __future__ import annotations
 import csv
 from io import StringIO
 from pathlib import Path
+import unicodedata
 
-from flask import Response, current_app, render_template, request, url_for
+from flask import (
+    Response,
+    current_app,
+    render_template,
+    request,
+    stream_with_context,
+    url_for,
+)
 
+from app.extensions import limiter
 from app.models import Category
 from app.routes.admin import pages_bp
 from app.security.decorators import admin_required
@@ -72,42 +81,50 @@ def analytics():
 
 
 @pages_bp.get("/analytics.csv")
+@limiter.limit(
+    lambda: current_app.config["RATE_LIMIT_ANALYTICS_EXPORT"],
+    override_defaults=False,
+)
 @admin_required
 def analytics_csv():
     """Export per-exercise analytics matching the current filters."""
     filters = parse_filters(request.args)
-    output = StringIO()
-    writer = csv.writer(output)
-    writer.writerow([
-        "item_id",
-        "title",
-        "type",
-        "task",
-        "category",
-        "unique_users",
-        "cards",
-        "right",
-        "wrong",
-        "skips",
-        "accuracy_percent",
-    ])
-    for item in build_item_export(filters):
-        writer.writerow([
-            item["id"],
-            _csv_safe(item["full_title"]),
-            _csv_safe(item["type"]),
-            item["task"] or "",
-            _csv_safe(item["category"]),
-            item["unique_users"],
-            item["cards"],
-            item["right"],
-            item["wrong"],
-            item["skips"],
-            item["accuracy"],
+
+    def generate_rows():
+        output = StringIO()
+        writer = csv.writer(output)
+
+        def encode(row: list[object]) -> str:
+            writer.writerow(row)
+            value = output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+            return value
+
+        yield "\ufeff"
+        yield encode([
+            "item_id", "title", "type", "task", "category",
+            "unique_users", "cards", "right", "wrong", "skips",
+            "accuracy_percent",
         ])
+        for item in build_item_export(filters):
+            yield encode([
+                item["id"],
+                _csv_safe(item["full_title"]),
+                _csv_safe(item["type"]),
+                item["task"] or "",
+                _csv_safe(item["category"]),
+                item["unique_users"],
+                item["cards"],
+                item["right"],
+                item["wrong"],
+                item["skips"],
+                item["accuracy"],
+            ])
+
     filename = f"analytics-{filters.start}-{filters.end}.csv"
     return Response(
-        "\ufeff" + output.getvalue(),
+        stream_with_context(generate_rows()),
         mimetype="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
@@ -117,6 +134,13 @@ def _csv_safe(value: object) -> object:
     """Prevent spreadsheet programs from evaluating exported text as formulas."""
     if not isinstance(value, str) or not value:
         return value
-    if value[0] in {"=", "+", "-", "@", "\t", "\r"}:
+    first_meaningful = next((
+        character
+        for character in value
+        if not character.isspace()
+        and character != "\ufeff"
+        and unicodedata.category(character) != "Cf"
+    ), "")
+    if first_meaningful in {"=", "+", "-", "@"}:
         return f"'{value}"
     return value
