@@ -8,8 +8,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.extensions import db
 
 if TYPE_CHECKING:
-    from app.models.paronym_group import ParonymGroup
     from app.models.paronym_exercise import ParonymExercise
+    from app.models.paronym_group import ParonymGroup
 
 
 class Paronym(db.Model):

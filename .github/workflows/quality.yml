@@ -39,5 +39,8 @@ jobs:
           node-version: "22"
       - run: pip install -r requirements-test.txt -r requirements-audit.txt
       - run: flask --app app db upgrade
-      - run: pytest
+      - run: ruff check .
+      - run: mypy app
+      - run: coverage run -m pytest
+      - run: coverage report
       - run: scripts/check_security.sh

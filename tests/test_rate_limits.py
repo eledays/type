@@ -1,6 +1,5 @@
-from tests.base import AppTestCase
-
 from app.models import User
+from tests.base import AppTestCase
 
 
 class TestRateLimits(AppTestCase):

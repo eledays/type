@@ -6,9 +6,8 @@ Revises: f4b3a21d9c10
 
 from datetime import timedelta
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 revision = "1a7d5e9c2b40"
 down_revision = "f4b3a21d9c10"

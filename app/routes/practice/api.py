@@ -106,7 +106,10 @@ def create_attempt():
     card_type = payload.get("card_type")
     request_id = payload.get("request_id")
     if not isinstance(card_id, int) or not isinstance(answer, str):
-        return jsonify({"error": "invalid_attempt", "message": "Invalid id or answer"}), 400
+        return jsonify({
+            "error": "invalid_attempt",
+            "message": "Invalid id or answer",
+        }), 400
     if card_type not in {"spelling", "paronym"}:
         return jsonify({
             "error": "invalid_card_type",

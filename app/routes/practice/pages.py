@@ -66,6 +66,7 @@ def index():
 
     background = choose_background(user)
     static_root = current_app.static_folder
+    static_root_path = Path(static_root or "app/static")
 
     def static_url(filename: str) -> str:
         """Формирует версионированный URL статического ресурса.
@@ -80,16 +81,12 @@ def index():
             v=_asset_version(str(path)),
         )
 
-    background_name = (
-        background.relative_to(static_root).as_posix()
-        if static_root is not None
-        else background.as_posix()
-    )
+    background_name = background.relative_to(static_root_path).as_posix()
     background_pools = {
         theme: [
             url_for(
                 "static",
-                filename=path.relative_to(static_root).as_posix(),
+                filename=path.relative_to(static_root_path).as_posix(),
                 v=_asset_version(str(path)),
             )
             for path in paths

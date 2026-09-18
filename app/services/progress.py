@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import datetime
+from typing import TypedDict
 
 from sqlalchemy import delete, select, update
 
@@ -8,13 +10,20 @@ from app.extensions import db
 from app.models import Action, PracticeProgress, UserPracticeStats
 from app.time_utils import ensure_utc
 
-
 LEARNING_ACTIONS = (
     Action.RIGHT_ANSWER,
     Action.WRONG_ANSWER,
     Action.SKIP,
 )
 ACTIVE_GAP_SECONDS = 10 * 60
+
+
+class _ProgressCounts(TypedDict):
+    right_count: int
+    wrong_count: int
+    skip_count: int
+    latest_action: int | None
+    latest_action_at: datetime | None
 
 
 def merge_user_progress(source_user_id: int, target_user_id: int) -> None:
@@ -43,7 +52,7 @@ def merge_user_progress(source_user_id: int, target_user_id: int) -> None:
         .order_by(Action.datetime, Action.id)
     ).all()
 
-    per_item: dict[int, dict[str, object]] = defaultdict(
+    per_item: dict[int, _ProgressCounts] = defaultdict(
         lambda: {
             "right_count": 0,
             "wrong_count": 0,
@@ -64,15 +73,15 @@ def merge_user_progress(source_user_id: int, target_user_id: int) -> None:
             right_count += 1
             current_streak += 1
             best_streak = max(best_streak, current_streak)
-            item["right_count"] = int(item["right_count"]) + 1
+            item["right_count"] += 1
         elif row.action == Action.WRONG_ANSWER:
             wrong_count += 1
             current_streak = 0
-            item["wrong_count"] = int(item["wrong_count"]) + 1
+            item["wrong_count"] += 1
         else:
             skip_count += 1
             current_streak = 0
-            item["skip_count"] = int(item["skip_count"]) + 1
+            item["skip_count"] += 1
 
         item["latest_action"] = row.action
         item["latest_action_at"] = row.datetime

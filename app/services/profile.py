@@ -5,7 +5,6 @@ from app.extensions import db
 from app.models import SpellingExercise, User
 from app.utils import get_user_stats
 
-
 BOOLEAN_SETTINGS = {"strike", "notification", "day_results"}
 TIME_SETTINGS = {"notification_time", "day_results_time"}
 

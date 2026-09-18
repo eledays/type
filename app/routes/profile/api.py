@@ -14,8 +14,8 @@ from flask_login import current_user, login_required
 from app.extensions import limiter
 from app.models import User
 from app.routes.profile import api_bp
-from app.services.profile import InvalidSettings, get_profile_stats, update_settings
 from app.services.backgrounds import choose_background
+from app.services.profile import InvalidSettings, get_profile_stats, update_settings
 
 
 @api_bp.get("/background")

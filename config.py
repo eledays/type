@@ -15,7 +15,6 @@ from pydantic import (
 )
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
-
 PROJECT_ROOT = Path(__file__).resolve().parent
 
 

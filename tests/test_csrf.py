@@ -1,9 +1,8 @@
 from bs4 import BeautifulSoup
 
-from tests.base import AppTestCase
-
 from app.extensions import db
 from app.models import User
+from tests.base import AppTestCase
 
 
 class TestCSRFProtection(AppTestCase):

@@ -2,7 +2,6 @@
 
 from flask import Blueprint, redirect, url_for
 
-
 bp = Blueprint("legacy", __name__)
 
 

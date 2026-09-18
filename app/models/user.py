@@ -23,8 +23,8 @@ from app.time_utils import utc_now
 if TYPE_CHECKING:
     from app.models.action import Action
     from app.models.error_report import ErrorReport
-    from app.models.settings import Settings
     from app.models.legal_acceptance import LegalAcceptance
+    from app.models.settings import Settings
 
 
 class User(UserMixin, db.Model):

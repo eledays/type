@@ -2,7 +2,6 @@ import os
 
 import pytest
 
-
 os.environ["DEBUG"] = "false"
 os.environ["URL"] = "https://type.eleday.ru/"
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-test-suite-32chars")

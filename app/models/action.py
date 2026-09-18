@@ -137,12 +137,12 @@ def update_practice_progress(session: Session, *_args: object) -> None:
 def _dialect_insert(connection: Connection, table):
     """Возвращает INSERT с поддержкой ON CONFLICT для рабочей СУБД."""
     if connection.dialect.name == "sqlite":
-        from sqlalchemy.dialects.sqlite import insert
+        from sqlalchemy.dialects.sqlite import insert as dialect_insert
     elif connection.dialect.name == "postgresql":
-        from sqlalchemy.dialects.postgresql import insert
+        from sqlalchemy.dialects.postgresql import insert as dialect_insert
     else:
         return None
-    return insert(table)
+    return dialect_insert(table)
 
 
 @event.listens_for(Action, "after_insert")

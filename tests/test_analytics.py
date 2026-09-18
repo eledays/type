@@ -7,12 +7,12 @@ from sqlalchemy import event
 
 from app.extensions import db
 from app.models import Action, Category, SpellingExercise, User
+from app.routes.admin.pages import _csv_safe
 from app.services.analytics import (
     build_dashboard,
     build_exercise_results,
     parse_filters,
 )
-from app.routes.admin.pages import _csv_safe
 from tests.base import AppTestCase
 
 

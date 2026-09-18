@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from concurrent.futures import ThreadPoolExecutor
 import os
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from threading import Barrier
 
 import pytest
@@ -13,7 +13,6 @@ from app.extensions import db
 from app.models import Action, Category, Settings, SpellingExercise, User
 from app.services.analytics import build_dashboard, parse_filters
 from app.services.practice import PracticeError, check_answer
-
 
 POSTGRES_URL = os.environ.get("TEST_POSTGRES_URL")
 POSTGRES_ENABLED = (

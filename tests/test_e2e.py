@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import shutil
+from pathlib import Path
 from threading import Thread
 
 import pytest
@@ -13,7 +13,6 @@ from werkzeug.serving import make_server
 from app import create_app
 from app.extensions import db
 from app.models import Action, Category, SpellingExercise
-
 
 pytestmark = pytest.mark.browser
 

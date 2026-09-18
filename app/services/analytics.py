@@ -19,7 +19,6 @@ from app.models import (
 )
 from app.time_utils import UTC, ensure_utc
 
-
 LEARNING_ACTIONS = (
     Action.RIGHT_ANSWER,
     Action.WRONG_ANSWER,
@@ -259,7 +258,7 @@ def _local_day(timestamp, filters: AnalyticsFilters):
     if db.session.get_bind().dialect.name == "postgresql":
         return func.date(func.timezone(filters.timezone_name, timestamp))
     raw_connection = db.session.connection().connection
-    driver_connection = getattr(
+    driver_connection: Any = getattr(
         raw_connection, "driver_connection", raw_connection
     )
 

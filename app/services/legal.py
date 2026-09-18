@@ -16,7 +16,6 @@ from app.models import (
 )
 from app.time_utils import utc_now
 
-
 TERMS_VERSION = "2026-09-07"
 PRIVACY_VERSION = "2026-09-07"
 PERSONAL_DATA_CONSENT_VERSION = "2026-09-07"
@@ -123,7 +122,7 @@ def revoke_legal_consent(user: User) -> None:
             stats.wrong_count = int(counts.wrong_count or 0) if counts else 0
             stats.skip_count = int(counts.skip_count or 0) if counts else 0
 
-    user.settings = None
+    user.settings = None  # type: ignore[assignment]
     user.telegram_id = None
     user.yandex_id = None
     user.yandex_login = None

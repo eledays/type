@@ -1,0 +1,34 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+exclude = ["app/static/js/feed.min.js", "parsing", "parsing_paronyms"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"migrations/versions/*.py" = ["E501", "W291"]
+"tests/*.py" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+check_untyped_defs = true
+ignore_missing_imports = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+exclude = ["migrations/", "parsing/", "parsing_paronyms/"]
+
+[[tool.mypy.overrides]]
+module = "app.models.*"
+disable_error_code = ["name-defined", "assignment"]
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = true
+omit = ["app/static/*"]

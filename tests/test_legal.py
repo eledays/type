@@ -1,5 +1,3 @@
-from tests.base import AppTestCase
-
 from app.extensions import db
 from app.models import (
     Action,
@@ -13,6 +11,7 @@ from app.services.legal import (
     PRIVACY_VERSION,
     TERMS_VERSION,
 )
+from tests.base import AppTestCase
 
 
 class TestLegalConsent(AppTestCase):

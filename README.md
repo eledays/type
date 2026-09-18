@@ -166,6 +166,16 @@ pip install -r requirements-test.txt
 pytest
 ```
 
+Локальные quality gates, совпадающие с CI:
+
+```bash
+pip install -r requirements-audit.txt
+ruff check .
+mypy app
+coverage run -m pytest
+coverage report
+```
+
 PostgreSQL-проверка намеренно принимает только отдельную базу с именем,
 оканчивающимся на `_test`, и очищает её:
 

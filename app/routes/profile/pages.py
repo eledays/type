@@ -1,6 +1,6 @@
 from typing import cast
 
-from flask import current_app, render_template, session
+from flask import render_template, session
 from flask_login import current_user, login_required
 
 from app.models import User

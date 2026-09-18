@@ -1,9 +1,8 @@
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
+
 import pytest
 from sqlalchemy import event
-
-from tests.base import AppTestCase
 
 from app.extensions import db
 from app.models import (
@@ -14,11 +13,11 @@ from app.models import (
     ParonymExercise,
     ParonymGroup,
     PracticeProgress,
-    SpellingExercise,
     User,
 )
 from app.models.paronym_exercise import inflect_word
 from app.services.practice import PracticeError, select_card, select_cards
+from tests.base import AppTestCase
 
 
 class TestPracticeApi(AppTestCase):

@@ -1,10 +1,9 @@
 import re
 from unittest.mock import patch
 
-from tests.base import AppTestCase
-
 from app.extensions import db
 from app.models import Action, Category, SpellingExercise, User
+from tests.base import AppTestCase
 
 
 class TestRouteMap(AppTestCase):

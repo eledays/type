@@ -5,7 +5,6 @@ from typing import Any, TypeVar, cast
 from flask import abort
 from flask_login import current_user, login_required
 
-
 View = TypeVar("View", bound=Callable[..., Any])
 
 

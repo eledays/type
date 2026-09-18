@@ -4,11 +4,10 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy import event
 
-from tests.base import AppTestCase
-
 from app.extensions import db
 from app.models import Action, SpellingExercise, User
 from app.utils import get_strike, get_user_stats
+from tests.base import AppTestCase
 
 
 class TestProfile(AppTestCase):

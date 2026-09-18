@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import random
 
-from sqlalchemy import CheckConstraint, ForeignKey, JSON, String
+from sqlalchemy import JSON, CheckConstraint, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, validates
 
-from app.extensions import db
 from app.models.practice_item import PracticeItem
 
 

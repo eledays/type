@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from sqlalchemy import Engine, URL, create_engine, func, inspect, select, text
+from sqlalchemy import URL, Engine, create_engine, func, inspect, select, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.extensions import db

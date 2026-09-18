@@ -1,7 +1,16 @@
-from urllib.parse import urlencode
 import secrets
+from urllib.parse import urlencode
 
-from flask import abort, current_app, flash, redirect, render_template, request, session, url_for
+from flask import (
+    abort,
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_login import current_user, login_required, login_user, logout_user
 
 from app.extensions import limiter
@@ -13,7 +22,6 @@ from app.services.auth import (
     safe_next_url,
     validate_state,
 )
-
 
 YANDEX_AUTHORIZE_URL = "https://oauth.yandex.ru/authorize"
 

@@ -1,10 +1,10 @@
-from dataclasses import dataclass
 import random
+from dataclasses import dataclass
 from typing import Any
 
 from flask import current_app, session
 from sqlalchemy import and_, select
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models import (

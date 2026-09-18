@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import csv
+import unicodedata
 from io import StringIO
 from pathlib import Path
-import unicodedata
 
 from flask import (
     Response,

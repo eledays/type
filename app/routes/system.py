@@ -6,7 +6,6 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.extensions import db, limiter
 
-
 bp = Blueprint("system", __name__)
 
 

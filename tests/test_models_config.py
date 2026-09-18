@@ -1,11 +1,10 @@
 from datetime import timedelta
 
-from pydantic import ValidationError
 import pytest
+from pydantic import ValidationError
 
-from tests.base import AppTestCase
 from config import AppSettings
-
+from tests.base import AppTestCase
 
 TEST_SECRET = "a-secure-test-secret-with-32-characters"
 

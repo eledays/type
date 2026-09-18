@@ -2,9 +2,6 @@ from pathlib import Path
 
 import pytest
 
-from tests.base import AppTestCase
-
-from app.extensions import db
 from app.models import (
     Category,
     Paronym,
@@ -12,6 +9,7 @@ from app.models import (
     ParonymGroup,
     SpellingExercise,
 )
+from tests.base import AppTestCase
 
 
 class TestImportCommands(AppTestCase):

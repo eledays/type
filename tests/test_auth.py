@@ -3,16 +3,20 @@ from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
-from tests.base import AppTestCase
-
 from app.extensions import db
 from app.models import Action, LegalAcceptance, Settings, User, UserPracticeStats
+from app.services.auth import (
+    OAuthError,
+    authenticate_yandex,
+    safe_next_url,
+    validate_state,
+)
 from app.services.legal import (
     PERSONAL_DATA_CONSENT_VERSION,
     PRIVACY_VERSION,
     TERMS_VERSION,
 )
-from app.services.auth import OAuthError, authenticate_yandex, safe_next_url, validate_state
+from tests.base import AppTestCase
 
 
 class TestAuth(AppTestCase):

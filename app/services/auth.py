@@ -13,7 +13,6 @@ from app.models import Settings, User
 from app.services.progress import merge_user_progress
 from app.time_utils import utc_now
 
-
 # Public provider endpoint, not a credential.
 YANDEX_TOKEN_URL = "https://oauth.yandex.ru/token"  # nosec B105
 YANDEX_USER_INFO_URL = "https://login.yandex.ru/info"

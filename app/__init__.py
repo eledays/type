@@ -4,8 +4,7 @@ from typing import Any
 from flask import Flask, request
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from app.extensions import db, limiter, migrate, login_manager
-
+from app.extensions import db, limiter, login_manager, migrate
 from config import settings
 
 
@@ -23,7 +22,7 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
             app.config["LEGAL_CONSENT_REQUIRED"] = False
     trusted_proxy_count = int(app.config.get("TRUSTED_PROXY_COUNT", 0))
     if trusted_proxy_count:
-        app.wsgi_app = ProxyFix(
+        app.wsgi_app = ProxyFix(  # type: ignore[method-assign]
             app.wsgi_app,
             x_for=trusted_proxy_count,
             x_proto=trusted_proxy_count,
@@ -43,8 +42,8 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
 
     from app.cli import register_commands
     from app.routes import register_blueprints
-    from app.security.csrf import register_csrf
     from app.security.api_errors import register_api_errors
+    from app.security.csrf import register_csrf
     from app.security.headers import register_security_headers
     from app.security.rate_limits import register_rate_limit_errors
     from app.security.session import (
