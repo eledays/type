@@ -32,10 +32,10 @@ class TestAnalytics(AppTestCase):
         assert self.client.get("/admin/analytics.csv").status_code == 302
         assert self.client.get(
             "/api/v1/admin/analytics/items/1"
-        ).status_code == 302
+        ).status_code == 401
         assert self.client.get(
             "/api/v1/admin/analytics/exercises"
-        ).status_code == 302
+        ).status_code == 401
         assert "Перейти в аналитику".encode() not in self.client.get("/").data
 
         self._make_admin()

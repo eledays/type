@@ -54,14 +54,26 @@ def patch_settings():
     """
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
-        return jsonify({"status": "error", "message": "Invalid JSON"}), 400
+        return jsonify({
+            "status": "error",
+            "error": "invalid_json",
+            "message": "Invalid JSON",
+        }), 400
     user = cast(User, current_user._get_current_object())
     try:
         update_settings(user, payload)
     except PermissionError as error:
-        return jsonify({"status": "error", "message": str(error)}), 403
+        return jsonify({
+            "status": "error",
+            "error": "admin_required",
+            "message": str(error),
+        }), 403
     except InvalidSettings as error:
-        return jsonify({"status": "error", "message": str(error)}), 400
+        return jsonify({
+            "status": "error",
+            "error": "invalid_settings",
+            "message": str(error),
+        }), 400
     if "admin" in payload:
         session["admin"] = payload["admin"]
     return jsonify({"status": "success"})

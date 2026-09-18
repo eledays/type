@@ -322,3 +322,12 @@ class TestRouteMap(AppTestCase):
         assert response.headers["Cache-Control"] == (
             "public, max-age=31536000, immutable"
         )
+
+    def test_generic_api_errors_have_stable_codes(self) -> None:
+        missing = self.client.get("/api/v1/missing")
+        wrong_method = self.client.put("/api/v1/practice/cards")
+
+        assert missing.status_code == 404
+        assert missing.get_json()["error"] == "not_found"
+        assert wrong_method.status_code == 405
+        assert wrong_method.get_json()["error"] == "method_not_allowed"

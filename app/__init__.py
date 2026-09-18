@@ -44,21 +44,25 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     from app.cli import register_commands
     from app.routes import register_blueprints
     from app.security.csrf import register_csrf
+    from app.security.api_errors import register_api_errors
     from app.security.headers import register_security_headers
     from app.security.rate_limits import register_rate_limit_errors
     from app.security.session import (
         ensure_authenticated_user,
         load_user,
         require_current_legal_acceptance,
+        unauthorized,
     )
 
     login_manager.user_loader(load_user)
+    login_manager.unauthorized_handler(unauthorized)
     limiter.init_app(app)
     app.before_request(ensure_authenticated_user)
     app.before_request(require_current_legal_acceptance)
     register_csrf(app)
     register_security_headers(app)
     register_rate_limit_errors(app)
+    register_api_errors(app)
     register_commands(app)
     register_blueprints(app)
 

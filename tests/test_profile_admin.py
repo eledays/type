@@ -44,12 +44,16 @@ class TestProfile(AppTestCase):
             )
             assert response.status_code == 400
             assert message in response.get_json()["message"]
+            assert response.get_json()["error"] in {
+                "invalid_json", "invalid_settings"
+            }
 
     def test_only_database_admin_can_toggle_admin_mode(self) -> None:
         denied = self.client.patch(
             "/api/v1/profile/settings", json={"admin": True}
         )
         assert denied.status_code == 403
+        assert denied.get_json()["error"] == "admin_required"
 
         user_id = self.current_user_id()
         with self.app.app_context():

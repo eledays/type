@@ -24,6 +24,19 @@ def load_user(user_id: str) -> User | None:
     return db.session.get(User, parsed_user_id)
 
 
+def unauthorized() -> ResponseReturnValue:
+    """Return JSON for APIs and a safe login redirect for browser pages."""
+    if request.path.startswith("/api/"):
+        return jsonify({
+            "error": "authentication_required",
+            "message": "Authentication is required",
+        }), 401
+    return redirect(url_for(
+        "auth.login",
+        next=safe_next_url(request.full_path.rstrip("?")),
+    ))
+
+
 def ensure_authenticated_user() -> None:
     """Создаёт временного пользователя для нового браузера.
 
