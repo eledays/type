@@ -5,6 +5,18 @@ x-logging: &default-logging
     max-file: "5"
 
 services:
+  migrate:
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-type}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the production env file}@postgres:5432/${POSTGRES_DB:-type}
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
   app:
     environment:
       DEBUG: "false"

@@ -1,4 +1,24 @@
 services:
+  migrate:
+    build:
+      context: .
+    command: ["flask", "--app", "app", "db", "upgrade"]
+    environment:
+      DEBUG: "true"
+      SECRET_KEY: ${DOCKER_SECRET_KEY:-local-docker-secret-key-not-for-production-123}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-type}:${POSTGRES_PASSWORD:-type-local}@postgres:5432/${POSTGRES_DB:-type}
+      URL: ${DOCKER_PUBLIC_URL:-http://localhost:8000}
+      RATE_LIMIT_STORAGE_URI: redis://redis:6379/0
+      TRUSTED_HOSTS: ${DOCKER_TRUSTED_HOSTS:-localhost,127.0.0.1}
+      LEGAL_OPERATOR_NAME: ${LEGAL_OPERATOR_NAME:-Разработчик сервиса type}
+      LEGAL_CONTACT_EMAIL: ${LEGAL_CONTACT_EMAIL:-privacy@localhost}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - backend
+
   app:
     build:
       context: .
@@ -22,6 +42,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD
