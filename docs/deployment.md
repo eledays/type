@@ -46,6 +46,17 @@ scripts/compose_production.sh up --build --detach
 scripts/compose_production.sh ps
 ```
 
+The Python, PostgreSQL, and Redis images are pinned to immutable digests so a
+rebuild cannot silently pick up a different base image. Update each tag and
+digest together during a planned dependency upgrade, then repeat the security,
+migration, backup, and restore checks before deployment.
+
+Python's direct dependencies are declared in `requirements.in`; the generated
+`requirements.txt` locks the complete dependency graph with package hashes.
+Regenerate it with `pip-compile --generate-hashes requirements.in` during a
+planned upgrade. The image build uses `--require-hashes` and fails if an
+artifact differs from the reviewed lock file.
+
 Allow `${APP_PORT}` through the application-server firewall only from the
 Apache server. The connection must use a trusted private network or VPN; do not
 send authenticated origin traffic as plain HTTP over the public internet.

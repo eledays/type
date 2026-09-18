@@ -1,4 +1,4 @@
--r requirements.txt
+-r requirements.in
 
 beautifulsoup4==4.13.4
 soupsieve==2.9.0

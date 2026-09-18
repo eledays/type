@@ -11,3 +11,4 @@ WorkingDirectory=/opt/type
 EnvironmentFile=-/etc/type-backup.env
 ExecStart=/opt/type/scripts/backup_postgres.sh
 ExecStart=/opt/type/scripts/restore_test_postgres.sh
+ExecStart=/opt/type/scripts/compose_production.sh exec -T app flask --app app cleanup_anonymous

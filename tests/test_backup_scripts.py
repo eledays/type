@@ -82,3 +82,22 @@ def test_restore_uses_disposable_database_and_drops_it(tmp_path: Path) -> None:
     assert "pg_restore" in calls
     assert "SELECT 1 FROM alembic_version" in calls
     assert "dropdb --if-exists --force" in calls
+
+
+def test_daily_backup_service_cleans_expired_anonymous_profiles_last() -> None:
+    service = (
+        PROJECT_ROOT / "deploy/systemd/type-backup.service.example"
+    ).read_text(encoding="utf-8")
+
+    commands = [
+        line.removeprefix("ExecStart=")
+        for line in service.splitlines()
+        if line.startswith("ExecStart=")
+    ]
+
+    assert commands == [
+        "/opt/type/scripts/backup_postgres.sh",
+        "/opt/type/scripts/restore_test_postgres.sh",
+        "/opt/type/scripts/compose_production.sh exec -T app "
+        "flask --app app cleanup_anonymous",
+    ]

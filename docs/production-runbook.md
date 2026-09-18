@@ -427,7 +427,7 @@ cd /opt/type
 scripts/backup_postgres.sh
 ```
 
-После резервной копии очистите анонимные профили, срок хранения которых истёк:
+Для ручной проверки и очистки анонимных профилей, срок хранения которых истёк:
 
 ```bash
 scripts/compose_production.sh exec -T app \
@@ -451,7 +451,9 @@ scripts/restore_test_postgres.sh
 Команда создаёт временную БД с уникальным именем, восстанавливает последний
 dump, проверяет таблицу Alembic и всегда удаляет тестовую БД. Для ежедневного
 запуска установите примеры `deploy/systemd/type-backup.{service,timer}.example`
-в `/etc/systemd/system/`, задайте `/etc/type-backup.env`, затем включите timer:
+в `/etc/systemd/system/`, задайте `/etc/type-backup.env`, затем включите timer.
+Сервис последовательно создаёт backup, проверяет восстановление и только после
+успешной проверки удаляет анонимные профили старше `ANONYMOUS_RETENTION_DAYS`:
 
 ```bash
 sudo systemctl enable --now type-backup.timer

@@ -471,8 +471,8 @@ def _lifecycle_metrics(filters: AnalyticsFilters) -> dict[str, Any]:
                 User.is_admin.is_(False),
                 User.created_at >= earliest_cohort,
                 User.created_at < filters.end_at,
-                target_day >= filters.start.isoformat(),
-                target_day <= filters.end.isoformat(),
+                target_day >= filters.start,
+                target_day <= filters.end,
             )
             .subquery()
         )
